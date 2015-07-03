@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\RTSGame.uproject" />
+    <Filter Include="Source">
+      <UniqueIdentifier>{A4697039-1C83-4E67-A44D-8A0BF79150C6}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\RTSGame.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\Source\RTSGameEditor.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <Filter Include="Config">
+      <UniqueIdentifier>{CD35A1C5-05FC-48EA-8035-DA7A8AF4E2B6}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\DefaultEditor.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultEngine.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultGame.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Source\RTSGame">
+      <UniqueIdentifier>{2EC1E644-7B19-4E40-B76D-E1CE5679CFB5}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\RTSGame\RTSGame.Build.cs">
+      <Filter>Source\RTSGame</Filter>
+    </None>
+    <Filter Include="Source\RTSGame\Resources">
+      <UniqueIdentifier>{C811B05A-4CA8-4C49-820D-36A0A8A2FBC8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\Resources\Windows">
+      <UniqueIdentifier>{1287FFD0-8436-482D-A5A5-7BC75CF4C435}</UniqueIdentifier>
+    </Filter>
+    <ResourceCompile Include="..\..\Source\RTSGame\Resources\Windows\RTSGame.rc">
+      <Filter>Source\RTSGame\Resources\Windows</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source\RTSGame\GameObjects">
+      <UniqueIdentifier>{6c9e49e1-a4a4-4734-94a2-7b49053426c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\Buildings">
+      <UniqueIdentifier>{cf071ebe-db83-4335-b7f0-6c010c3d9e0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\UI">
+      <UniqueIdentifier>{4ce67a63-6ae9-4d79-bdd2-1288a52a4d86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\Data">
+      <UniqueIdentifier>{a4b3b09a-78a7-4a3a-9f3e-f317f2bee79c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\GAME">
+      <UniqueIdentifier>{158020cc-92b1-426c-8b7f-6b5358fbc0b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\Util">
+      <UniqueIdentifier>{20564de1-ed88-428b-bb5c-a976ab538717}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Source\RTSGame\Avatar.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\CombatUnit.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\GameObject.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\DialogBox.cpp">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\TipsBox.cpp">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Item.cpp">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Menu.cpp">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Peasant.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Spell.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\RTSGame.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\RTSGameGameMode.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\RTSGameInstance.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\RTSGameState.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Resource.cpp">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\UnitsData.cpp">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Unit.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\WidgetData.cpp">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Settings.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\MyHUD.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Camera.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\AI.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\CameraMan.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\FlyCam.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Team.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Weapon.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Pathfinder.cpp">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\PlayerControl.cpp">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\GroundPlane.cpp">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Building.cpp">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Source\RTSGame\Avatar.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\CombatUnit.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\GameObject.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\DialogBox.h">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\TipsBox.h">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Item.h">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Menu.h">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\ItemData.h">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Peasant.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Spell.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\RTSGame.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\RTSGameGameMode.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\RTSGameInstance.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\RTSGameState.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Resource.h">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\UnitsData.h">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Unit.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\WidgetData.h">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Settings.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\MyHUD.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Camera.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\AI.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\CameraMan.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\FlyCam.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\StdWilUtil.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Types.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Team.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Weapon.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Pathfinder.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\PlayerControl.h">
+      <Filter>Source\RTSGame\GAME</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Vector2f.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\UnitTypeUClassPair.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\ResourceMiningTimes.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\GlobalFunctions.h">
+      <Filter>Source\RTSGame\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\GroundPlane.h">
+      <Filter>Source\RTSGame\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Building.h">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

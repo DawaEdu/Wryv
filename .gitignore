@@ -1,0 +1,10 @@
+/Binaries/*
+/Content/Assets/*
+/Intermediate/Build/*
+/Saved/*
+
+# Precompiled Headers
+*.gch
+*.pch
+*.sdf
+*.bin
