@@ -99,6 +99,36 @@ inline float randFloat( int min, int max )
   return min + FMath::FRand()*( max - min );
 }
 
+template <typename T> static T* GetComponentByType( AActor* a )
+{
+  TArray<UActorComponent*> comps = a->GetComponents();
+  for( int i = 0; i < comps.Num(); i++ )
+    if( T* s = Cast<T>( comps[i] ) )
+      return s;
+  return 0;
+}
+
+template <typename T> static vector<T*> GetComponentsByType( AActor* a )
+{
+  TArray<UActorComponent*> comps = a->GetComponents();
+  //UE_LOG( LogTemp, Warning, TEXT("# components %d"), comps.Num() );
+  vector<T*> coll;
+  for( int i = 0; i < comps.Num(); i++ )
+    if( T* s = Cast<T>( comps[i] ) )
+      coll.push_back( s );
+  return coll;
+}
+
+template <typename T> static T* GetComponentByName( AActor* a, FString name )
+{
+  TArray<UActorComponent*> comps = a->GetComponents();
+  for( int i = 0; i < comps.Num(); i++ )
+    if( T* s = Cast<T>( comps[i] ) )
+      if( s->GetName() == name )
+        return s;
+  return 0;
+}
+
 inline bool Intersects( FBox& box, FVector& pt )
 {
   return box.Min.X < pt.X && pt.X < box.Max.X   &&
@@ -141,3 +171,4 @@ struct Linear
     return P0*l_t + P1*t;
   }
 };
+

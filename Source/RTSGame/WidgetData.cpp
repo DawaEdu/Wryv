@@ -7,3 +7,8 @@ FString FWidgetData::ToString()
     *GetEnumName( Type ), *Label,
     Pos.X, Pos.Y, Size.X, Size.Y );
 }
+
+void WidgetGroup::draw()
+{
+  
+}

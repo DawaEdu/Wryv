@@ -3,11 +3,10 @@
 #include "RTSGameInstance.h"
 #include "RTSGameGameMode.h"
 
-AResource::AResource( const FObjectInitializer& PCIP ) : ABuilding(PCIP)
+AResource::AResource( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
   // Make sure that the object type is actually a resource type
-  if( UnitsData.Type != Types::RESGOLDMINE || UnitsData.Type != Types::RESTREEDECIDUOUS ||
-      UnitsData.Type != Types::RESTREEEVERGREEN || UnitsData.Type != Types::RESSTONE )
+  if( UnitsData.Type != Types::RESGOLDMINE || UnitsData.Type != Types::RESTREE || UnitsData.Type != Types::RESSTONE )
   {
     //UE_LOG( LogTemp, Warning, TEXT( "Object %s was not a resource" ), *UnitsData.Name );
   }

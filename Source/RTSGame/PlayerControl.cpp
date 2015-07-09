@@ -62,7 +62,7 @@ bool APlayerControl::TraceMulti(const FVector2D ScreenPosition, vector<FHitResul
       FCollisionQueryParams fqp("ClickableTrace", true);
       TArray<FHitResult> res;
       bool hit = GetWorld()->LineTraceMultiByChannel(res,
-        origin, endPt, ECollisionChannel::ECC_EngineTraceChannel1, fqp );
+        origin, endPt, ECollisionChannel::ECC_GameTraceChannel9, fqp );
       //UE_LOG( LogTemp, Warning, TEXT("-- Hit %d objects\n"), (int)res.Num() );
 
       for( int i = 0; i < res.Num(); i++ )
@@ -112,7 +112,7 @@ bool APlayerControl::Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& 
       
       FCollisionQueryParams fqp("ClickableTrace", true);
       bool h = actor->ActorLineTraceSingle( hit, origin, endPt,
-        ECollisionChannel::ECC_EngineTraceChannel1, fqp );
+        ECollisionChannel::ECC_GameTraceChannel9, fqp );
       return h;
 		}
 	}

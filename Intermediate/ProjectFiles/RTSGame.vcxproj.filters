@@ -120,14 +120,8 @@
     <ClCompile Include="..\..\Source\RTSGame\MyHUD.cpp">
       <Filter>Source\RTSGame\GAME</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\Camera.cpp">
-      <Filter>Source\RTSGame\GAME</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\AI.cpp">
       <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\CameraMan.cpp">
-      <Filter>Source\RTSGame\GAME</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\FlyCam.cpp">
       <Filter>Source\RTSGame\GAME</Filter>
@@ -148,6 +142,9 @@
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\Building.cpp">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClCompile>
   </ItemGroup>
@@ -212,14 +209,8 @@
     <ClInclude Include="..\..\Source\RTSGame\MyHUD.h">
       <Filter>Source\RTSGame\GAME</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\Camera.h">
-      <Filter>Source\RTSGame\GAME</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\AI.h">
       <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\CameraMan.h">
-      <Filter>Source\RTSGame\GAME</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\FlyCam.h">
       <Filter>Source\RTSGame\GAME</Filter>
@@ -258,6 +249,9 @@
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Building.h">
+      <Filter>Source\RTSGame\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\ItemShop.h">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClInclude>
   </ItemGroup>

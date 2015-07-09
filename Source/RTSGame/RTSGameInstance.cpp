@@ -45,7 +45,7 @@ AGameObject* URTSGameInstance::Make( Types type, FVector v, int teamId )
   }
   else
   {
-    UE_LOG( LogTemp, Warning, TEXT("URTSGameInstance::Make()") );
+    UE_LOG( LogTemp, Warning, TEXT("URTSGameInstance::Make() couldn't make object %s"), *uc->GetName() );
   }
   return go;
 }

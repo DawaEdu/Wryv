@@ -52,7 +52,7 @@ void AAvatar::MouseClicked()
   // Perform trace to retrieve hit info
   FHitResult hit( ForceInit );
   if( PController->GetHitResultAtScreenPosition(
-    mouse, ECollisionChannel::ECC_EngineTraceChannel1, true, hit ) )
+    mouse, ECollisionChannel::ECC_GameTraceChannel9, true, hit ) )
   {
     AActor* actor = hit.GetActor();
     if( actor )
@@ -66,7 +66,7 @@ void AAvatar::MouseClicked()
   }
   
   //GetWorld()->LineTraceSingle( Hit, StartTrace, EndTrace,
-  //  ECollisionChannel::ECC_EngineTraceChannel1, TraceParams ); // simple trace function
+  //  ECollisionChannel::ECC_GameTraceChannel9, TraceParams ); // simple trace function
   //FString fs = FString::Printf( TEXT( "Clicked on %s" ), actor->GetName() );
   //UE_LOG( LogTemp, Warning, TEXT("%s %d"), fs, 5 );
   //FString fs = FString::Printf( TEXT( "%f" ), 47.f );

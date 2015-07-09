@@ -4,6 +4,7 @@
 #include "Resource.h"
 #include "PlayerControl.h"
 #include "GameObject.h"
+#include "Building.h"
 #include "GlobalFunctions.h"
 #include "GroundPlane.h"
 #include "RTSGameInstance.h"
@@ -37,27 +38,35 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
 {
   check( InputComponent );
   Super::SetupPlayerInputComponent( InputComponent );
+  InitializeDefaultPawnInputBindings();
+  CameraZ = 2500.f;
 
   InputComponent->BindAxis( "Forward", this, &AFlyCam::MoveForward );
   InputComponent->BindAxis( "Left", this, &AFlyCam::MoveLeft );
   InputComponent->BindAxis( "Back", this, &AFlyCam::MoveBack );
   InputComponent->BindAxis( "Right", this, &AFlyCam::MoveRight );
-  
   InputComponent->BindAxis( "MouseX", this, &AFlyCam::MouseMovedX );
   InputComponent->BindAxis( "MouseY", this, &AFlyCam::MouseMovedY );
+
+  //InputComponent->AddAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
+  //InputComponent->AddAxisMapping(FInputAxisKeyMapping("CameraDown", EKeys::PageDown, 1.f));
+  InputComponent->BindAxis( "CameraUp", this, &AFlyCam::MoveCameraZUp );
+  InputComponent->BindAxis( "CameraDown", this, &AFlyCam::MoveCameraZDown );
+  
   InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseClicked );
   InputComponent->BindAction( "MouseClickedRMB", IE_Pressed, this, &AFlyCam::MouseRightClicked );
 
   // Bind a key press to displaying the menu
   InputComponent->BindKey( EKeys::F10, IE_Pressed, this, &AFlyCam::DisplayMenu );
-  
+  //InputComponent->BindKey( EKeys::PageUp, IE_Pressed, this, &AFlyCam::MoveCameraZUp );
+  //InputComponent->BindKey( EKeys::PageDown, IE_Pressed, this, &AFlyCam::MoveCameraZDown );
   FindFloor();
   //Setup();
 
   // Start the background music. Since we don't want attenuation,
   // we play the sound attached to the RootComponent of the Camera object,
   // and supply no further arguments.
-  music = UGameplayStatics::PlaySoundAttached( bkgMusic, RootComponent );
+  //music = UGameplayStatics::PlaySoundAttached( bkgMusic, RootComponent );
   sfxVolume = 1.f;
 
   // Construct the dialog boxes
@@ -76,6 +85,9 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
 
 void AFlyCam::InitializeDefaultPawnInputBindings()
 {
+  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
+  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraDown", EKeys::PageDown, 1.f));
+
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::W, 1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::S, -1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Up, 1.f));
@@ -85,6 +97,45 @@ void AFlyCam::InitializeDefaultPawnInputBindings()
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::A, -1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Right, 1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Left, -1.f));
+}
+
+void AFlyCam::MoveCameraZUp( float amount )
+{
+  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZUp(%f)"), amount );
+  if( Controller && amount )
+  {
+    FVector up( 0, 0, 1 );
+    AddMovementInput( up, movementSpeed*amount );
+  }
+}
+
+void AFlyCam::MoveCameraZDown( float amount )
+{
+  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZDown(%f)"), amount );
+  if( Controller && amount )
+  {
+    FVector down( 0, 0, -1 );
+    AddMovementInput( down, movementSpeed*amount );
+  }
+}
+
+void AFlyCam::SetCameraPosition( FVector2D perc )
+{
+  FVector startLoc = GetActorLocation();
+  FBox box = floor->GetComponentsBoundingBox();
+  FVector pos = box.Min;
+  
+  // X & Y are reversed because Y goes right, X goes fwd.
+  // Extents are HALF extents
+  pos += box.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
+  
+  // Move the camera back from the point on the plane in -cameraDir
+  // vertically move the camera up to the higher plane
+  // Move BACK in the direction of the fwd vector length of previous location
+  pos += camera->GetForwardVector() * -startLoc.Size();
+
+  FQuat q( 0.f, 0.f, 0.f, 0.f );
+  SetActorLocationAndRotation( pos, q );
 }
 
 void AFlyCam::NextTip()
@@ -115,7 +166,7 @@ FHitResult AFlyCam::LOS( FVector p, FVector q, TArray<AActor*> ignoredActors )
 
 void AFlyCam::SetColor( AActor* a, UMaterial* mat )
 {
-  vector<UMeshComponent*> meshes = AGameObject::GetComponentsOfType<UMeshComponent>( a );
+  vector<UMeshComponent*> meshes = AGameObject::GetComponentsByType<UMeshComponent>( a );
     for( int i = 0; i < meshes.size(); i++ )
       for( int j = 0; j < meshes[i]->GetNumMaterials(); j++ )
         meshes[i]->SetMaterial( j, mat );
@@ -207,8 +258,7 @@ void AFlyCam::InitLevel()
   
   FVector diff = box.Max - box.Min;
   vector<Types> intTypes;
-  intTypes.push_back( Types::RESTREEDECIDUOUS );
-  intTypes.push_back( Types::RESTREEEVERGREEN );
+  intTypes.push_back( Types::RESTREE );
   intTypes.push_back( Types::RESSTONE );
   intTypes.push_back( Types::RESGOLDMINE );
   
@@ -272,13 +322,15 @@ void AFlyCam::InitLevel()
 
 void AFlyCam::Setup()
 {
-  //UE_LOG( LogTemp, Warning, TEXT( "AFlyCam::Setup()" ) );
   // Frame setup. Runs at beginning of game frame.
-
   Game->pc = Cast<APlayerControl>( GetWorld()->GetFirstPlayerController() );
   Game->myhud = Cast<AMyHUD>( Game->pc->GetHUD() );
   Game->gm = (ARTSGameGameMode*)GetWorld()->GetAuthGameMode();
   Game->flycam = this;
+
+  // The pitch of the camera is setup in the game blueprint.
+  // we capture the camera component here
+  camera = GetComponentByName<UCameraComponent>( this, "Camera" );
   
   if( !setup )
   {
@@ -334,7 +386,7 @@ FHitResult AFlyCam::getHitGeometry()
   FVector2D mouse = getMousePos();
   // Trace into the scene and check what got hit.
   Game->pc->GetHitResultAtScreenPosition( mouse,
-    ECollisionChannel::ECC_EngineTraceChannel1, true, hit );
+    ECollisionChannel::ECC_GameTraceChannel9, true, hit );
   return hit;
 }
 
@@ -449,7 +501,6 @@ void AFlyCam::FindFloor()
     }
     
     //UE_LOG( LogTemp, Warning, TEXT("Actor: %s"), *a->GetName() );
-    
     // This is the actor we're checking for intersections with:
     // Cast to ground plane to check if the object is a GroundPlane object.
     if( a->IsA<AGroundPlane>() )

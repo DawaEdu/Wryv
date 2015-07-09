@@ -21,7 +21,6 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)
 	TArray< TEnumAsByte<Types> > Spells;
 
-  // The types of special attacks this hero has.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)
 	TArray< TEnumAsByte<Types> > Items;
 

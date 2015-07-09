@@ -18,7 +18,7 @@ Types AI::GetNeededResourceType( Team& team )
   }
   else if( lumberP < goldP   &&   lumberP < stoneP )
   {
-    return Types::RESTREEEVERGREEN;
+    return Types::RESTREE;
   }
   else
   {

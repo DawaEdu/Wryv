@@ -36,7 +36,6 @@ struct SpawnTime
   SpawnTime( AGameObject *spawn, float iTime ) : 
     spawning( spawn ), time( iTime )
   {
-    
   }
 };
 
@@ -100,7 +99,7 @@ public:
   // The queue of objects being spawned
   vector<AGameObject*> spawnQueue;
   
-  template <typename T> static vector<T*> GetComponentsOfType( AActor* a )
+  template <typename T> static vector<T*> GetComponentsByType( AActor* a )
   {
     TArray<UActorComponent*> comps = a->GetComponents();
     //UE_LOG( LogTemp, Warning, TEXT("# components %d"), comps.Num() );
@@ -120,6 +119,7 @@ public:
   float outsideDistance( AGameObject *go );
   FVector Pos();
   void SetPos(const FVector& pos);
+  FRotator GetRot();
   void SetRot( FRotator & ro );
   void CastSpell( Types type, AGameObject *target );
   bool Reached( FVector& v, float dist );

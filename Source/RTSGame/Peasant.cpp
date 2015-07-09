@@ -206,12 +206,9 @@ void APeasant::Mine( float t )
         // Just mined it. Get the resource.
         switch( mining->UnitsData.Type )
         {
-          case RESTREEEVERGREEN:  case RESTREEDECIDUOUS:
-            team->Lumber += mining->Multiplier;  break;
-          case RESGOLDMINE:
-            team->Gold += mining->Multiplier;  break;
-          case RESSTONE:
-            team->Stone += mining->Multiplier;  break;
+          case RESTREE:  team->Lumber += mining->Multiplier;  break;
+          case RESGOLDMINE:  team->Gold += mining->Multiplier;  break;
+          case RESSTONE:  team->Stone += mining->Multiplier;  break;
         }
 
         // We've mined.

@@ -16,11 +16,9 @@ enum Types
   UNITPEASANT       UMETA(DisplayName = "Peasant"),
   UNITFOOTMAN       UMETA(DisplayName = "Footman"),
   UNITARCHER        UMETA(DisplayName = "Archer"),
-  UNITJANE          UMETA(DisplayName = "Jane"),
 
   // Resources.
-  RESTREEDECIDUOUS  UMETA(DisplayName = "Resource Deciduous"),
-  RESTREEEVERGREEN  UMETA(DisplayName = "Resource Evergreen"),
+  RESTREE           UMETA(DisplayName = "Resource Tree"),
   RESSTONE          UMETA(DisplayName = "Resource Stone"),
   RESGOLDMINE       UMETA(DisplayName = "Resource Goldmine"),
 
@@ -28,6 +26,7 @@ enum Types
   BLDGFARM          UMETA(DisplayName = "Building Farm"),
   BLDGBARRACKS      UMETA(DisplayName = "Building Barracks"),
   BLDGTOWNHALL      UMETA(DisplayName = "Building Townhall"),
+  BLDGITEMSHOP      UMETA(DisplayName = "Building Itemshop"),
 
   // Spells.
   SPELLFIRE         UMETA(DisplayName = "Spell Fire"),
@@ -53,13 +52,13 @@ inline bool Between( int v, int lo, int hi ) {
   return lo <= v && v <= hi ;
 }
 inline bool IsUnit( Types b ) {
-  return Between( b, UNITPEASANT, UNITJANE );
+  return Between( b, UNITPEASANT, UNITARCHER );
 }
 inline bool IsBuilding( Types b ) {
   return Between( b, BLDGFARM, BLDGTOWNHALL );
 }
 inline bool IsResource( Types b ) {
-  return Between( b, RESTREEDECIDUOUS, RESGOLDMINE );
+  return Between( b, RESTREE, RESGOLDMINE );
 }
 inline bool IsItem( Types b ) {
   return Between( b, ITEMSPEEDUP, ITEMDEFENSEUP );

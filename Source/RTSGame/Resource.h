@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Building.h"
+#include "GameObject.h"
 #include "Resource.generated.h"
 
 UCLASS()
-class RTSGAME_API AResource : public ABuilding
+class RTSGAME_API AResource : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
 public:
@@ -14,7 +14,7 @@ public:
   // Multiply the amount mined each turn by this amount.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )
   int32 Multiplier;
-
+  
   //AResource(const FObjectInitializer& PCIP);
   void BeginPlay();
 };

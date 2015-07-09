@@ -55,11 +55,7 @@
     <ClCompile Include="..\..\Source\RTSGame\Avatar.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\Avatar.h" />
     <ClCompile Include="..\..\Source\RTSGame\Building.cpp" />
-    <ClCompile Include="..\..\Source\RTSGame\Camera.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\Building.h" />
-    <ClInclude Include="..\..\Source\RTSGame\Camera.h" />
-    <ClCompile Include="..\..\Source\RTSGame\CameraMan.cpp" />
-    <ClInclude Include="..\..\Source\RTSGame\CameraMan.h" />
     <ClCompile Include="..\..\Source\RTSGame\CombatUnit.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\CombatUnit.h" />
     <ClCompile Include="..\..\Source\RTSGame\DialogBox.cpp" />
@@ -74,7 +70,9 @@
     <ClCompile Include="..\..\Source\RTSGame\Item.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\Item.h" />
     <ClInclude Include="..\..\Source\RTSGame\ItemData.h" />
+    <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\Menu.cpp" />
+    <ClInclude Include="..\..\Source\RTSGame\ItemShop.h" />
     <ClInclude Include="..\..\Source\RTSGame\Menu.h" />
     <ClCompile Include="..\..\Source\RTSGame\MyHUD.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\MyHUD.h" />

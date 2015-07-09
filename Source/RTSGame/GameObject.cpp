@@ -158,6 +158,15 @@ void AGameObject::SetPos(const FVector& pos)
   RootComponent->SetWorldLocation( pos );
 }  
 
+FRotator AGameObject::GetRot()
+{
+  if( RootComponent )
+  {
+    return RootComponent->GetComponentRotation();
+  }
+  return FRotator( 0.f );
+}
+
 void AGameObject::SetRot( FRotator & ro )
 {
   if( RootComponent )

@@ -28,10 +28,12 @@ public:
   AGroundPlane *floor;
   AGameObject *ghost;
   Pathfinder *pathfinder;
+  UCameraComponent *camera;
 
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CameraZ;
   
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* bkgMusic;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* buildingPlaced;
@@ -65,7 +67,10 @@ public:
   
   // Called to bind functionality to input
   virtual void SetupPlayerInputComponent( UInputComponent* InputComponent ) override;
-  void InitializeDefaultPawnInputBindings() ;
+  void InitializeDefaultPawnInputBindings();
+  void MoveCameraZUp( float amount );
+  void MoveCameraZDown( float amount );
+  void SetCameraPosition( FVector2D perc );
   void NextTip();
   static void SetColor( AActor* a, UMaterial* mat );
   // Series of points to visualize
