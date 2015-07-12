@@ -46,8 +46,7 @@ public:
 
   // What this unit type spawns
   // Type of unit spawned when this widget is pressed.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
-  TArray< TEnumAsByte<Types> > Spawns;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte<Types> > Spawns;
 
   // The blueprint from which class instance came from
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UClass* uClass;

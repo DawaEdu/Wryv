@@ -8,6 +8,7 @@ using namespace std;
 #include "Peasant.generated.h"
 
 class AResource;
+class ABuilding;
 
 UCLASS()
 class RTSGAME_API APeasant : public AUnit
@@ -23,14 +24,14 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
   float MiningDistance;
   float MiningTime;  // Total time the peasant has been mining for
-  AGameObject* building; // The building this unit is building
+  ABuilding* building; // The building this unit is building
   AGameObject* repair; // The building this unit is currently repairing
   AResource* mining; // The Resource we are mining
 
   //APeasant(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
   AGameObject* Build( Types type, FVector location );
-  bool PlaceBuilding( AGameObject* go, FVector location );
+  bool PlaceBuilding( ABuilding* go, FVector location );
   AGameObject* PlaceBuildingAtRandomLocation( Types type );
   void Build( float t );
   void Repair( float t );

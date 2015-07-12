@@ -61,6 +61,9 @@
     <Filter Include="Source\RTSGame\Util">
       <UniqueIdentifier>{20564de1-ed88-428b-bb5c-a976ab538717}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\RTSGame\Data\unused">
+      <UniqueIdentifier>{e8734ccc-1059-41dc-a3e5-7ff817a04409}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\RTSGame\Avatar.cpp">
@@ -146,6 +149,15 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp">
       <Filter>Source\RTSGame\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Widget.cpp">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\IconGroup.cpp">
+      <Filter>Source\RTSGame\Data\unused</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Icon.cpp">
+      <Filter>Source\RTSGame\Data\unused</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -253,6 +265,18 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\ItemShop.h">
       <Filter>Source\RTSGame\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Widget.h">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\IconGroup.h">
+      <Filter>Source\RTSGame\Data\unused</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Icon.h">
+      <Filter>Source\RTSGame\Data\unused</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\CursorTexture.h">
+      <Filter>Source\RTSGame\Data</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

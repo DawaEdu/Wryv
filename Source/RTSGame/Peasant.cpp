@@ -7,6 +7,7 @@
 #include "GroundPlane.h"
 #include "Pathfinder.h"
 #include "AI.h"
+#include "Building.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
@@ -29,14 +30,14 @@ void APeasant::BeginPlay()
 AGameObject* APeasant::Build( Types type, FVector pos )
 {
   // Builds the building @ pos.
-  AGameObject* b = Game->Make( type, pos, team->teamId );
+  ABuilding* b = Cast<ABuilding>( Game->Make( type, pos, team->teamId ) );
 
   // Try and place the building can be placed @ position
   if( PlaceBuilding( b, pos ) )  return b;
   else  return NULL;
 }
 
-bool APeasant::PlaceBuilding( AGameObject* b, FVector pos )
+bool APeasant::PlaceBuilding( ABuilding* b, FVector pos )
 {
   // Check if building is placeable here.
   // Uses the graph to determine placeability, and puts nodes to blocked
@@ -77,7 +78,7 @@ AGameObject* APeasant::PlaceBuildingAtRandomLocation( Types type )
   UClass* uc = Game->unitsData[ type ].uClass;
 
   // Create the building (for size/dimensions @ placement attempts)
-  building = Cast<AGameObject>( GetWorld()->SpawnActor( uc ) );
+  building = Cast<ABuilding>( GetWorld()->SpawnActor( uc ) );
   
   // Get the dimensions of the building to know how to shift it
   // between placement attempts
@@ -286,7 +287,7 @@ void APeasant::SetTarget( AGameObject* go )
   }
   else if( go->isBuilding() )
   {
-    building = go;
+    building = Cast<ABuilding>( go );
   }
 }
 

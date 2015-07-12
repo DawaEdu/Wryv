@@ -28,7 +28,6 @@ void AGameObject::BeginPlay()
   dest = Pos();  // set the position to where the thing is.
   hp = UnitsData.HpMax;
   
-  buildProgress = 0.f; // reset build progress
   repairing = 1; // Units be default recover some HP each frame
   if( isBuilding() )  repairing = 0; // Buildings need an attending peasant to repair
   // Add the GameObject to the global collection of objects of this type
@@ -262,7 +261,7 @@ void AGameObject::Stop()
 void AGameObject::Tick( float t )
 {
 	Super::Tick( t );
-  
+
   // Recover HP at stock recovery rate
   if( repairing ) {
     hp += UnitsData.RepairHPFractionCost*t;
@@ -271,13 +270,6 @@ void AGameObject::Tick( float t )
   // Call the ai for this object type
   ai( t );
   
-  // Tick all the traits
-  for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
-    BonusTraits[i].time -= t;
-    if( BonusTraits[i].time <= 0 )
-      BonusTraits.erase( BonusTraits.begin() + i );
-  }
-
   // dest is modified by the attackTarget.
   // Move towards the destination as long as we're not in attackRange
   if( attackTarget )
@@ -434,16 +426,6 @@ AGameObject* AGameObject::GetClosestObjectOfType( Types type )
   return closestObject;
 }
 
-void AGameObject::ApplyEffect( Types type )
-{
-  // timeLength, dataSet
-  FUnitsDataRow dataSet = Game->unitsData[ type ];
-  UE_LOG( LogTemp, Warning, TEXT("Applying %s for %f seconds"),
-    *dataSet.Name, dataSet.TimeLength );
-
-  BonusTraits.push_back( PowerUpTimeOut( dataSet.TimeLength, dataSet ) );
-}
-
 bool AGameObject::LOS( FVector p )
 {
   FHitResult hit;
@@ -525,12 +507,61 @@ void AGameObject::SetDestination( FVector d )
   // the path.
 }
 
-FUnitsDataRow AGameObject::GetTraits()
+// Populate the spawnqueue
+void AGameObject::RefreshSpawnQueue()
 {
-  FUnitsDataRow data = UnitsData;
-  for( int i = 0; i < BonusTraits.size(); i++ )
-    data += BonusTraits[i].traits;
-  return data;
+  StackPanel* sq = Game->myhud->spawnQueue;
+
+  // Clear existing widgets
+  sq->Clear();
+
+  // Things that are spawning.
+  for( int i = 0; i < spawnQueue.size(); i++ )
+  {
+    SpawningObject so = spawnQueue[i];
+    
+    // Program-in removal logic
+    ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.type ].Icon );
+    img->OnClicked = [this,i](){
+      // Remove this entry from the spawnQueue
+      // then refresh the spawn queue
+      spawnQueue.erase( spawnQueue.begin()+i );
+      RefreshSpawnQueue();
+    };
+    img->OnHover = [](){
+      
+    };
+    sq->StackRight( img );
+  }
 }
 
+void AGameObject::OnSelected()
+{
+  // Clear the items palette
+  Game->myhud->itemSlots->Clear();
+
+  Game->myhud->itemSlots->SetNumSlots( 0, 0 );
+
+  // when a gameobject is selected, the picture/icon is updated
+  //Game->myhud->selectedIcon->Icon = Widget.Icon;
+  RefreshSpawnQueue();
+
+  // track object's attacktarget
+  Game->myhud->SetAttackTargetSelector( attackTarget );
+}
+
+FString AGameObject::PrintStats()
+{
+  // puts the stats into an fstring
+  FString stats = FString::Printf( TEXT( "%s\nAttack Damage %d\nArmor %d" ),
+    *UnitsData.Name, UnitsData.AttackDamage, UnitsData.Armor );
+  return stats;
+}
+
+float AGameObject::GetBoundingRadius()
+{
+  FVector2D size;
+  GetComponentsBoundingCylinder( size.X, size.Y, 1 );
+  return size.GetMax();
+}
 

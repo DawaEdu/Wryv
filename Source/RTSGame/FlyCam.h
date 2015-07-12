@@ -55,7 +55,7 @@ public:
   UMenu *menu;
   UTipsBox *tipsBox;
   int tipNumber;
-
+  
   // For stats INFO on display
   bool setup;
   float movementSpeed;
@@ -72,6 +72,8 @@ public:
   void MoveCameraZDown( float amount );
   void SetCameraPosition( FVector2D perc );
   void NextTip();
+  void DisplayMenu();
+  FHitResult LOS( FVector p, FVector q, TArray<AActor*> ignoredActors );
   static void SetColor( AActor* a, UMaterial* mat );
   // Series of points to visualize
   void Visualize( FVector& v, UMaterial* color );
@@ -79,12 +81,11 @@ public:
   AActor* MakeSphere( FVector center, float radius, UMaterial* color );
   AActor* MakeCube( FVector center, float radius, UMaterial* color );
   AActor* MakeLine( FVector a, FVector b, UMaterial* color );
-  void DisplayMenu();
-  FHitResult LOS( FVector p, FVector q, TArray<AActor*> ignoredActors );
   void InitLevel();
-  FVector getRandomLocation();
   void Setup();
-
+  void debug( int slot, FColor color, FString mess );
+  void setGhost( Types ut );
+  
   FVector2D getMousePos();
   FHitResult getHitGeometry();
   vector<FHitResult> getAllHitGeometry();
@@ -94,18 +95,18 @@ public:
   bool intersectsAnyOfType( AActor* actor, vector<Types>& types );
   
   void FindFloor();
-  void MouseClicked();
-  void MouseRightClicked();
+  void MouseLeftDown();
+  void MouseLeftUp();
+  void MouseRightDown();
+  void MouseRightUp();
   void MouseMoved();
   void MouseMovedX( float amount );
   void MouseMovedY( float amount );
   
   void MoveForward( float amount );
   void MoveBack( float amount );
-  void MoveRight( float amount );
   void MoveLeft( float amount );
-  void debug( int slot, FColor color, FString mess );
-  void setGhost( Types ut );
+  void MoveRight( float amount );
   
 	virtual void BeginPlay() override;
 	virtual void Tick( float t ) override;

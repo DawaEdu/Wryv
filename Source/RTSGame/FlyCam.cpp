@@ -53,8 +53,10 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   InputComponent->BindAxis( "CameraUp", this, &AFlyCam::MoveCameraZUp );
   InputComponent->BindAxis( "CameraDown", this, &AFlyCam::MoveCameraZDown );
   
-  InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseClicked );
-  InputComponent->BindAction( "MouseClickedRMB", IE_Pressed, this, &AFlyCam::MouseRightClicked );
+  InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseLeftDown );
+  InputComponent->BindAction( "MouseClickedLMB", IE_Released, this, &AFlyCam::MouseLeftUp );
+  InputComponent->BindAction( "MouseClickedRMB", IE_Pressed, this, &AFlyCam::MouseRightDown );
+  InputComponent->BindAction( "MouseClickedRMB", IE_Released, this, &AFlyCam::MouseRightUp );
 
   // Bind a key press to displaying the menu
   InputComponent->BindKey( EKeys::F10, IE_Pressed, this, &AFlyCam::DisplayMenu );
@@ -324,13 +326,16 @@ void AFlyCam::Setup()
 {
   // Frame setup. Runs at beginning of game frame.
   Game->pc = Cast<APlayerControl>( GetWorld()->GetFirstPlayerController() );
-  Game->myhud = Cast<AMyHUD>( Game->pc->GetHUD() );
+  HotSpot::hud = Game->myhud = Cast<AMyHUD>( Game->pc->GetHUD() );
   Game->gm = (ARTSGameGameMode*)GetWorld()->GetAuthGameMode();
   Game->flycam = this;
 
   // The pitch of the camera is setup in the game blueprint.
   // we capture the camera component here
   camera = GetComponentByName<UCameraComponent>( this, "Camera" );
+
+  // Initialize the data table.
+  Game->Init();
   
   if( !setup )
   {
@@ -517,16 +522,24 @@ void AFlyCam::FindFloor()
   }
 }
 
-void AFlyCam::MouseClicked()
+void AFlyCam::MouseLeftUp()
 {
-  AGameObject* lo = Game->myhud->lastClickedObject;
+  UE_LOG( LogTemp, Warning, TEXT("MouseLeftUp") );
+  Game->myhud->MouseLeftUp( getMousePos() );
+}
+
+void AFlyCam::MouseLeftDown()
+{
+  UE_LOG( LogTemp, Warning, TEXT("MouseLeftDown") );
   
   // First, test for intersect with UI
   FVector2D mouse = getMousePos();
 
+  AGameObject* lo = Game->myhud->lastClickedObject;
+  
   // Check if the mouse was clicked on the HUD.
   // If the wood panel was clicked, we would enter here as well,
-  if( Game->myhud->MouseClicked( mouse ) )
+  if( Game->myhud->MouseLeftDown( mouse ) )
   {
     // The HUD was clicked. The lastClickedWidget
     // is the building that was selected for placement.
@@ -604,13 +617,21 @@ void AFlyCam::MouseClicked()
   // When not placing a building OR casting a spell, we're picking something.
   // from the screen whose info should be displayed in the sidebar.
   UE_LOG( LogTemp, Warning, TEXT("Clicked on %s"), *hit->UnitsData.Name );
-    
+  
+  // Here we check if we need to change the selected unit  
   // Change selected object, as long as a spell wasn't queued on LO
   if( hit != floor )
   {
     // if there is a lastObject WITH a spell queued, then don't change the selected object.
-    if( !( lo   &&   lo->NextSpell ) )
+    if( lo   &&   lo->NextSpell )
+    {
+      // Setting spell target to the object that was hit
+    }
+    else
+    {
       Game->myhud->lastClickedObject = hit;
+      hit->OnSelected();
+    }
   }
 
   ///////////////////////////
@@ -619,8 +640,9 @@ void AFlyCam::MouseClicked()
   //UE_LOG( LogTemp, Warning, TEXT("%f %f %f"), hitPos.X, hitPos.Y, hitPos.Z );
 }
 
-void AFlyCam::MouseRightClicked()
+void AFlyCam::MouseRightDown()
 {
+  UE_LOG( LogTemp, Warning, TEXT("MouseRightDown") );
   AGameObject *lo = Game->myhud->lastClickedObject;
   FHitResult hit = getHitGeometry();
   if( hit.Actor != floor )
@@ -644,14 +666,32 @@ void AFlyCam::MouseRightClicked()
   }
 }
 
+void AFlyCam::MouseRightUp()
+{
+  UE_LOG( LogTemp, Warning, TEXT("MouseRightUp") );
+  
+}
+
 void AFlyCam::MouseMoved()
 {
   //UE_LOG( LogTemp, Warning, TEXT("MouseMoved() frame %d"), Game->tick );
   Setup(); // This is here because it runs first for some reason (before ::Tick())
   FVector2D mouse = getMousePos();
   Game->myhud->MouseMoved( mouse );
+
+  // if the mouse button is down, then its a drag event, elsee its a hover event
+  bool leftMouseDown = Game->pc->IsDown( EKeys::LeftMouseButton );
+  if( leftMouseDown )
+  {
+    // drag event
+
+  }
+  else
+  {
+    // hover event
+  }
+
   FHitResult hit = getHitGeometry();
-  Game->myhud->selector->SetActorLocation( hit.ImpactPoint );
   
   // If you're sliding the mouse along the floor,
   if( ghost && hit.Actor == floor )
@@ -662,6 +702,8 @@ void AFlyCam::MouseMoved()
 
 void AFlyCam::MouseMovedX( float amount )
 {
+  // Just calls MouseMoved() where mouse pixel
+  // coords are extracted from getMousePos()
   MouseMoved();
 }
 
@@ -683,16 +725,6 @@ void AFlyCam::MoveForward( float amount )
   }
 }
 
-void AFlyCam::MoveLeft( float amount )
-{
-  if( Controller && amount )
-  {
-    //UE_LOG( LogTemp, Warning, TEXT("MoveLeft %f"), amount );
-    FVector left( 0, -1, 0 );
-    AddMovementInput( left, movementSpeed*amount );
-  }
-}
-
 void AFlyCam::MoveBack( float amount )
 {
   if( Controller && amount )
@@ -700,6 +732,16 @@ void AFlyCam::MoveBack( float amount )
     //UE_LOG( LogTemp, Warning, TEXT("MoveBack %f"), amount );
     FVector back( -1, 0, 0 );
     AddMovementInput( back, movementSpeed*amount );
+  }
+}
+
+void AFlyCam::MoveLeft( float amount )
+{
+  if( Controller && amount )
+  {
+    //UE_LOG( LogTemp, Warning, TEXT("MoveLeft %f"), amount );
+    FVector left( 0, -1, 0 );
+    AddMovementInput( left, movementSpeed*amount );
   }
 }
 

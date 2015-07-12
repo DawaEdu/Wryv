@@ -10,6 +10,7 @@ class RTSGAME_API ABuilding : public AGameObject
 	
 public:
   //ABuilding(const FObjectInitializer& PCIP);
-
+  float buildProgress;    // When a unit is building, this is the % progress it is to completion.
   
+  virtual void Tick( float t ) override;
 };

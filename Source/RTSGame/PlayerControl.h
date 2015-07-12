@@ -17,4 +17,6 @@ public:
   FSceneView* GetSceneView(ULocalPlayer* LocalPlayer);
   bool TraceMulti(const FVector2D ScreenPosition, vector<FHitResult>& HitResult);
 	bool Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& hit);
+
+  bool IsDown( FKey key );
 };

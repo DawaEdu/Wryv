@@ -59,6 +59,7 @@
     <ClCompile Include="..\..\Source\RTSGame\CombatUnit.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\CombatUnit.h" />
     <ClCompile Include="..\..\Source\RTSGame\DialogBox.cpp" />
+    <ClInclude Include="..\..\Source\RTSGame\CursorTexture.h" />
     <ClInclude Include="..\..\Source\RTSGame\DialogBox.h" />
     <ClCompile Include="..\..\Source\RTSGame\FlyCam.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\FlyCam.h" />
@@ -67,7 +68,11 @@
     <ClInclude Include="..\..\Source\RTSGame\GlobalFunctions.h" />
     <ClCompile Include="..\..\Source\RTSGame\GroundPlane.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\GroundPlane.h" />
+    <ClCompile Include="..\..\Source\RTSGame\Icon.cpp" />
+    <ClCompile Include="..\..\Source\RTSGame\IconGroup.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\Item.cpp" />
+    <ClInclude Include="..\..\Source\RTSGame\Icon.h" />
+    <ClInclude Include="..\..\Source\RTSGame\IconGroup.h" />
     <ClInclude Include="..\..\Source\RTSGame\Item.h" />
     <ClInclude Include="..\..\Source\RTSGame\ItemData.h" />
     <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp" />
@@ -112,7 +117,9 @@
     <ClInclude Include="..\..\Source\RTSGame\Vector2f.h" />
     <ClCompile Include="..\..\Source\RTSGame\Weapon.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\Weapon.h" />
+    <ClCompile Include="..\..\Source\RTSGame\Widget.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\WidgetData.cpp" />
+    <ClInclude Include="..\..\Source\RTSGame\Widget.h" />
     <ClInclude Include="..\..\Source\RTSGame\WidgetData.h" />
     <ResourceCompile Include="..\..\Source\RTSGame\Resources\Windows\RTSGame.rc" />
   </ItemGroup>

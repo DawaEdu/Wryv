@@ -17,26 +17,12 @@ class AGameObject;
 struct Team;
 struct FWidgetData;
 
-struct PowerUpTimeOut
+struct SpawningObject
 {
   float time;
-  FUnitsDataRow traits;
-  PowerUpTimeOut():time(0.f){}
-  PowerUpTimeOut( float t, FUnitsDataRow &iTraits ) :
-    time( t ), traits( iTraits ) { }
-  void Tick( float t ) { time += t; }
-};
-
-struct SpawnTime
-{
-  float time;
-  AGameObject *spawning;
-
-  SpawnTime() : time(0.f), spawning(0) { }
-  SpawnTime( AGameObject *spawn, float iTime ) : 
-    spawning( spawn ), time( iTime )
-  {
-  }
+  Types type;
+  SpawningObject() : time(0.f), type(Types::NOTHING) {}
+  SpawningObject( float iTime, Types iType ) : time(iTime), type(iType) {}
 };
 
 UCLASS()
@@ -45,33 +31,18 @@ class RTSGAME_API AGameObject : public AActor
   GENERATED_UCLASS_BODY()
 public:
   // The full set of units data.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)
-  FUnitsDataRow UnitsData;
-
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow UnitsData;
   // Cooldown on this unit since last attack
   float attackCooldown;
-
   // The HP that this unit currently has. Floating point qty so
   // heal/damage effects can be continuous (fractions of a hitpoint
   // can be added per-frame).
   float hp;
-
-  // If the unit is repairing itself
-  bool repairing;
-
-  // When a unit is building, this is the % progress it is to completion.
-  float buildProgress;
-
-  // List set of traits that gets applied due to powerups
-  //   0.025 => FUnitsDataRow()
-  //   0.150 => FUnitsDataRow()
-  //   0.257 => FUnitsDataRow()
-  vector< PowerUpTimeOut > BonusTraits;
-
+  bool repairing;         // If the building/unit is repairing
+  
   // The widget for this object type. Specified in the blueprint for this object type
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitWidget)
-  FWidgetData Widget;
-
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitWidget)  FWidgetData Widget;
+  
   // Do we use the datatable to fill this unit with data.
   bool LoadsFromTable;
   vector<FVector> waypoints;
@@ -92,13 +63,11 @@ public:
   // This variable is here because the unit may not be in range
   // @ time spell is queued.
   Types NextSpell;
-  
-  // Contains the team logic.
-  Team *team;
+  Team *team;   // Contains the team logic.
 
-  // The queue of objects being spawned
-  vector<AGameObject*> spawnQueue;
-  
+  // The queue of objects being spawned. Each has a time before it is spawned.
+  vector<SpawningObject> spawnQueue;
+
   template <typename T> static vector<T*> GetComponentsByType( AActor* a )
   {
     TArray<UActorComponent*> comps = a->GetComponents();
@@ -136,12 +105,14 @@ public:
 	map<float, AGameObject*> FindEnemyUnitsInSightRange();
 	AGameObject* GetClosestObjectOfType( Types type );
 
-  void ApplyEffect( Types type );
   bool LOS( FVector p );
   // Set the color of the actor
   void SetDestination( FVector d );
-  FUnitsDataRow GetTraits();
-  
+  void RefreshSpawnQueue();
+  virtual void OnSelected();
+  FString PrintStats();
+  float GetBoundingRadius();
+
   bool isUnit(){ return IsUnit( UnitsData.Type ); }
   bool isBuilding(){ return IsBuilding( UnitsData.Type ); }
   bool isResource(){ return IsResource( UnitsData.Type ); }

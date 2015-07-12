@@ -120,3 +120,9 @@ bool APlayerControl::Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& 
 	return false;
 }
 
+bool APlayerControl::IsDown( FKey key )
+{
+  return GetInputKeyTimeDown( key ) != 0.f;
+}
+
+
