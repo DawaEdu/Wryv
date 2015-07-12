@@ -19,10 +19,12 @@ struct FWidgetData;
 
 struct SpawningObject
 {
-  float time;
-  Types type;
-  SpawningObject() : time(0.f), type(Types::NOTHING) {}
-  SpawningObject( float iTime, Types iType ) : time(iTime), type(iType) {}
+  float Time, TotalTime;
+  Types Type;
+  SpawningObject() : Time(0.f), TotalTime(1.f), Type(Types::NOTHING) {}
+  SpawningObject( float totalTime, Types type ) :
+    Time(0.f), TotalTime(totalTime), Type(type) {}
+  float Percent() { return Time/TotalTime; }
 };
 
 UCLASS()

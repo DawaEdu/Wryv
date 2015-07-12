@@ -24,12 +24,12 @@ AMyHUD::AMyHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   selector = 0;
   selectorAttackTarget = 0;
   selectorShopPatron = 0;
-  lastClickedObject = 0;
+  SelectedObject = 0;
   hoverWidget = 0;
-  itemSlots = 0;
+  itemBelt = 0;
   buffs = 0;
   spawnQueue = 0;
-
+  
   Init = 0; // Have the slots & widgets been initialied yet? can only happen
   // in first call to draw.
 }
@@ -41,7 +41,7 @@ void AMyHUD::BeginDestroy()
   delete rightPanel;
   delete resourcesWidget;
   delete tooltip;
-  delete itemSlots;
+  delete itemBelt;
   delete buffs;
   delete spawnQueue;
 }
@@ -49,30 +49,33 @@ void AMyHUD::BeginDestroy()
 void AMyHUD::InitWidgets()
 {
   if( Init ) return;
-  Init=1;
+  Init = 1;
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
   ResourcesWidget::GoldTexture = GoldIconTexture;
   ResourcesWidget::LumberTexture = LumberIconTexture;
   ResourcesWidget::StoneTexture = StoneIconTexture;
+  SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
+  SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
+
   resourcesWidget = new ResourcesWidget( 16 );
   tooltip = new Tooltip( TooltipBackgroundTexture, FString("tooltip"), FVector2D(8,8) );
 
   // Create the panel for containing items/inventory
   FVector2D size( 400, 100 );
-  FVector2D pos( ( Canvas->SizeX - size.X )/2, Canvas->SizeY - size.Y );
-  itemSlots = new SlotPalette( 1, 4, SlotPanelTexture, pos, size );
-  //AddDebugText( "Hello", this, 25.f, FVector(0.f), FVector(0.f), FLinearColor::White );
+  FVector2D pos( ( Canvas->SizeX - size.X )/2, Canvas->SizeY - size.Y - BarSize );
+  itemBelt = new SlotPalette( SlotPaletteTexture, pos, size, 1, 4 );
   
-  minimap = new ImageWidget( texMinimap, FVector2D(0,0),
-    FVector2D( texMinimap->GetSurfaceWidth(), texMinimap->GetSurfaceHeight() ) );
+  minimap = new Minimap( texMinimap, FVector2D(0, 0),
+    FVector2D( texMinimap->GetSurfaceWidth(), texMinimap->GetSurfaceHeight() ),
+    8.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
 
-  rightPanel = new Panel( RightPanelTexture, FVector2D(256, Canvas->SizeY), 4 );
+  rightPanel = new Panel( RightPanelTexture, FVector2D( 256, Canvas->SizeY ), 4 );
   rightPanel->Icon->Icon = texIcon;
 
-  buffs = new StackPanel( FVector2D( 16, 16 ), FVector2D( 4, 4 ) );
+  buffs = new StackPanel( FVector2D( 24, 24 ), FVector2D( 4, 4 ) );
 
-  spawnQueue = new StackPanel( FVector2D( 64, 64 ), FVector2D( 6, 6 ) );
+  spawnQueue = new StackPanel( FVector2D( 50, 50 ), FVector2D( 4, 4 ) );
 
   // Keep one of these for showing costs on flyover
   costWidget = new CostWidget();
@@ -82,6 +85,7 @@ void AMyHUD::InitWidgets()
 
 void AMyHUD::Setup()
 {
+  
   FVector v(0.f);
   FRotator r(0.f);
   if( !selector )  selector = GetWorld()->SpawnActor<AActor>( uClassSelector, v, r );
@@ -125,81 +129,20 @@ void AMyHUD::Setup()
   int j = 0;
   for( pair<const Types, FWidgetData>& p : widgets )
   {
-    UE_LOG( LogTemp, Warning, TEXT("%d Icon: %s, %d pointer=%p" ),
-      j, *p.second.Label, (int)p.second.Type.GetValue(), p.second.Icon );
+    UE_LOG( LogTemp, Warning, TEXT("Entry %d:  Icon: %s, %d" ),
+      j, *p.second.Label, (int)p.second.Type.GetValue() );
     j++;
   }
 
-  // check if the canvas width is available
-  // It doesn't look like these sizes are correct on initial load,
-  // because the canvas may not be setup yet, but we put it here anyway
-  float w = 256.f, h = 256.f, panelWidth = 256.f;
-  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::SetupPlayerInputComponent() w=%f, h=%f"), w, h );
-  
-  // No selected building to begin with
-  lastClickedObject = 0;
-  
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" ); //rs[0];
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" ); //rs[1];
-}
-
-void AMyHUD::DrawWidget( FWidgetData& w )
-{
-  UE_LOG( LogTemp, Warning, TEXT( "can't render widgetdata's!" ) );
-
-  if( w.Icon )
-  {
-    //DrawTexture( w.Icon, w.Pos.X, w.Pos.Y, w.Size.X, w.Size.Y, 0, 0, 1, 1 );
-  }
-  else
-  {
-    UE_LOG( LogTemp, Warning, TEXT( "No texture in %s %s" ), *GetEnumName( w.Type ), *w.Label );
-  }
-
-  //DrawText( w.Label, w.TextColor, w.TextPos.X, w.TextPos.Y );
-}
-
-void AMyHUD::DrawGroup( TArray< TEnumAsByte<Types> >& v, float xPos, float yPos, float size, float margin, bool horizontalStack, bool label, bool purchaseables )
-{
-  // Collect as a map. How many of each type do you have?
-  map< Types, int > items;
-  for( int i = 0; i < v.Num(); i++ )
-    items[ v[i] ]++;
-
-  // Draw Name:Qty of each item
-  int i = 0;
-  for( pair<Types,int> p : items )
-  {
-    // take stock copies of the building widgets and draw it
-    FWidgetData bw = widgets[ p.first ];
-    if( label ) // Draw the QTY
-      bw.Label = GetEnumName( p.first ) + FString::Printf( TEXT(" x %d"), p.second ) ;
-    
-    bw.Size = FVector2D( size, size );
-
-    int cols = 3;
-    // Stacking horizontal/vertical
-    ////bw.Pos = FVector2D( xPos, yPos );
-    ////bw.Pos.X += (i%cols)*(bw.Size.X + margin);
-    ////bw.Pos.Y -= (i/cols)*(bw.Size.Y + margin);
-    ////
-    ////bw.TextPos = FVector2D( bw.Pos.X, bw.Pos.Y + bw.Size.Y );
-
-    //UE_LOG( LogTemp, Warning, TEXT("i=%d"), i );
-
-    // To track hits, we store this in the frameWidgets collection
-    frameWidgets.push_back( bw );
-    DrawWidget( bw );
-
-    i++;
-  }
 }
 
 void AMyHUD::SetAttackTargetSelector( AGameObject* target )
 {
   if( target )
   {
-    FVector v = lastClickedObject->attackTarget->Pos();
+    FVector v = SelectedObject->attackTarget->Pos();
     if( Game->flycam->floor )
     {
       //UE_LOG( LogTemp, Warning, TEXT("-- %s"), *Game->flycam->floor->UnitsData.Name );
@@ -219,7 +162,7 @@ void AMyHUD::SetShopTargetSelector( AGameObject* target )
 {
   if( target )
   {
-    if( AItemShop *is = Cast<AItemShop>( lastClickedObject ) )
+    if( AItemShop *is = Cast<AItemShop>( SelectedObject ) )
     {
       FVector v = is->patron->Pos();
       selectorShopPatron->SetActorLocation( v );
@@ -232,41 +175,23 @@ void AMyHUD::SetShopTargetSelector( AGameObject* target )
   }
 }
 
-void AMyHUD::DrawSidebar()
+void AMyHUD::DrawSelectedObjectStats()
 {
-  float w = Canvas->SizeX;
-  float h = Canvas->SizeY;
-
-  rightPanel->Pos.X = w - rightPanel->Size.X;
-  rightPanel->render();
-
-  // Minimap is lower left
-  minimap->Pos.X = 0;
-  minimap->Pos.Y = h - minimap->Size.Y - BarSize - 0;
-  
-  // Draw the minimap
-  FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-  float boxMax = box.GetExtent().GetMax();
-
-  // Render the minimap
-  RenderScreen( rendererMinimap, texMinimap, Game->flycam->floor->Pos(), boxMax, FVector( 0, 0, -1 ) );
-  minimap->render();
-  
-  if( lastClickedObject )
+  if( SelectedObject )
   {
+    // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
+    // Print unit's stats into the stats panel
+    rightPanel->UnitStats->SetText( SelectedObject->PrintStats() );
+    rightPanel->Icon->Icon = SelectedObject->Widget.Icon;
+
     // render last-clicked object to texture
     // zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, texIcon, lastClickedObject->Pos(), lastClickedObject->GetBoundingRadius(), camDir );
+    RenderScreen( rendererIcon, texIcon, SelectedObject->Pos(), SelectedObject->GetBoundingRadius(), camDir );
     
-    // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
-    // Print unit's stats into the stats panel
-    rightPanel->UnitStats->SetText( lastClickedObject->PrintStats() );
-    //rightPanel->icon->Icon = lastClickedObject->Widget.Icon;
-
-    // Draw the buffs
+    // PER-FRAME: Clear & then re-draw the buffs
     buffs->Clear(); // Clear any existing/previous buffs.
-    if( AUnit* unit = Cast<AUnit>( lastClickedObject ) )
+    if( AUnit* unit = Cast<AUnit>( SelectedObject ) )
     {
       // Go through the applied buffs
       for( int i = 0; i < unit->BonusTraits.size(); i++ )
@@ -276,16 +201,55 @@ void AMyHUD::DrawSidebar()
       }
     }
 
-    ////////////////////
+    // Clear & re-draw the spawn queue
     // Draw icons for the objects being spawned, and their progress.
-    for( int i = 0; i < lastClickedObject->spawnQueue.size(); i++ )
+    spawnQueue->Clear();
+    SelectedObject->spawnQueue.clear();
+    SelectedObject->spawnQueue.push_back( SpawningObject( 8.f, Types::UNITFOOTMAN ) );
+    SelectedObject->spawnQueue.push_back( SpawningObject( 8.f, Types::UNITFOOTMAN ) );
+    for( int i = 0; i < SelectedObject->spawnQueue.size(); i++ )
     {
-      Types type = lastClickedObject->spawnQueue[i].type;
-      FWidgetData w = Game->myhud->widgets[ type ];
-      w.Size = FVector2D( 100.f, 100.f );
-      // Draw a cooldownpie
+      SpawningObject so = SelectedObject->spawnQueue[i];
+      ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.Type ].Icon );
+      img->Color.A = so.Percent();
+      spawnQueue->StackRight(img);
+
+      // Draw a cooldownpie on top of each node
+      //img->Add( new CooldownPie( so.time ) );
     }
   }
+}
+
+void AMyHUD::DrawSidebar()
+{
+  DrawSelectedObjectStats();
+  rightPanel->Pos.X = Canvas->SizeX - rightPanel->Size.X;
+  rightPanel->render();
+  
+  // Buffs appear in lower center
+  //buffs->Pos = FVector2D( (Canvas->SizeX - buffs->Size.X)/ 2, Canvas->SizeY - buffs->Size.Y - BarSize );
+  buffs->Pos = FVector2D( 0, Canvas->SizeY / 2 );
+  buffs->render();
+
+  // center it
+  spawnQueue->Pos.X = 0;//(Canvas->SizeX - spawnQueue->Size.X)/2;
+  spawnQueue->Pos.Y = 0;//Canvas->SizeY - spawnQueue->Size.Y - BarSize;
+  spawnQueue->render();
+}
+
+void AMyHUD::DrawMinimap()
+{
+  FVector2D pad(0,0);
+  minimap->Pos.X = pad.X;
+  minimap->Pos.Y = Canvas->SizeY - minimap->Size.Y - BarSize - pad.Y;
+  
+  // Draw the minimap
+  FBox box = Game->flycam->floor->GetComponentsBoundingBox();
+  float boxMax = box.GetExtent().GetMax();
+
+  // Render the minimap
+  RenderScreen( rendererMinimap, texMinimap, Game->flycam->floor->Pos(), boxMax, FVector( 0, 0, -1 ) );
+  minimap->render();
 }
 
 void AMyHUD::UpdateDisplayedResources()
@@ -350,9 +314,10 @@ void AMyHUD::DrawHUD()
   DrawBottomBar();
   DrawTopBar();
   
-  itemSlots->render();
+  itemBelt->render();
 
   DrawSidebar();
+  DrawMinimap();
   DrawMouseCursor();
 }
 
@@ -363,15 +328,15 @@ bool AMyHUD::Purchase( Types itemType )
   
   // Can afford it.
   Game->gm->playersTeam->Spend( itemType );
-  // Increment inventory of this item on lastClickedObject.
+  // Increment inventory of this item on SelectedObject.
 
   // Purchase an item means
   if( IsUnit( itemType ) ) {
     // purchasing a unit adds it to your team
-    if( lastClickedObject )
+    if( SelectedObject )
     {
       // add to spawn queue of the lco
-      lastClickedObject->spawnQueue.push_back( SpawningObject( 0, itemType ) );
+      SelectedObject->spawnQueue.push_back( SpawningObject( 0, itemType ) );
     }
   }
   else if( IsBuilding( itemType ) ) {
@@ -379,10 +344,10 @@ bool AMyHUD::Purchase( Types itemType )
     NextBuilding = itemType;
   }
   else if( IsItem( itemType ) ) {
-    // give item to lastClickedObject
-    if( lastClickedObject )
+    // give item to SelectedObject
+    if( SelectedObject )
     {
-      AItemShop *shop = (AItemShop *)lastClickedObject;
+      AItemShop *shop = (AItemShop *)SelectedObject;
       if( shop && shop->patron )
       {
         shop->patron->Items.Push( itemType ) ;
@@ -407,8 +372,8 @@ void AMyHUD::RunEvent( Types buttonType )
   {
     // Single use items
     UE_LOG( LogTemp, Warning, TEXT( "Effect %s" ), *Game->unitsData[ buttonType ].Name );
-    // Apply the speedup to the lastClickedObject (currently selected unit)
-    ////lastClickedObject->ApplyEffect( buttonType );
+    // Apply the speedup to the SelectedObject (currently selected unit)
+    ////SelectedObject->ApplyEffect( buttonType );
   }
   else if( IsSpell( buttonType ) )
   {
@@ -434,7 +399,7 @@ bool AMyHUD::MouseLeftDown( FVector2D mouse )
   if( !Init ) return 0;
   UE_LOG( LogTemp, Warning, TEXT("Mouse clicked on hud") );
 
-  itemSlots->Click( mouse );
+  itemBelt->Click( mouse );
   
   // capture minimap event first
   if( minimap->hit( mouse ) )
@@ -474,12 +439,11 @@ bool AMyHUD::MouseLeftUp( FVector2D mouse )
   // Form a box shaped selection
   TArray<AActor*> actors;
   selectBox += mouse;
-  Game->myhud->GetActorsInSelectionRectangle( selectBox.Min, selectBox.Max, actors );
-
-  for( int i = 0; i < actors.Num(); i++ )
-  {
-    UE_LOG( LogTemp, Warning, TEXT("Selected %s"), *actors[i]->GetName() );
-  }
+  //Game->myhud->GetActorsInSelectionRectangle( selectBox.Min, selectBox.Max, actors );
+  //for( int i = 0; i < actors.Num(); i++ )
+  //{
+  //  UE_LOG( LogTemp, Warning, TEXT("Selected %s"), *actors[i]->GetName() );
+  //}
   return 1;
 }
 
@@ -510,12 +474,11 @@ bool AMyHUD::MouseDragged( FVector2D mouse )
 bool AMyHUD::MouseHovered( FVector2D mouse )
 {
   // Check against the slotPanel
-  itemSlots->Hover( mouse );
+  itemBelt->Hover( mouse );
   hoverWidget = 0;
   for( int i = 0 ; i < frameWidgets.size(); i++ )
   {
     FWidgetData &w = frameWidgets[i];
-
     // Update the status message with the status info
     // of the item UNDER the mouse cursor
     //if( w.hit( mouse ) )
@@ -547,9 +510,9 @@ bool AMyHUD::MouseMoved( FVector2D mouse )
 
 void AMyHUD::Tick( float t )
 {
-  if( selector   &&   lastClickedObject )
+  if( selector   &&   SelectedObject )
   {
-    FVector v = lastClickedObject->Pos();
+    FVector v = SelectedObject->Pos();
     FBox box = Game->flycam->floor->GetComponentsBoundingBox();
     v.Z = box.Max.Z;
     selector->SetActorLocation( v );

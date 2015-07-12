@@ -26,7 +26,6 @@ struct ImageWidget;
 struct Panel;
 struct StackPanel;
 
-
 UCLASS()
 class RTSGAME_API AMyHUD : public AHUD
 {
@@ -39,11 +38,13 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* LumberIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StoneIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* RightPanelTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPanelTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TooltipBackgroundTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   
   // Widgets for the selectObject icon
-  ImageWidget *minimap, *mouseCursor;
+  Minimap *minimap;
+  ImageWidget *mouseCursor;
 
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
@@ -53,10 +54,11 @@ public:
   ResourcesWidget* resourcesWidget;
   CostWidget* costWidget;
   Tooltip* tooltip;
-  SlotPalette* itemSlots;
+  SlotPalette* itemBelt;
   StackPanel* buffs;
-  StackPanel* spawnQueue;
-
+  
+  StackPanel* spawnQueue; // Queue of things we are building (in order)
+  
   //vector<HotSpot*> buttons;
   bool Init;  // Global init for all objects
   FBox2D selectBox;
@@ -82,7 +84,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *hudFont;
 
   // The texture etc to use for last clicked object
-  AGameObject *lastClickedObject;
+  AGameObject *SelectedObject;
   // The next spell to be cast by the UI, 0 if no spell is queued & ready
   Types NextSpell;
   // NULL if no building is trying to be placed.
@@ -103,14 +105,14 @@ public:
   virtual void BeginDestroy() override;
   void InitWidgets();
   void Setup();
-  void DrawWidget( FWidgetData& bw );
-  void DrawGroup( TArray< TEnumAsByte<Types> >& v, float xPos, float yPos, float size, float margin, bool horizontalStack, bool label, bool purchaseables );
   void SetAttackTargetSelector( AGameObject* target );
   void SetShopTargetSelector( AGameObject* target );
   
+  void DrawSelectedObjectStats();
   void DrawSidebar();
   void DrawTopBar();
   void DrawBottomBar();
+  void DrawMinimap();
   void UpdateDisplayedResources();
   virtual void DrawHUD() override;
   void DrawMouseCursor();

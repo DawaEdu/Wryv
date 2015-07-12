@@ -535,7 +535,7 @@ void AFlyCam::MouseLeftDown()
   // First, test for intersect with UI
   FVector2D mouse = getMousePos();
 
-  AGameObject* lo = Game->myhud->lastClickedObject;
+  AGameObject* lo = Game->myhud->SelectedObject;
   
   // Check if the mouse was clicked on the HUD.
   // If the wood panel was clicked, we would enter here as well,
@@ -590,7 +590,7 @@ void AFlyCam::MouseLeftDown()
         // of the building, if the person has enough gold, lumber, stone to build it
         if( Game->gm->playersTeam->CanAfford( Game->myhud->NextBuilding ) )
         {
-          if( APeasant *p = Cast<APeasant>( Game->myhud->lastClickedObject ) )
+          if( APeasant *p = Cast<APeasant>( Game->myhud->SelectedObject ) )
           {
             UGameplayStatics::PlaySoundAttached( buildingPlaced, RootComponent );
             Game->gm->playersTeam->Spend( Game->myhud->NextBuilding );
@@ -629,7 +629,7 @@ void AFlyCam::MouseLeftDown()
     }
     else
     {
-      Game->myhud->lastClickedObject = hit;
+      Game->myhud->SelectedObject = hit;
       hit->OnSelected();
     }
   }
@@ -643,7 +643,7 @@ void AFlyCam::MouseLeftDown()
 void AFlyCam::MouseRightDown()
 {
   UE_LOG( LogTemp, Warning, TEXT("MouseRightDown") );
-  AGameObject *lo = Game->myhud->lastClickedObject;
+  AGameObject *lo = Game->myhud->SelectedObject;
   FHitResult hit = getHitGeometry();
   if( hit.Actor != floor )
   {

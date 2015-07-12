@@ -60,7 +60,7 @@ public:
   HotSpot( FVector2D pos, FVector2D size ) : Pos( pos ), Size( size ), Color( FLinearColor::White )
   {
   }
-  virtual ~HotSpot(){}
+  virtual ~HotSpot(){Clear();}
 protected:
   virtual void render( FVector2D offset )
   {
@@ -159,8 +159,9 @@ struct ImageWidget : public HotSpot
   FVector2D hotpoint; // Usually top left corner (0,0), meaning will render from topleft corner.
   // if its half size, then it will render from the center (such as when an imageWidget is being
   // click-dragged
+  FLinearColor Color;
   
-  ImageWidget( UTexture* pic ) : Icon( pic ), uv( 1, 1 ), hotpoint(0,0)
+  ImageWidget( UTexture* pic ) : Icon( pic ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
     if( Icon ){
       Size.X = Icon->GetSurfaceWidth();
@@ -168,7 +169,7 @@ struct ImageWidget : public HotSpot
     }
   }
   ImageWidget( UTexture* pic, FVector2D pos ) :
-    Icon( pic ), HotSpot( pos ), uv( 1, 1 ), hotpoint(0,0)
+    Icon( pic ), HotSpot( pos ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
     if( Icon ){
       Size.X = Icon->GetSurfaceWidth();
@@ -176,7 +177,7 @@ struct ImageWidget : public HotSpot
     }
   }
   ImageWidget( UTexture* pic, FVector2D pos, FVector2D size ) :
-    Icon( pic ), HotSpot( pos, size ), uv( 1, 1 ), hotpoint(0,0)
+    Icon( pic ), HotSpot( pos, size ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
   }
   virtual ~ImageWidget(){}
@@ -186,13 +187,50 @@ protected:
   virtual void render( FVector2D offset ) override 
   {
     FVector2D renderPos = Pos - hotpoint;
-    hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, Size.X, Size.Y, 0, 0, uv.X, uv.Y );
+    if( !Icon )
+    {
+      UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget" ) );
+    }
+    hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color );
     HotSpot::render( offset );
   }
 };
 
-// starting offset point and group of widgets to draw
+struct SolidWidget : public ImageWidget
+{
+  static UTexture* SolidWhiteTexture;
+  SolidWidget( FLinearColor color ) : ImageWidget( SolidWhiteTexture )
+  {
+    Color = color;
+  }
+  SolidWidget( FVector2D pos, FVector2D size, FLinearColor color ) : ImageWidget( SolidWhiteTexture, pos, size )
+  {
+    Color = color;
+  }
+  virtual ~SolidWidget(){}
+};
 
+struct CooldownPie : public HotSpot
+{
+  float Time, TotalTime; // time to cooldown
+  // Creates a cooldownpie whose animation progresses over a period
+  CooldownPie( FVector2D pos, FVector2D size, float t ) :
+    HotSpot( pos, size ), Time(0.f), TotalTime(t)
+  {
+  }
+  void update( float t ) { Time -= t; }
+  void render()
+  {
+    float p = Time/TotalTime;
+
+    // Display the interpolate animation
+    // Don't have an animation for this yet.. but it should
+    //hud->DrawLine( 
+  }
+  virtual ~CooldownPie(){}
+};
+
+// starting offset point and group of widgets to draw
 // Make a custom widget for the overlays etc
 struct ResourcesWidget : public HotSpot
 {
@@ -225,7 +263,7 @@ struct ResourcesWidget : public HotSpot
     i->Add( stone );
     Add( i );
   }
-
+  virtual ~ResourcesWidget(){}
   void SetValues( int goldCost, int lumberCost, int stoneCost )
   {
     gold->SetText( FString::Printf( TEXT("%d"), goldCost ) );
@@ -238,6 +276,8 @@ struct ResourcesWidget : public HotSpot
 struct UseWidget : public HotSpot
 {
   ImageWidget *mana;
+  UseWidget(){}
+  virtual ~UseWidget(){}
 };
 
 struct CostWidget : public HotSpot
@@ -263,7 +303,7 @@ struct CostWidget : public HotSpot
     bottomText = new TextWidget( "BottomText", FVector2D(0,44), FVector2D(16,0) );
     Add(bottomText);
   }
-
+  virtual ~CostWidget(){}
   void SetCosts( int goldCost, int lumberCost, int stoneCost )
   {
     cost->SetValues( goldCost, lumberCost, stoneCost );
@@ -282,7 +322,7 @@ public:
     Text = new TextWidget( text );
     SetText( text );
   }
-
+  virtual ~Tooltip(){}
   void SetText( FString txt )
   {
     Text->SetText( txt );
@@ -293,22 +333,23 @@ public:
 
 struct SlotPalette : public ImageWidget
 {
+  FVector2D SlotSize;
+  ImageWidget* Drag;
+  static UTexture* SlotPaletteTexture;
   int Rows, Cols;
-  FVector2D SlotSize, UVFraction;
-  
+
   // Drag & Drop for items from slots
   // The item we are dragging (subhotspot)
-  ImageWidget* Drag;
-  
-  SlotPalette( int rows, int cols, UTexture* tex, FVector2D pos, FVector2D size ) : 
-    Rows(rows), Cols(cols), ImageWidget( tex, pos, size )
+  SlotPalette( UTexture* bkg, FVector2D pos, FVector2D size, int rows, int cols ) : 
+    Rows(rows), Cols(cols), ImageWidget( bkg, pos, size )
   {
     // Init w/ # slots used in this palette
-    SlotSize = FVector2D( 100.f, 100.f );
-    // Measure the UV coordinates used since the texture is 6x6
+    // The stock size of the width is 100px/slot. We re-calculate the slotsize though
+    // based on # slots used.
     Drag = 0;
-    SetNumSlots( Rows, Cols );
+    SetNumSlots( rows, cols );
   }
+  virtual ~SlotPalette(){}
 
   FVector2D GetSlotPosition( int i )
   {
@@ -340,13 +381,18 @@ struct SlotPalette : public ImageWidget
   {
     Rows = rows;
     Cols = cols;
+
+    //SlotSize = Size / FVector2D( cols, rows );
+    SlotSize.X = Size.X / cols; // = FVector2D(100,100);//Size / FVector2D( cols, rows );
+    SlotSize.Y = Size.Y / rows;
     int numSlots = rows*cols;
 
-    uv = FVector2D( Cols/6., Rows/6. );
+    // The uv's are equal to 
+    // Measure the UV coordinates used since the texture is 6x6
+    uv = FVector2D( cols/6., rows/6. ); // The texture is 6x6 blocks
     Clear();    // Remove the old ImageWidgets.
     
     // The size of this widget set here.
-    Size = FVector2D( Cols, Rows ) * SlotSize;
     vector<ImageWidget*> slots;
     for( int i = 0; i < numSlots; i++ )
     {
@@ -359,39 +405,27 @@ struct SlotPalette : public ImageWidget
 
 };
 
-struct Panel : public ImageWidget
-{
-  ImageWidget* Icon;      // pictoral representation of selected unit
-  TextWidget* UnitStats;  // The stats of the last selected unit
-
-  // For the group of selected units.
-  Panel( UTexture* tex, FVector2D size, float margin ) :
-    ImageWidget( tex, FVector2D( 0, 0 ), size )
-  {
-    float s = size.X - 2*margin;
-    Icon = new ImageWidget( 0, FVector2D( margin, margin ), FVector2D(s,s) );
-    Add( Icon );
-
-    UnitStats = new TextWidget( "Stats:", FVector2D( margin, size.Y/3 ), FVector2D(s,400) );
-    Add( UnitStats );
-  }
-};
-
 // Supports stacking-in of widgets from left/right or top/bottom
 struct StackPanel : public HotSpot
 {
   FVector2D IconSize;
-  FVector2D Margins;
+  FVector2D Margins;  // Padding between entries
   StackPanel( FVector2D iconSize, FVector2D margins ) :
-    IconSize( iconSize ), Margins( margins )
+    HotSpot( FVector2D(0,0), FVector2D(0,0) ), IconSize( iconSize ), Margins( margins )
   {
   }
+  StackPanel( FVector2D pos, FVector2D size, FVector2D iconSize, FVector2D margins ) :
+    HotSpot( pos, size ), IconSize( iconSize ), Margins( margins )
+  {
+  }
+  virtual ~StackPanel(){}
   
   //    _ _
   // > |_|_|
   void StackLeft( ImageWidget* w )
   {
     w->Pos.X = GetBounds().left() - w->Size.X - Margins.X;
+    w->Size = IconSize;
     HotSpot::Add( w );
   }
 
@@ -400,6 +434,7 @@ struct StackPanel : public HotSpot
   void StackRight( ImageWidget* w )
   {
     w->Pos.X = GetBounds().right() + Margins.X;
+    w->Size = IconSize;
     HotSpot::Add( w );
   }
 
@@ -410,6 +445,7 @@ struct StackPanel : public HotSpot
   void StackTop( ImageWidget* w )
   {
     w->Pos.Y = GetBounds().top() - Margins.Y - w->Size.Y;
+    w->Size = IconSize;
     HotSpot::Add( w );
   }
 
@@ -420,13 +456,51 @@ struct StackPanel : public HotSpot
   void StackBottom( ImageWidget* w )
   {
     w->Pos.Y = GetBounds().bottom() + Margins.Y;
+    w->Size = IconSize;
     HotSpot::Add( w );
   }
+};
 
-  void Remove( int i )
+struct Panel : public ImageWidget
+{
+  ImageWidget* Icon;      // pictoral representation of selected unit
+  TextWidget* UnitStats;  // The stats of the last selected unit
+  SlotPalette* useSlots;
+
+  // For the group of selected units.
+  Panel( UTexture* tex, FVector2D size, float margin ) :
+    ImageWidget( tex, FVector2D( 0, 0 ), size )
   {
-    // remove by index
+    float s = size.X - 2*margin;
+    Icon = new ImageWidget( 0, FVector2D( margin, margin ), FVector2D(s,s) );
+    Add( Icon );
+    UnitStats = new TextWidget( "Stats:", FVector2D( margin, size.Y/3 ), FVector2D(s,400) );
+    Add( UnitStats );
+    SolidWidget *solid = new SolidWidget( FVector2D( -4, 0 ), FVector2D( margin, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
+    Add( solid );
+
+    useSlots = new SlotPalette( SlotPalette::SlotPaletteTexture, FVector2D( margin, s+margin ), FVector2D(s,s), 2, 3 );
+    useSlots->Add( new TextWidget( "text" ) );
+    Add( useSlots );
   }
+  virtual ~Panel(){}
+};
+
+struct Minimap : public ImageWidget
+{
+  Minimap( UTexture* icon, FVector2D pos, FVector2D size,
+    float borderSize, FLinearColor borderColor ) : 
+    ImageWidget( icon, pos, size )
+  {
+    // right border
+    Add( new SolidWidget( Pos + FVector2D( size.X, 0 ) + ( -borderSize/2, -borderSize/2 ),
+      FVector2D( borderSize, size.Y + borderSize ), borderColor ) );
+
+    // Top border
+    Add( new SolidWidget( Pos + FVector2D( 0, -borderSize/2 ),
+      FVector2D( size.X + borderSize, borderSize ), borderColor ) );
+  }
+  virtual ~Minimap(){}
 };
 
 // Covers entries with a cooldownpie each

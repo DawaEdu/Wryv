@@ -32,41 +32,57 @@ void AUnit::OnSelected()
 {
   AGameObject::OnSelected();
 
-  // Move selection cursor to this unit.
-  // Populate the toolbelt, etc
-  int itemRows = Items.Num() / 4;
-  int itemCols = Items.Num() % 4;
-  vector<ImageWidget*> slots = Game->myhud->itemSlots->SetNumSlots( itemRows, itemCols );
-  
-  // The function associated with the Item is hooked up here.
-  // Inventory size dictates #items.
-  for( int i = 0; i < slots.size(); i++ )
-  {
-    ImageWidget *img = slots[i];
-    Types item = Items[i];
-    slots[i]->Icon = Game->myhud->widgets[ Items[i] ].Icon;
+  //Items.Push( Types::ITEMDEFENSEUP );
 
-    slots[i]->OnClicked = [this,i](){
-      // use the item.
-      this->ApplyEffect( Items[i] );
-    };
-    slots[i]->OnHover = [item](){
-      // display a tooltip describing the current item.
-      Game->myhud->tooltip->SetText( Game->myhud->widgets[ item ].Label );
-    };
+  if( Items.Num() )
+  {
+    // Move selection cursor to this unit.
+    // Populate the toolbelt, etc
+    int itemRows = 1 + ((Items.Num() - 1) / 4); // 1 + ( 5 - 1 )/4
+    int itemCols = 4;
+    itemCols = Items.Num() % 4;
+    if( !itemCols )  itemCols = 4; // 
+
+    vector<ImageWidget*> slots = Game->myhud->itemBelt->SetNumSlots( itemRows, itemCols );
+  
+    // The function associated with the Item is hooked up here.
+    // Inventory size dictates #items.
+    for( int i = 0; i < slots.size(); i++ )
+    {
+      ImageWidget *img = slots[i];
+      Types item = Items[i];
+      FWidgetData &data = Game->myhud->widgets[ item ];
+      slots[i]->Icon = data.Icon;
+      slots[i]->OnClicked = [this,i](){
+        // use the item.
+        this->ApplyEffect( Items[i] );
+      };
+      slots[i]->OnHover = [item](){
+        // display a tooltip describing the current item.
+        Game->myhud->tooltip->SetText( Game->myhud->widgets[ item ].Label );
+      };
+    }
+  }
+  else
+  {
+    // No items in the belt.
+    Game->myhud->itemBelt->SetNumSlots(0, 0);
   }
 
-  Items.Push( Types::ITEMDEFENSEUP );
-
-  // Things it can spawn.
-  if( UnitsData.Spawns.Num() ) // DRAW SPAWNS (with costs)
+  // Things it can spawn. Make sure useSlots size is at least right size
+  // for 
+  for( int i = 0; i < UnitsData.Spawns.Num(); i++ ) // DRAW SPAWNS (with costs)
   {
-    //DrawText( TEXT("Spawns"), FLinearColor::White, x, yPos );
-    //DrawGroup( lastClickedObject->UnitsData.Spawns, x, yPos += BarSize, IconSize.X, BarSize, 1, 1, 1 );
-    // go thru all the unitsdata spawns and 
-    //Game->myhud->spawnQueue->SetNumSlots( 
+    Types type = UnitsData.Spawns[i];
+    //Game->myhud->rightPanel->useSlots->SetSlot( i, Game->myhud->widgets[ type ].Icon );
+  }
 
-    
+  // Then render the abilities on the next line
+  for( int i = 0; i < UnitsData.Abilities.Num(); i++ ) // abilities
+  {
+    Types type = UnitsData.Abilities[i];
+    //Game->myhud->rightPanel->useSlots->SetSlot( UnitsData.Spawns.Num() + i,
+    //  Game->myhud->widgets[ type ].Icon );
   }
 
   

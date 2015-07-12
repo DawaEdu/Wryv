@@ -100,14 +100,14 @@ void AGameObject::removeAsTarget()
   if( !Game->IsReady() )
     return;
   
-  if( Game->myhud->lastClickedObject )
+  if( Game->myhud->SelectedObject )
   {
-    if( Game->myhud->lastClickedObject == this )
+    if( Game->myhud->SelectedObject == this )
     {
       // this was the last clicked object, so remove the selector
       Game->myhud->selector->SetActorLocation( FVector(0.f) );
     }
-    else if( Game->myhud->lastClickedObject->attackTarget == this )
+    else if( Game->myhud->SelectedObject->attackTarget == this )
     {
       Game->myhud->selectorAttackTarget->SetActorLocation( FVector(0.f) );
     }
@@ -128,7 +128,7 @@ void AGameObject::removeAsTarget()
         go->attackTarget = 0;
         // If the last clicked object was the gameObject,
         // then unselect it in the hud
-        if( this == Game->myhud->lastClickedObject )
+        if( this == Game->myhud->SelectedObject )
           Game->myhud->selectorAttackTarget->SetActorLocation( FVector(0.f) );
       }
     }
@@ -521,7 +521,7 @@ void AGameObject::RefreshSpawnQueue()
     SpawningObject so = spawnQueue[i];
     
     // Program-in removal logic
-    ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.type ].Icon );
+    ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.Type ].Icon );
     img->OnClicked = [this,i](){
       // Remove this entry from the spawnQueue
       // then refresh the spawn queue
@@ -538,9 +538,9 @@ void AGameObject::RefreshSpawnQueue()
 void AGameObject::OnSelected()
 {
   // Clear the items palette
-  Game->myhud->itemSlots->Clear();
+  Game->myhud->itemBelt->Clear();
 
-  Game->myhud->itemSlots->SetNumSlots( 0, 0 );
+  Game->myhud->itemBelt->SetNumSlots( 0, 0 );
 
   // when a gameobject is selected, the picture/icon is updated
   //Game->myhud->selectedIcon->Icon = Widget.Icon;
