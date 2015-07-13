@@ -25,6 +25,7 @@ struct CostWidget;
 struct ImageWidget;
 struct Panel;
 struct StackPanel;
+struct UserInterface;
 
 UCLASS()
 class RTSGAME_API AMyHUD : public AHUD
@@ -42,22 +43,11 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TooltipBackgroundTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   
-  // Widgets for the selectObject icon
-  Minimap *minimap;
-  ImageWidget *mouseCursor;
-
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
   
   // The buttons currently showing on the user interface.
-  Panel* rightPanel;
-  ResourcesWidget* resourcesWidget;
-  CostWidget* costWidget;
-  Tooltip* tooltip;
-  SlotPalette* itemBelt;
-  StackPanel* buffs;
-  
-  StackPanel* spawnQueue; // Queue of things we are building (in order)
+  UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
   
   //vector<HotSpot*> buttons;
   bool Init;  // Global init for all objects
@@ -66,10 +56,6 @@ public:
   // Maps UNITTYPE=>WIDGET for it. Connected by code at game-startup, since
   // Widget faces are specified in the Blueprints for each individual model
   map<Types,FWidgetData> widgets;
-  
-  // widgets active this frame (discards each frame).
-  vector<FWidgetData> frameWidgets;
-  FWidgetData* hoverWidget; // The widget over which the mouse is hovering
   
   // The uClass of the selected object highlight
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UClass *uClassSelector;
@@ -94,9 +80,7 @@ public:
   // attached to the currently selected unit
   AActor *selector, *selectorAttackTarget, *selectorShopPatron;
   FString statusMsg;
-  static float BarSize;
-  static float Margin;
-
+  
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
   float displayedGold, displayedLumber, displayedStone;
@@ -108,14 +92,10 @@ public:
   void SetAttackTargetSelector( AGameObject* target );
   void SetShopTargetSelector( AGameObject* target );
   
-  void DrawSelectedObjectStats();
-  void DrawSidebar();
-  void DrawTopBar();
-  void DrawBottomBar();
-  void DrawMinimap();
+  void UpdateSelectedObjectStats();
   void UpdateDisplayedResources();
+  void UpdateMouse();
   virtual void DrawHUD() override;
-  void DrawMouseCursor();
   bool Purchase( Types itemType );
   void RunEvent( Types buttonType );
 

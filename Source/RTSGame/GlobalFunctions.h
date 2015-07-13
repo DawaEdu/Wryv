@@ -37,6 +37,14 @@ template <typename T> bool remove( vector<T>& v, T& elt )
   return 0;
 }
 
+/// Removes an element t from a vector v
+template <typename T> bool remove( vector<T>& v, int index )
+{
+  if( index >= v.size() )  return 0;
+  v.erase( v.begin() + index );
+  return 1;
+}
+
 template <typename T> bool remove( set<T>& s, T& elt )
 {
   set<T>::iterator it = s.find( elt );

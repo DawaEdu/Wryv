@@ -508,12 +508,12 @@ void AGameObject::SetDestination( FVector d )
 }
 
 // Populate the spawnqueue
-void AGameObject::RefreshSpawnQueue()
+void AGameObject::RefreshBuildingQueue()
 {
-  StackPanel* sq = Game->myhud->spawnQueue;
+  StackPanel* building = Game->myhud->ui->building;
 
   // Clear existing widgets
-  sq->Clear();
+  building->Clear();
 
   // Things that are spawning.
   for( int i = 0; i < spawnQueue.size(); i++ )
@@ -522,29 +522,30 @@ void AGameObject::RefreshSpawnQueue()
     
     // Program-in removal logic
     ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.Type ].Icon );
-    img->OnClicked = [this,i](){
+    img->OnClicked = [this,i](FVector2D mouse){
       // Remove this entry from the spawnQueue
       // then refresh the spawn queue
-      spawnQueue.erase( spawnQueue.begin()+i );
-      RefreshSpawnQueue();
+      UE_LOG( LogTemp, Warning, TEXT( "Removing elt %d from spawnqueue" ), i );
+      remove( spawnQueue, i );
+      RefreshBuildingQueue();
     };
-    img->OnHover = [](){
+    img->OnHover = [](FVector2D mouse){
       
     };
-    sq->StackRight( img );
+    building->StackRight( img );
   }
 }
 
 void AGameObject::OnSelected()
 {
   // Clear the items palette
-  Game->myhud->itemBelt->Clear();
+  Game->myhud->ui->itemBelt->Clear();
 
-  Game->myhud->itemBelt->SetNumSlots( 0, 0 );
+  Game->myhud->ui->itemBelt->SetNumSlots( 0, 0 );
 
   // when a gameobject is selected, the picture/icon is updated
   //Game->myhud->selectedIcon->Icon = Widget.Icon;
-  RefreshSpawnQueue();
+  RefreshBuildingQueue();
 
   // track object's attacktarget
   Game->myhud->SetAttackTargetSelector( attackTarget );

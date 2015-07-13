@@ -2,36 +2,41 @@
 
 #include <vector>
 #include <functional>
+#include "GlobalFunctions.h"
 using namespace std;
 class AHUD;
 
-struct AABB2D
+struct FBox2DU : public FBox2D
 {
-  FVector2D mins, maxes;
-  AABB2D() : mins( 1e6, 1e6 ), maxes( -1e6, -1e6 ) { }
-  float left(){ return mins.X; }
-	float right(){ return maxes.X; }
-	float top(){ return mins.Y; }
-	float bottom(){ return maxes.Y; }
-	bool hit( FVector2D v )
-	{
-		// +---+ top (0)
-		// |   |
-		// +---+ bottom (2) (bottom > top)
-		// L   R
-		return left() < v.X   &&   v.X < right() &&
-           top() < v.Y   &&   v.Y < bottom();
-	}
-  inline void Add( const FVector2D& v ) {
-    if( v.X < mins.X )  mins.X = v.X;
-    else if( v.X > maxes.X )  maxes.X = v.X;
-
-    if( v.Y < mins.Y )  mins.Y = v.Y;
-    else if( v.Y > maxes.Y )  maxes.Y = v.Y;
+  // +---------->
+  // | min
+  // |  TL----TR
+  // |   |    |
+  // |   |    |
+  // v  BL----BR
+  //          max
+  FBox2DU()
+  {
+    Min.X = Min.Y = 1e6f;
+    Max.X = Max.Y = -1e6f;
   }
-  inline void Add( const AABB2D& aabb ) {
-    Add( aabb.mins );
-    Add( aabb.maxes );
+
+  float left(){ return Min.X; }
+	float right(){ return Max.X; }
+	float top(){ return Min.Y; }
+	float bottom(){ return Max.Y; }
+
+  FVector2D TL() { return Min; }
+  FVector2D TR() { return FVector2D( Max.X, Min.Y ); }
+  FVector2D BR() { return Max; }
+  FVector2D BL() { return FVector2D( Min.X, Max.Y ); }
+  
+  void print(FString msg) {
+    UE_LOG( LogTemp, Warning, TEXT( "%s fbox2du bounds min=(%f %f) max=(%f %f) meas=(%f %f)"),
+      *msg, Min.X, Min.Y, Max.X, Max.Y, Size().X, Size().Y );
+  }
+  FVector2D Size() { 
+    return Max - Min;
   }
 };
 
@@ -41,26 +46,29 @@ struct HotSpot
 {
   static AHUD* hud;
 
+  bool hidden;
   FVector2D Pos, Size;
   FLinearColor Color;
   // Associations with AGameObject's contained in this hotspot. Empty if no objects
   // are associated with the spot (used for item slots)
   vector<AGameObject*> Objects;
 protected:
+  HotSpot* Parent;
   vector<HotSpot*> children;  // Children of this hotspot.
+  bool dirty; // set if the widget's bounds need to be remeasured
 public:
-  function< void () > OnClicked;
-  function< void () > OnHover;
-  function< void () > OnDrag;
+  function< void (FVector2D mouse) > OnClicked;
+  function< void (FVector2D mouse) > OnHover;
+  function< void (FVector2D mouse) > OnDrag;
   // A function that runs when the widget is dropped @ certain location
-  function< void (FVector2D dropLocation) > OnDrop;
+  function< void (FVector2D mouse) > OnDrop;
 
-  HotSpot() : Pos(0,0), Size(32,32), Color( FLinearColor::White ) {}
-  HotSpot( FVector2D pos ) : Pos(pos), Size(32,32), Color( FLinearColor::White ) {}
-  HotSpot( FVector2D pos, FVector2D size ) : Pos( pos ), Size( size ), Color( FLinearColor::White )
+  HotSpot() : hidden(0), Pos(0,0), Size(32,32), Color( FLinearColor::White ), Parent(0), dirty(1) {}
+  HotSpot( FVector2D pos ) : hidden(0), Pos(pos), Size(32,32), Color( FLinearColor::White ), Parent(0), dirty(1) {}
+  HotSpot( FVector2D pos, FVector2D size ) : hidden(0), Pos( pos ), Size( size ), Color( FLinearColor::White ), Parent(0), dirty(1)
   {
   }
-  virtual ~HotSpot(){Clear();}
+  virtual ~HotSpot(){ Clear(); }
 protected:
   virtual void render( FVector2D offset )
   {
@@ -69,9 +77,26 @@ protected:
       children[i]->render( offset + Pos );
   }
 public:
-  void Add( HotSpot* w ) { children.push_back( w ); }
-  virtual void render(){ render( FVector2D(0,0) ); }
-  
+  void Add( HotSpot* w ) {
+    if( w->Parent )  w->Orphan();
+    w->Parent = this;
+    children.push_back( w );
+  }
+  // Orphans the child from its parent
+  void Orphan()
+  {
+    if( Parent )
+    {
+      remove( Parent->children, this );
+      Parent = 0;
+    }
+  }
+  // all calls to render a widget externally route through here
+  // they all kick-off to subclass::render( FVector2D(0,0) )
+  virtual void render(){ if( hidden ) return; render( FVector2D(0,0) ); }
+  void repad( FVector2D pad ) {
+    Size = GetChildBounds().Size() + pad;
+  }
   float left(){ return Pos.X; }
 	float right(){ return Pos.X + Size.X; }
 	float top(){ return Pos.Y; }
@@ -86,19 +111,35 @@ public:
   //         top()  < v.Y   &&   v.Y < bottom();
 	//}
   // Check main bounds
-  bool hit( FVector2D v ) { return GetBounds( FVector2D(0,0) ).hit( v ); }
+  bool hit( FVector2D v ) {
+    FBox2DU bounds = GetBounds();
+    return bounds.IsInside( v ); // check if v is inside the box (<-)
+  }
   FVector2D getHitPercent( FVector2D v ) { return (v - Pos)/Size; }
-  AABB2D GetBounds( FVector2D offset ){
-    AABB2D bounds;
+  FBox2DU GetBounds( FVector2D offset ){
+    FBox2DU bounds;
+
     // bound this and all children
-    bounds.Add( offset + Pos );
-    bounds.Add( offset + Pos + Size );
+    bounds += offset + Pos;
+    bounds += offset + Pos + Size;
     for( int i = 0; i < children.size(); i++ ) {
-      bounds.Add( children[i]->GetBounds( Pos ) );
+      bounds += children[i]->GetBounds( offset + Pos );
     }
     return bounds;
   }
-  AABB2D GetBounds() { return GetBounds( FVector2D(0,0) ); }
+  FBox2DU GetBounds()
+  {
+    return GetBounds( FVector2D(0,0) );
+  }
+  // Get bounds of children, excluding this
+  FBox2DU GetChildBounds()
+  {
+    FBox2DU bounds;
+    for( int i = 0; i < children.size(); i++ ) {
+      bounds += children[i]->GetBounds( Pos );
+    }
+    return bounds;
+  }
   void Clear(){
     for( int i = 0; i < children.size(); i++ )
       delete children[i];
@@ -107,12 +148,12 @@ public:
   void Click( FVector2D v ) {
     // Check if hit parent. sometimes children are outside parent, which
     // is why
-    if( OnClicked && hit( v ) )  OnClicked();
+    if( OnClicked && hit( v ) )  OnClicked(v);
     for( int i = 0; i < children.size(); i++ )
       children[i]->Click( v - Pos ); // relatively position click point to parent
   }
   void Hover( FVector2D v ) {
-    if( OnHover && hit( v ) )  OnHover();
+    if( OnHover && hit( v ) )  OnHover(v);
     for( int i = 0; i < children.size(); i++ )
       children[i]->Hover( v - Pos );
   }
@@ -129,7 +170,7 @@ public:
     // Measures size in Text using HUD object (must be init & ready)
     SetText( fs );
   }
-  TextWidget( FString fs, FVector2D pos, FVector2D size ) : HotSpot( pos, size ), Text( fs )
+  TextWidget( FString fs, FVector2D pos ) : HotSpot( pos ), Text( fs )
   {
     SetText( fs );
   }
@@ -139,17 +180,31 @@ public:
   void SetText( FString text )
   {
     Text = text;
-    hud->GetTextSize( Text, Size.X, Size.Y );
+    dirty = 1;
+    //Measure(); // call may fail here, but put it here anyway.
+    // [[ cannot call measure here, since may happen
+    //    during callback due to mouse motion etc. ]]
   }
-  virtual void render() override { HotSpot::render(); }
 
-protected:
-  void render( FVector2D offset ) override
+  void Measure()
   {
+    hud->GetTextSize( Text, Size.X, Size.Y );
+    // ERROR IF THE HUD is not currently ready
+    // to draw (ie canvas size won't be available)
+  }
+  
+protected:
+  // We call Measure() each call to render() since text cannot be measured except when
+  // canvas is ready (ie during render() calls)
+  virtual void render( FVector2D offset ) override
+  {
+    if( dirty ) { // It seems in first calls to render(), Measure() does not properly measure text width
+      Measure();
+      dirty = 0;
+    }
     hud->DrawText( Text, Color, Pos.X + offset.X, Pos.Y + offset.Y );
     HotSpot::render( offset );
   }
-  
 };
 
 struct ImageWidget : public HotSpot
@@ -181,7 +236,6 @@ struct ImageWidget : public HotSpot
   {
   }
   virtual ~ImageWidget(){}
-  virtual void render() override { HotSpot::render(); }
 
 protected:
   virtual void render( FVector2D offset ) override 
@@ -189,7 +243,11 @@ protected:
     FVector2D renderPos = Pos - hotpoint;
     if( !Icon )
     {
+      // We have to remove this comment for normal ops because
+      // sometimes we want to have null texes eg in slotpalette items when
+      // no item is present
       UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget" ) );
+      // render should not be called when the texture is hidden
     }
     hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color );
     HotSpot::render( offset );
@@ -237,31 +295,33 @@ struct ResourcesWidget : public HotSpot
   TextWidget *gold, *lumber, *stone;
   static UTexture *GoldTexture, *LumberTexture, *StoneTexture;
   int Px; // size of the icons
+  int Spacing; // spacing between widgets
 
   // Add in all the subwidgets
-  ResourcesWidget(int pxSize) : Px(pxSize)
+  ResourcesWidget(int pxSize, int spacing, FVector2D pos) : HotSpot(pos), Px(pxSize), Spacing(spacing)
   {
     // +-----------------+
     // |G1000 W1000 S1000|
     // +-----------------+
-    // 
     // The 3 resource types
     ImageWidget* i = new ImageWidget( GoldTexture, FVector2D(0,0), FVector2D(Px,Px) );
-    gold = new TextWidget( "1000", FVector2D(Px,0), FVector2D(Px,Px) );
+    gold = new TextWidget( "1000", FVector2D(Px,0) );
     i->Add( gold );
     Add( i );
     
-    AABB2D b = i->GetBounds();
-    i = new ImageWidget( LumberTexture, FVector2D(b.right(),0), FVector2D(Px,Px) );
-    lumber = new TextWidget( "1000", FVector2D(Px,0), FVector2D(Px,Px) );
+    FBox2DU b = i->GetBounds();
+    i = new ImageWidget( LumberTexture, FVector2D(b.right()+Spacing,0), FVector2D(Px,Px) );
+    lumber = new TextWidget( "1000", FVector2D(Px,0) );
     i->Add( lumber );
     Add( i );
     
     b = i->GetBounds();
-    i = new ImageWidget( StoneTexture, FVector2D(b.right(),0), FVector2D(Px,Px) );
-    stone = new TextWidget( "1000", FVector2D(Px,0), FVector2D(Px,Px) );
+    i = new ImageWidget( StoneTexture, FVector2D(b.right()+Spacing,0), FVector2D(Px,Px) );
+    stone = new TextWidget( "1000", FVector2D(Px,0) );
     i->Add( stone );
     Add( i );
+
+    Size = GetChildBounds().Size(); // Size of the entire resources widget
   }
   virtual ~ResourcesWidget(){}
   void SetValues( int goldCost, int lumberCost, int stoneCost )
@@ -280,34 +340,64 @@ struct UseWidget : public HotSpot
   virtual ~UseWidget(){}
 };
 
-struct CostWidget : public HotSpot
+// +-------------------------------------+
+// | Barracks                            |
+// | [] gold [] lumber [] stone          |
+// | Barracks are used to build militia. |
+// +-------------------------------------+
+struct CostWidget : public ImageWidget
 {
   TextWidget* topText;
   ResourcesWidget* cost;
   TextWidget* bottomText;
+  FVector2D Pad; // padding on the background image
 
-  // +-------------------------------------+
-  // | Barracks                            |
-  // | [] gold [] lumber [] stone          |
-  // | Barracks are used to build militia. |
-  // +-------------------------------------+
   // Using a popup for the UI information about the build costs
   // makes it so new players don't actually have to look for it.
   // It pops up, so you always notice it right away.
-  CostWidget()
+  CostWidget( UTexture* bkg, FVector2D pad, float vSpacing ) : ImageWidget( bkg ), Pad(pad)
   {
-    topText = new TextWidget( "TopText", FVector2D(0,0), FVector2D(16,0) );
+    topText = new TextWidget( "TopText", pad/2 );
     Add(topText);
-    cost = new ResourcesWidget(16);
+
+    UE_LOG( LogTemp, Warning, TEXT( "topText->GetBounds()" ) );
+    FBox2DU bounds = topText->GetBounds();
+    bounds.print("toptext");
+    cost = new ResourcesWidget(16, 4, FVector2D( pad.X/2, topText->GetBounds().bottom() + vSpacing ) );
     Add(cost);
-    bottomText = new TextWidget( "BottomText", FVector2D(0,44), FVector2D(16,0) );
+
+    UE_LOG( LogTemp, Warning, TEXT( "cost pos: %f %f" ), cost->Pos.X, cost->Pos.Y );
+    UE_LOG( LogTemp, Warning, TEXT( "cost->GetBounds()" ) );
+    bounds = cost->GetBounds();
+    bounds.print("costbounds");
+    bottomText = new TextWidget( "BottomText", FVector2D( pad.X/2, cost->GetBounds().bottom() + vSpacing ) );
     Add(bottomText);
+
+    UE_LOG( LogTemp, Warning, TEXT( "bottomText->GetBounds()" ) );
+    bounds = bottomText->GetBounds();
+    bounds.print("bottomText");
+    
+    repad( Pad );
   }
   virtual ~CostWidget(){}
-  void SetCosts( int goldCost, int lumberCost, int stoneCost )
+  void Set( FString top, int goldCost, int lumberCost, int stoneCost, FString bottom )
   {
+    topText->SetText( top );
     cost->SetValues( goldCost, lumberCost, stoneCost );
+    bottomText->SetText( bottom );
+    dirty = 1;
   }
+
+  virtual void render( FVector2D offset ) override
+  {
+    if( dirty )
+    {
+      repad( Pad ) ;
+      dirty = 0 ;
+    }
+    ImageWidget::render( offset );
+  }
+
 };
 
 struct Tooltip : public ImageWidget
@@ -317,17 +407,52 @@ private:
 
 public:
   FVector2D Pad;
-  Tooltip( UTexture* bkg, FString text, FVector2D pad ) : ImageWidget( bkg ), Pad(pad)
+  Tooltip( UTexture* bkg, FString txt, FVector2D pad ) : ImageWidget( bkg ), Pad(pad)
   {
-    Text = new TextWidget( text );
-    SetText( text );
+    Text = new TextWidget( txt );
+    Add( Text );
+    
+    Set( txt );
   }
   virtual ~Tooltip(){}
-  void SetText( FString txt )
+  void Set( FString txt )
   {
     Text->SetText( txt );
-    Size = Text->Size + 2*Pad;
-    Pos = Text->Pos - Pad;
+    Size = Text->Size + Pad; /// cannot re-measure size here.
+    Text->Pos = Pos + Pad/2;
+    hidden = 0; // unhide the tooltip if it was hidden before
+    dirty = 1;
+  }
+
+  virtual void render( FVector2D offset ) override {
+    //re-measure the background's size if the text has changed
+    //if( dirty )
+    {
+      repad( Pad );
+      dirty = 0;
+    }
+    ImageWidget::render( offset );
+  }
+};
+
+struct SlotEntry : public ImageWidget
+{
+  TextWidget *qty;   // The quantity of the item
+  SlotEntry( UTexture* tex, FVector2D pos, FVector2D size ) : ImageWidget( tex, pos, size )
+  {
+    qty = new TextWidget( "1" );
+    Add( qty );
+    FBox2DU bounds = GetBounds();
+    qty->Pos.X = bounds.right() - qty->Size.X;
+
+    hidden = 1; // defaults hidden with NULL texture.
+  }
+
+  void SetQuantity( int quantity )
+  {
+    qty->SetText( FString::Printf( TEXT("%d"), quantity ) );
+    FBox2DU bounds = GetBounds();
+    qty->Pos.X = bounds.right() - qty->Size.X;
   }
 };
 
@@ -366,14 +491,28 @@ struct SlotPalette : public ImageWidget
   // External users of class cannot add a textwidget for example to the slotpanel.
   // (make sure you don't add children to slotpanel that are not imageWidgets)
   // the children of an imagewidget CAN be textnodes etc.
-  ImageWidget* GetSlot( int i )
+  SlotEntry* GetSlot( int i )
   {
-    return (ImageWidget*)children[i];
+    return (SlotEntry*)children[i];
   }
 
-  void SetSlot( int i, UTexture* icon )
+  void ResetSlots()
   {
-    GetSlot(i)->Icon = icon;
+    // reset slot texture entries to nulls
+    for( int i = 0; i < children.size(); i++ )
+      children[i]->hidden = 1;
+  }
+
+  ImageWidget* SetSlot( int i, UTexture* icon )
+  {
+    ImageWidget* slot = GetSlot(i);
+    slot->hidden = 0; // unhide it if hidden when set with a texture
+    slot->Icon = icon;
+
+    // center the child image a bit
+    FVector2D originalPos = GetSlotPosition( i );
+
+    return slot;
   }
 
   // Widget's by themselves are just hotspots
@@ -397,12 +536,12 @@ struct SlotPalette : public ImageWidget
     for( int i = 0; i < numSlots; i++ )
     {
       ImageWidget *iw = new ImageWidget( Icon, GetSlotPosition(i), SlotSize );
+      iw->hidden = 1; // initialize as hidden, until texture is set.
       slots.push_back( iw );
       Add( iw );
     }
     return slots;
   }
-
 };
 
 // Supports stacking-in of widgets from left/right or top/bottom
@@ -461,48 +600,132 @@ struct StackPanel : public HotSpot
   }
 };
 
-struct Panel : public ImageWidget
-{
-  ImageWidget* Icon;      // pictoral representation of selected unit
-  TextWidget* UnitStats;  // The stats of the last selected unit
-  SlotPalette* useSlots;
-
-  // For the group of selected units.
-  Panel( UTexture* tex, FVector2D size, float margin ) :
-    ImageWidget( tex, FVector2D( 0, 0 ), size )
-  {
-    float s = size.X - 2*margin;
-    Icon = new ImageWidget( 0, FVector2D( margin, margin ), FVector2D(s,s) );
-    Add( Icon );
-    UnitStats = new TextWidget( "Stats:", FVector2D( margin, size.Y/3 ), FVector2D(s,400) );
-    Add( UnitStats );
-    SolidWidget *solid = new SolidWidget( FVector2D( -4, 0 ), FVector2D( margin, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
-    Add( solid );
-
-    useSlots = new SlotPalette( SlotPalette::SlotPaletteTexture, FVector2D( margin, s+margin ), FVector2D(s,s), 2, 3 );
-    useSlots->Add( new TextWidget( "text" ) );
-    Add( useSlots );
-  }
-  virtual ~Panel(){}
-};
-
 struct Minimap : public ImageWidget
 {
   Minimap( UTexture* icon, FVector2D pos, FVector2D size,
     float borderSize, FLinearColor borderColor ) : 
     ImageWidget( icon, pos, size )
   {
-    // right border
-    Add( new SolidWidget( Pos + FVector2D( size.X, 0 ) + ( -borderSize/2, -borderSize/2 ),
+    FBox2DU bounds = GetBounds();
+
+    // tl -> tr
+    Add( new SolidWidget( bounds.TL() - borderSize/2,
+      FVector2D( size.X + borderSize, borderSize ), borderColor ) );
+    
+    // tr -> br
+    Add( new SolidWidget( bounds.TR() - borderSize/2,
       FVector2D( borderSize, size.Y + borderSize ), borderColor ) );
 
-    // Top border
-    Add( new SolidWidget( Pos + FVector2D( 0, -borderSize/2 ),
-      FVector2D( size.X + borderSize, borderSize ), borderColor ) );
+    // bl -> br
+    Add( new SolidWidget( bounds.BL() - borderSize/2,
+      FVector2D( borderSize, size.Y + borderSize ), borderColor ) );
+
+    // tl -> bl
+    Add( new SolidWidget( bounds.TL() - borderSize/2,
+      FVector2D( borderSize, size.Y + borderSize ), borderColor ) );
   }
   virtual ~Minimap(){}
 };
 
+struct Panel : public ImageWidget
+{
+  ImageWidget* portrait;  // pictoral representation of selected unit
+  TextWidget* unitStats;  // The stats of the last selected unit
+  SlotPalette* abilities; // 
+  Minimap* minimap;       // the minimap widget for displaying the world map
+
+  // For the group of selected units.
+  Panel( UTexture* texPanelBkg, UTexture* texMinimap, FVector2D size, float margin ) :
+    ImageWidget( texPanelBkg, FVector2D( 0, 0 ), size )
+  {
+    float s = size.X - 2*margin;
+    portrait = new ImageWidget( 0, FVector2D( margin, margin ), FVector2D(s,s) );
+    Add( portrait );
+
+    unitStats = new TextWidget( "Stats:", FVector2D( margin, portrait->GetBounds().bottom()+margin ) );
+    Add( unitStats );
+
+    SolidWidget *leftBorder = new SolidWidget( FVector2D( -4, 0 ), FVector2D( margin, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
+    Add( leftBorder );
+
+    abilities = new SlotPalette( SlotPalette::SlotPaletteTexture, FVector2D( margin, s+margin ), FVector2D(s,s), 2, 3 );
+    Add( abilities );
+
+    minimap = new Minimap( texMinimap, FVector2D(0, abilities->GetBounds().bottom()+margin),
+      FVector2D( texMinimap->GetSurfaceWidth(), texMinimap->GetSurfaceHeight() ),
+      20.f, FLinearColor( 1.0f, 0.1f, 0.1f, 1.f ) );
+    Add( minimap );
+  }
+  virtual ~Panel(){}
+};
+
+struct StatusBar : public SolidWidget
+{
+  TextWidget* Text;
+  StatusBar( FVector2D canvasSize, float height, FLinearColor bkgColor ) :
+    SolidWidget( FVector2D( 0, canvasSize.Y - height ),
+    FVector2D( canvasSize.X, height ), bkgColor )
+  {
+    Text = new TextWidget( "status text" );
+    Add( Text );
+  }
+};
+
+// The root UI component
+struct UserInterface : public HotSpot
+{
+  // +-----------------------------+
+  // | resourcesW     | rightPanel  |
+  // |                |  Portrait   |
+  // |                |  unitStats  |
+  // |                |  abilities  |
+  // |                | +---------+ |
+  // |  +----------+  | | minimap | |
+  // |  | itemBelt |  | +---------+ |
+  // +--buffs-----------------------+
+  //
+  // 
+  ResourcesWidget* resources; // The resources widget in the top left
+  Panel* rightPanel;      // containing: portrait, unitStats, abilities, minimap
+  CostWidget* costWidget; // a flyover cost of the hovered item from 
+  Tooltip* tooltip;
+  SlotPalette* itemBelt;
+  StackPanel* buffs;
+  StackPanel* building; // Queue of things we are building (in order)
+  StatusBar* statusBar; // the bottom status bar has 
+  ImageWidget* mouseCursor;
+
+  UserInterface( FVector2D pos, FVector2D size ) : HotSpot( pos, size ) {
+    resources = 0, rightPanel = 0, costWidget = 0, tooltip = 0,
+    itemBelt = 0, buffs = 0, building = 0, statusBar = 0, mouseCursor = 0;
+  }
+
+  ~UserInterface(){
+    //delete resources;
+    //delete rightPanel;
+    //delete costWidget;
+    //delete tooltip;
+    //delete itemBelt;
+    //delete buffs;
+    //delete building;
+    //delete statusBar;
+    //delete mouseCursor;
+  }
+
+  // layout all widgets based on canvas (screen) size
+  void layout( FVector2D canvasSize )
+  {
+    Size = canvasSize;
+    rightPanel->Pos.X = Size.X - rightPanel->Size.X;
+    // buffs appear listed in the 
+    buffs->Pos = FVector2D( 0, Size.Y / 2 );
+    building->Pos = FVector2D( 0, 2*Size.Y / 3 );
+
+    statusBar->Pos = FVector2D( 0, Size.Y - statusBar->Size.Y );
+    statusBar->Size.X = Size.X;
+  }
+
+};
 // Covers entries with a cooldownpie each
 //struct SpawnQueue : public StackPanel
 //{

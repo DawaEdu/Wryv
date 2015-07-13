@@ -5,6 +5,7 @@
 #include "PlayerControl.h"
 #include "MyHUD.h"
 #include "Widget.h"
+#include "UnitsData.h"
 
 #include <map>
 using namespace std;
@@ -32,8 +33,6 @@ void AUnit::OnSelected()
 {
   AGameObject::OnSelected();
 
-  //Items.Push( Types::ITEMDEFENSEUP );
-
   if( Items.Num() )
   {
     // Move selection cursor to this unit.
@@ -43,8 +42,8 @@ void AUnit::OnSelected()
     itemCols = Items.Num() % 4;
     if( !itemCols )  itemCols = 4; // 
 
-    vector<ImageWidget*> slots = Game->myhud->itemBelt->SetNumSlots( itemRows, itemCols );
-  
+    vector<ImageWidget*> slots = Game->myhud->ui->itemBelt->SetNumSlots( itemRows, itemCols );
+    
     // The function associated with the Item is hooked up here.
     // Inventory size dictates #items.
     for( int i = 0; i < slots.size(); i++ )
@@ -53,36 +52,54 @@ void AUnit::OnSelected()
       Types item = Items[i];
       FWidgetData &data = Game->myhud->widgets[ item ];
       slots[i]->Icon = data.Icon;
-      slots[i]->OnClicked = [this,i](){
+      slots[i]->OnClicked = [this,i](FVector2D mouse){
         // use the item.
         this->ApplyEffect( Items[i] );
       };
-      slots[i]->OnHover = [item](){
+      slots[i]->OnHover = [img,item,data](FVector2D mouse){
         // display a tooltip describing the current item.
-        Game->myhud->tooltip->SetText( Game->myhud->widgets[ item ].Label );
+        // or could add as a child of the img widget
+        FWidgetData w = Game->myhud->widgets[ item ];
+
+        // 
+        Game->myhud->ui->tooltip->Set( w.Label + FString(": ") + w.Tooltip );
+        img->Add( Game->myhud->ui->tooltip );
+
+        //CostWidget *costWidget = Game->myhud->ui->costWidget;
+        //FUnitsDataRow data = Game->unitsData[ item ];
+        //costWidget->Set( data.Name, data.GoldCost, data.LumberCost, data.StoneCost, data.Description );
       };
     }
   }
   else
   {
     // No items in the belt.
-    Game->myhud->itemBelt->SetNumSlots(0, 0);
+    Game->myhud->ui->itemBelt->SetNumSlots(0, 0);
   }
 
-  // Things it can spawn. Make sure useSlots size is at least right size
-  // for 
+  Game->myhud->ui->rightPanel->abilities->ResetSlots();
+  // Things it can spawn. Make sure abilities size is at least right size for it.
+  SlotPalette *sp = Game->myhud->ui->rightPanel->abilities;
   for( int i = 0; i < UnitsData.Spawns.Num(); i++ ) // DRAW SPAWNS (with costs)
   {
     Types type = UnitsData.Spawns[i];
-    //Game->myhud->rightPanel->useSlots->SetSlot( i, Game->myhud->widgets[ type ].Icon );
+    
+    FWidgetData w = Game->myhud->widgets[ type ];
+    ImageWidget* slot = sp->SetSlot( i, w.Icon );
+    FUnitsDataRow ud = Game->unitsData[type];
+
+    // Set the hover of this slot to show the cost of the spawn
+    slot->OnHover = [ud](FVector2D mouse){
+      Game->myhud->ui->costWidget->Set( ud.Name, ud.GoldCost, ud.LumberCost, ud.StoneCost, ud.Description );
+    };
   }
 
   // Then render the abilities on the next line
   for( int i = 0; i < UnitsData.Abilities.Num(); i++ ) // abilities
   {
     Types type = UnitsData.Abilities[i];
-    //Game->myhud->rightPanel->useSlots->SetSlot( UnitsData.Spawns.Num() + i,
-    //  Game->myhud->widgets[ type ].Icon );
+    sp->SetSlot( UnitsData.Spawns.Num() + i,
+      Game->myhud->widgets[ type ].Icon );
   }
 
   

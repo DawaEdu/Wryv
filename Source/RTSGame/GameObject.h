@@ -110,7 +110,7 @@ public:
   bool LOS( FVector p );
   // Set the color of the actor
   void SetDestination( FVector d );
-  void RefreshSpawnQueue();
+  void RefreshBuildingQueue();
   virtual void OnSelected();
   FString PrintStats();
   float GetBoundingRadius();
