@@ -49,7 +49,6 @@ public:
   // The buttons currently showing on the user interface.
   UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
   
-  //vector<HotSpot*> buttons;
   bool Init;  // Global init for all objects
   FBox2D selectBox;
 
@@ -79,15 +78,16 @@ public:
   // This is the ring shaped selector that gets
   // attached to the currently selected unit
   AActor *selector, *selectorAttackTarget, *selectorShopPatron;
-  FString statusMsg;
   
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
   float displayedGold, displayedLumber, displayedStone;
   
   AMyHUD(const FObjectInitializer& PCIP);
+  virtual void BeginPlay() override;
   virtual void BeginDestroy() override;
   void InitWidgets();
+  void LoadUClasses();
   void Setup();
   void SetAttackTargetSelector( AGameObject* target );
   void SetShopTargetSelector( AGameObject* target );
@@ -96,8 +96,6 @@ public:
   void UpdateDisplayedResources();
   void UpdateMouse();
   virtual void DrawHUD() override;
-  bool Purchase( Types itemType );
-  void RunEvent( Types buttonType );
 
   // Which widget was hit by the mouse
   bool MouseLeftDown( FVector2D mouse );
@@ -105,9 +103,10 @@ public:
   bool MouseRightDown( FVector2D mouse );
   bool MouseRightUp( FVector2D mouse );
   
-  bool MouseDragged( FVector2D mouse );
-  bool MouseHovered( FVector2D mouse );
   bool MouseMoved( FVector2D mouse );
+  bool MouseHovered( FVector2D mouse );
+  bool MouseDragged( FVector2D mouse );
+  bool MouseDropped( FVector2D mouse );
 
   virtual void Tick( float t );
   // Get the Z distance that an object should be placed

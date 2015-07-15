@@ -39,7 +39,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   check( InputComponent );
   Super::SetupPlayerInputComponent( InputComponent );
   InitializeDefaultPawnInputBindings();
-  CameraZ = 2500.f;
+  camera = GetComponentByName<UCameraComponent>( this, "Camera" );
 
   InputComponent->BindAxis( "Forward", this, &AFlyCam::MoveForward );
   InputComponent->BindAxis( "Left", this, &AFlyCam::MoveLeft );
@@ -89,7 +89,6 @@ void AFlyCam::InitializeDefaultPawnInputBindings()
 {
   //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
   //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraDown", EKeys::PageDown, 1.f));
-
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::W, 1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::S, -1.f));
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Up, 1.f));
@@ -123,21 +122,32 @@ void AFlyCam::MoveCameraZDown( float amount )
 
 void AFlyCam::SetCameraPosition( FVector2D perc )
 {
-  FVector startLoc = GetActorLocation();
+  UE_LOG( LogTemp, Warning, TEXT( "startLoc %f %f" ), perc.X, perc.Y );
+  FVector P = GetActorLocation(); // restore the z value after movement
+  FVector fwd = camera->GetForwardVector();
   FBox box = floor->GetComponentsBoundingBox();
-  FVector pos = box.Min;
-  
+
+  // Find coordinates of click on ground plane
   // X & Y are reversed because Y goes right, X goes fwd.
   // Extents are HALF extents
-  pos += box.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
+  FVector G = box.Min + box.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
+  G.Z = box.Max.Z;
+  float len = FVector::Dist( P, G );
+
+  FVector P2 = G - len * fwd;
+  P2.Z = P.Z; // nail z-value to old z-value to prevent camera climb
   
+  // Stop the camera from previous motions
+  //ControlInputVector = FVector::ZeroVector;
+
   // Move the camera back from the point on the plane in -cameraDir
   // vertically move the camera up to the higher plane
   // Move BACK in the direction of the fwd vector length of previous location
-  pos += camera->GetForwardVector() * -startLoc.Size();
-
+  //pos += camera->GetForwardVector() * -startLoc.Size();
+  
   FQuat q( 0.f, 0.f, 0.f, 0.f );
-  SetActorLocationAndRotation( pos, q );
+  //UE_LOG( LogTemp, Warning, TEXT( "New camera loc %f %f %f" ), pos.X, pos.Y, pos.Z );
+  SetActorLocationAndRotation( P2, q );
 }
 
 void AFlyCam::NextTip()
@@ -330,16 +340,14 @@ void AFlyCam::Setup()
   Game->gm = (ARTSGameGameMode*)GetWorld()->GetAuthGameMode();
   Game->flycam = this;
 
-  // The pitch of the camera is setup in the game blueprint.
-  // we capture the camera component here
-  camera = GetComponentByName<UCameraComponent>( this, "Camera" );
-
-  // Initialize the data table.
-  Game->Init();
   
   if( !setup )
   {
     Game->myhud->Setup();
+    
+    // Initialize the data table.
+    Game->Init();
+  
     InitLevel(); // create the "gutter"
     setup = 1;
   }
@@ -524,13 +532,13 @@ void AFlyCam::FindFloor()
 
 void AFlyCam::MouseLeftUp()
 {
-  UE_LOG( LogTemp, Warning, TEXT("MouseLeftUp") );
+  //UE_LOG( LogTemp, Warning, TEXT("MouseLeftUp") );
   Game->myhud->MouseLeftUp( getMousePos() );
 }
 
 void AFlyCam::MouseLeftDown()
 {
-  UE_LOG( LogTemp, Warning, TEXT("MouseLeftDown") );
+  //UE_LOG( LogTemp, Warning, TEXT("MouseLeftDown") );
   
   // First, test for intersect with UI
   FVector2D mouse = getMousePos();
@@ -555,11 +563,11 @@ void AFlyCam::MouseLeftDown()
   AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
   if( hit )
   {
-    UE_LOG( LogTemp, Warning, TEXT("Clicked on %s"), *hit->UnitsData.Name );
+    //UE_LOG( LogTemp, Warning, TEXT("Clicked on %s"), *hit->UnitsData.Name );
   }
   else
   {
-    UE_LOG( LogTemp, Warning, TEXT("Nothing was selected") );
+    //UE_LOG( LogTemp, Warning, TEXT("Nothing was selected") );
     return;
   }
 
@@ -616,7 +624,7 @@ void AFlyCam::MouseLeftDown()
   
   // When not placing a building OR casting a spell, we're picking something.
   // from the screen whose info should be displayed in the sidebar.
-  UE_LOG( LogTemp, Warning, TEXT("Clicked on %s"), *hit->UnitsData.Name );
+  //UE_LOG( LogTemp, Warning, TEXT("Clicked on %s"), *hit->UnitsData.Name );
   
   // Here we check if we need to change the selected unit  
   // Change selected object, as long as a spell wasn't queued on LO
@@ -683,20 +691,19 @@ void AFlyCam::MouseMoved()
   bool leftMouseDown = Game->pc->IsDown( EKeys::LeftMouseButton );
   if( leftMouseDown )
   {
-    // drag event
-
+    // drag event, would be used for multiple object placement, or brushes.
+    
   }
   else
   {
-    // hover event
-  }
-
-  FHitResult hit = getHitGeometry();
+    // hover event. move the building ghost around etc.
+    FHitResult hit = getHitGeometry();
   
-  // If you're sliding the mouse along the floor,
-  if( ghost && hit.Actor == floor )
-  {
-    ghost->SetActorLocation( hit.ImpactPoint );
+    // If you're sliding the mouse along the floor,
+    if( ghost && hit.Actor == floor )
+    {
+      ghost->SetActorLocation( hit.ImpactPoint );
+    }
   }
 }
 
@@ -714,8 +721,6 @@ void AFlyCam::MouseMovedY( float amount )
 
 void AFlyCam::MoveForward( float amount )
 {
-  //MoveForward( 2.f );
-
   // Don't enter the body of this function if Controller is
   // not set up yet, or if the amount to move is equal to 0 
   if( Controller && amount )

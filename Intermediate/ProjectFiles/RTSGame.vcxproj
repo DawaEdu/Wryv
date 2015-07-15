@@ -74,9 +74,10 @@
     <ClInclude Include="..\..\Source\RTSGame\Icon.h" />
     <ClInclude Include="..\..\Source\RTSGame\IconGroup.h" />
     <ClInclude Include="..\..\Source\RTSGame\Item.h" />
-    <ClInclude Include="..\..\Source\RTSGame\ItemData.h" />
+    <ClCompile Include="..\..\Source\RTSGame\ItemQuantity.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\Menu.cpp" />
+    <ClInclude Include="..\..\Source\RTSGame\ItemQuantity.h" />
     <ClInclude Include="..\..\Source\RTSGame\ItemShop.h" />
     <ClInclude Include="..\..\Source\RTSGame\Menu.h" />
     <ClCompile Include="..\..\Source\RTSGame\MyHUD.cpp" />

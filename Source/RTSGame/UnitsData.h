@@ -13,6 +13,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte<Types> Type;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Name;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Quantity;
 
   // Build cost
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 GoldCost;
@@ -59,6 +60,7 @@ public:
     Type = NOTHING;
     GoldCost = LumberCost = StoneCost = BuildTime = Speed = HpMax = Armor = SightRange = 
       AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
+    Quantity = 1;
     TimeLength = 0.f;
     uClass = 0;
   }

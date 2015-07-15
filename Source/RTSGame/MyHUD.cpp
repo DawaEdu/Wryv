@@ -27,19 +27,29 @@ AMyHUD::AMyHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   // in first call to draw.
 }
 
+void AMyHUD::BeginPlay()
+{
+  Super::BeginPlay();
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::BeginPlay()") );
+
+  LoadUClasses();
+}
+
 void AMyHUD::BeginDestroy()
 {
-  Super::BeginDestroy();
   if( ui ) {
     delete ui;
     ui = 0;
   }
+  Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
 }
+  
 
 void AMyHUD::InitWidgets()
 {
   if( Init ) return;
   Init = 1;
+  UE_LOG( LogTemp, Warning, TEXT( "InitWidgets()" ) );
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
   ResourcesWidget::GoldTexture = GoldIconTexture;
@@ -49,59 +59,69 @@ void AMyHUD::InitWidgets()
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
 
   ui = new UserInterface(FVector2D(0,0), FVector2D(Canvas->SizeX, Canvas->SizeY));
-  
+  ui->Name = "UI-root";
+
   ui->resources = new ResourcesWidget( 16, 4, FVector2D(0,0) );
   ui->Add( ui->resources );
+  ui->resources->Name = "Resources";
 
   ui->rightPanel = new Panel( RightPanelTexture, texMinimap, FVector2D( 256, Canvas->SizeY ), 4 );
   ui->Add( ui->rightPanel );
 
   ui->rightPanel->portrait->Icon = texIcon;
+  ui->rightPanel->Name = "Right side panel";
+
   // Attach functionality for minimap
-  ui->rightPanel->minimap->OnClicked = [](FVector2D mouse){
-    // get the click % and pan
-    FVector2D perc = Game->myhud->ui->rightPanel->minimap->getHitPercent( mouse );
-    Game->flycam->SetCameraPosition( perc );
+  Minimap *minimap = ui->rightPanel->minimap;
+  minimap->OnClicked = [minimap](FVector2D mouse){
+    Game->flycam->SetCameraPosition( mouse / minimap->Size );
+    return 0;
   };
+  minimap->OnDrag = [minimap](FVector2D mouse){
+    Game->flycam->SetCameraPosition( mouse / minimap->Size );
+    return 0;
+  };
+  minimap->Name = "Minimap";
 
   // Keep one of these for showing costs on flyover
   ui->costWidget = new CostWidget( TooltipBackgroundTexture, FVector2D(16,13), 8 );
   ui->Add( ui->costWidget );
-  ui->costWidget->Pos = FVector2D(300,300);
+  ui->costWidget->align = HotSpot::HCenter | HotSpot::VCenter;
+  ui->costWidget->Pos = FVector2D(0,0);
+  ui->costWidget->reflushToParent( FVector2D(0,0) );
+  ui->costWidget->Name = "Cost widget";
 
   ui->tooltip = new Tooltip( TooltipBackgroundTexture, FString("tooltip"), FVector2D(8,8) );
   ui->Add( ui->tooltip );
-  //ui->tooltip->hidden = 1;
-  ui->tooltip->Set( "HELLO" ) ;
+  ui->tooltip->hidden = 1;
+  ui->tooltip->Name = "Tooltip";
 
   ui->buffs = new StackPanel( FVector2D( 24, 24 ), FVector2D( 4, 4 ) );
   ui->Add( ui->buffs );
+  ui->buffs->Name = "Buffs";
 
   ui->building = new StackPanel( FVector2D( 50, 50 ), FVector2D( 4, 4 ) );
   ui->Add( ui->building );
-  
+  ui->building->Name = "Building";
+
   ui->statusBar = new StatusBar( FVector2D(Canvas->SizeX,Canvas->SizeY), 22, FLinearColor::Black );
   ui->Add( ui->statusBar );
+  ui->statusBar->Name = "Status bar";
 
   // Create the panel for containing items/inventory
   FVector2D size( 400, 100 );
   FVector2D pos( ( Canvas->SizeX - size.X )/2, Canvas->SizeY - size.Y - ui->statusBar->Size.Y );
-  ui->itemBelt = new SlotPalette( SlotPaletteTexture, pos, size, 1, 4 );
+  ui->itemBelt = new SlotPalette( SlotPaletteTexture, pos, size, 1, 4, FVector2D( 8,8 ) );
   ui->Add( ui->itemBelt );
+  ui->itemBelt->Name = "Item belt";
 
   ui->mouseCursor = new ImageWidget( MouseCursorHand.Texture, FVector2D(Canvas->SizeX/2,Canvas->SizeY/2) );
   ui->Add( ui->mouseCursor );
-
+  ui->mouseCursor->Name = "Mouse cursor";
 }
 
-void AMyHUD::Setup()
+void AMyHUD::LoadUClasses()
 {
-  FVector v(0.f);
-  FRotator r(0.f);
-  if( !selector )  selector = GetWorld()->SpawnActor<AActor>( uClassSelector, v, r );
-  if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AActor>( uClassSelectorA, v, r );
-  if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AActor>( uClassSelectorShop, v, r );
-
   // Connect Widgets & UnitsData with mappings from Types
   vector< Types > types;
   for( int i = 0; i < Types::MAX; i++ )  types.push_back( (Types)i );
@@ -143,6 +163,17 @@ void AMyHUD::Setup()
       j, *p.second.Label, (int)p.second.Type.GetValue() );
     j++;
   }
+}
+
+void AMyHUD::Setup()
+{
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::Setup()" ) );
+
+  FVector v(0.f);
+  FRotator r(0.f);
+  if( !selector )  selector = GetWorld()->SpawnActor<AActor>( uClassSelector, v, r );
+  if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AActor>( uClassSelectorA, v, r );
+  if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AActor>( uClassSelectorShop, v, r );
 
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" ); //rs[0];
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" ); //rs[1];
@@ -253,7 +284,8 @@ void AMyHUD::UpdateDisplayedResources()
   diff *= 0.1; // jump by 10%
   displayedStone += diff;
 
-  ui->resources->SetValues( displayedGold, displayedLumber, displayedStone );
+  ui->resources->SetValues( FMath::RoundToInt( displayedGold ),
+    FMath::RoundToInt( displayedLumber ), FMath::RoundToInt( displayedStone ) );
 }
 
 void AMyHUD::UpdateMouse()
@@ -291,135 +323,27 @@ void AMyHUD::DrawHUD()
 
   // Render the entire UI
   ui->render();
-  
-}
-
-bool AMyHUD::Purchase( Types itemType )
-{
-  // The player acquires an itemType. Costs are looked up from the UnitsData table
-  if( !Game->gm->playersTeam->CanAfford( itemType ) )  return 0;
-  
-  // Can afford it.
-  Game->gm->playersTeam->Spend( itemType );
-  // Increment inventory of this item on SelectedObject.
-
-  // Purchase an item means
-  if( IsUnit( itemType ) ) {
-    // purchasing a unit adds it to your team
-    if( SelectedObject )
-    {
-      // add to spawn queue of the lco
-      SelectedObject->spawnQueue.push_back( SpawningObject( 0, itemType ) );
-    }
-  }
-  else if( IsBuilding( itemType ) ) {
-    // Pay for building and start to build it.
-    NextBuilding = itemType;
-  }
-  else if( IsItem( itemType ) ) {
-    // give item to SelectedObject
-    if( SelectedObject )
-    {
-      AItemShop *shop = (AItemShop *)SelectedObject;
-      if( shop && shop->patron )
-      {
-        shop->patron->Items.Push( itemType ) ;
-      }
-      else
-      {
-        UE_LOG( LogTemp, Warning, TEXT( "Not a shop or no patron" ) );
-      }
-    }
-  }
-  else if( IsSpell( itemType ) ) {
-    
-  }
-  
-  return 1;
-}
-
-void AMyHUD::RunEvent( Types buttonType )
-{
-  // Should be a widget that can do something
-  if( IsItem( buttonType ) )
-  {
-    // Single use items
-    UE_LOG( LogTemp, Warning, TEXT( "Effect %s" ), *Game->unitsData[ buttonType ].Name );
-    // Apply the speedup to the SelectedObject (currently selected unit)
-    ////SelectedObject->ApplyEffect( buttonType );
-  }
-  else if( IsSpell( buttonType ) )
-  {
-    // Single use spells. Spawn the spell object.
-    UE_LOG( LogTemp, Warning, TEXT( "Casting spell %s" ), *Game->unitsData[ buttonType ].Name );
-    // (some of which turn the mouse into a targetting cursor)
-    // If the spell type requires a 2nd click, we set the nextSpell
-    // variable so that the mouse cursor changes state and the spell
-    // will be cast on next click.
-    NextSpell = buttonType;
-  }
-  else if( IsBuilding( buttonType ) )
-  {
-    // We set this in the HUD. Once we return from this function,
-    // the NextBuilding will be linked to the Peasant or whatever is selected
-    NextBuilding = buttonType;
-  }
 }
 
 // Detect clicks and mouse moves on the HUD
 bool AMyHUD::MouseLeftDown( FVector2D mouse )
 {
-  if( !Init ) return 0;
-  UE_LOG( LogTemp, Warning, TEXT("Mouse clicked on hud") );
-
-  ui->itemBelt->Click( mouse );
-  
-  //UE_LOG( LogTemp, Warning, TEXT("didn't hit ui anywhere") );
-  return 0;
+  return ui->Click( mouse, FVector2D(0,0) );
 }
 
 bool AMyHUD::MouseLeftUp( FVector2D mouse )
 {
-  // The left mouse button was let go of, meaning the box selection may have ended
-  // Form a box shaped selection
-  TArray<AActor*> actors;
-  selectBox += mouse;
-  //Game->myhud->GetActorsInSelectionRectangle( selectBox.Min, selectBox.Max, actors );
-  //for( int i = 0; i < actors.Num(); i++ )
-  //{
-  //  UE_LOG( LogTemp, Warning, TEXT("Selected %s"), *actors[i]->GetName() );
-  //}
-  return 1;
+  return ui->Drop( mouse );
 }
 
 bool AMyHUD::MouseRightDown( FVector2D mouse )
 {
-  return 1;
+  return ui->RightClick( mouse, FVector2D(0,0) );
 }
 
 bool AMyHUD::MouseRightUp( FVector2D mouse )
 {
-  return 1;
-}
-
-bool AMyHUD::MouseDragged( FVector2D mouse )
-{
-  // Drag event. You cannot render here, Canvas is only initialized in DrawHUD()
-  // capture minimap event first
-  if( ui->rightPanel->minimap->hit( mouse ) )
-  {
-    // get the click % and pan
-    FVector2D perc = ui->rightPanel->minimap->getHitPercent( mouse );
-    Game->flycam->SetCameraPosition( perc );
-    return 1;
-  }
-  return 0;
-}
-
-bool AMyHUD::MouseHovered( FVector2D mouse )
-{
-  // Check against all ui widgets that require hover.
-  ui->itemBelt->Hover( mouse );
+  // Right up isn't handled.
   return 1;
 }
 
@@ -439,6 +363,24 @@ bool AMyHUD::MouseMoved( FVector2D mouse )
   }
 
   return 0;
+}
+
+bool AMyHUD::MouseHovered( FVector2D mouse )
+{
+  // Check against all ui widgets that require hover.
+  return ui->Hover( mouse );
+}
+
+bool AMyHUD::MouseDragged( FVector2D mouse )
+{
+  // Drag event.
+  return ui->Drag( mouse );
+}
+
+bool AMyHUD::MouseDropped( FVector2D mouse )
+{
+  // Drop event.
+  return ui->Drop( mouse );
 }
 
 void AMyHUD::Tick( float t )

@@ -159,6 +159,9 @@
     <ClCompile Include="..\..\Source\RTSGame\Icon.cpp">
       <Filter>Source\RTSGame\Data\unused</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\ItemQuantity.cpp">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\RTSGame\Avatar.h">
@@ -181,9 +184,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Menu.h">
       <Filter>Source\RTSGame\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\ItemData.h">
-      <Filter>Source\RTSGame\Data</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Peasant.h">
       <Filter>Source\RTSGame\GameObjects</Filter>
@@ -276,6 +276,9 @@
       <Filter>Source\RTSGame\Data\unused</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\CursorTexture.h">
+      <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\ItemQuantity.h">
       <Filter>Source\RTSGame\Data</Filter>
     </ClInclude>
   </ItemGroup>

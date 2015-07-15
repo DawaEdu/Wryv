@@ -31,9 +31,8 @@ void AItem::ProxPickup_Implementation( AActor* OtherActor, UPrimitiveComponent* 
   // Apply the powerup to the otheractor
   if( AUnit *unit = Cast<AUnit>( OtherActor ) )
   {
-    unit->Items.Push( UnitsData.Type );
-    UE_LOG( LogTemp, Warning, TEXT("%s picked up a %s"),
-      *unit->UnitsData.Name, *UnitsData.Name );
+    unit->Items.Push( UnitsData );
+    UE_LOG( LogTemp, Warning, TEXT("%s picked up a %s"), *unit->UnitsData.Name, *UnitsData.Name );
     Destroy();
   }
 

@@ -24,6 +24,8 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
 // Called when the game starts or when spawned
 void AGameObject::BeginPlay()
 {
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::BeginPlay()") );
+
   Super::BeginPlay();
   dest = Pos();  // set the position to where the thing is.
   hp = UnitsData.HpMax;
@@ -59,7 +61,7 @@ void AGameObject::BeginDestroy()
   }
 
   removeAsTarget();
-  Super::BeginDestroy();
+  Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }
 
 float AGameObject::centroidDistance( AGameObject *go )
@@ -528,9 +530,10 @@ void AGameObject::RefreshBuildingQueue()
       UE_LOG( LogTemp, Warning, TEXT( "Removing elt %d from spawnqueue" ), i );
       remove( spawnQueue, i );
       RefreshBuildingQueue();
+      return 0;
     };
     img->OnHover = [](FVector2D mouse){
-      
+      return 0;
     };
     building->StackRight( img );
   }

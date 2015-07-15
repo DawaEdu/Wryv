@@ -33,7 +33,6 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CameraZ;
   
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* bkgMusic;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* buildingPlaced;

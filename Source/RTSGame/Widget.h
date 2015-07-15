@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <functional>
+#include <string>
 #include "GlobalFunctions.h"
 using namespace std;
 class AHUD;
@@ -44,9 +45,13 @@ class AGameObject;
 
 struct HotSpot
 {
+  string Name; //the name of the widget
   static AHUD* hud;
-
+  enum HAlign { Left=1<<0, HCenter=1<<1, Right =1<<2, ToLeftOfParent=1<<3, ToRightOfParent=1<<4,   ToHCenterInParent=1<<5 };
+  enum VAlign { Top =1<<6, VCenter=1<<7, Bottom=1<<8, ToTopOfParent=1<<9,  ToBottomOfParent=1<<10, ToVCenterInParent=1<<11 };
+  int align;
   bool hidden;
+  float displayTime; // Amount of time to display remaining
   FVector2D Pos, Size;
   FLinearColor Color;
   // Associations with AGameObject's contained in this hotspot. Empty if no objects
@@ -55,23 +60,45 @@ struct HotSpot
 protected:
   HotSpot* Parent;
   vector<HotSpot*> children;  // Children of this hotspot.
-  bool dirty; // set if the widget's bounds need to be remeasured
+  bool dirty;  // Set if the widget's bounds need to be remeasured
+  bool bubbleUp; // When set, the event can bubbles up through the widget
 public:
-  function< void (FVector2D mouse) > OnClicked;
-  function< void (FVector2D mouse) > OnHover;
-  function< void (FVector2D mouse) > OnDrag;
+  // Returns true (1) if event should be consumed.
+  function< int (FVector2D mouse) > OnClicked;
+  function< int (FVector2D mouse) > OnRightClicked;
+  function< int (FVector2D mouse) > OnHover;
+  function< int (FVector2D mouse) > OnDrag;
   // A function that runs when the widget is dropped @ certain location
-  function< void (FVector2D mouse) > OnDrop;
-
-  HotSpot() : hidden(0), Pos(0,0), Size(32,32), Color( FLinearColor::White ), Parent(0), dirty(1) {}
-  HotSpot( FVector2D pos ) : hidden(0), Pos(pos), Size(32,32), Color( FLinearColor::White ), Parent(0), dirty(1) {}
-  HotSpot( FVector2D pos, FVector2D size ) : hidden(0), Pos( pos ), Size( size ), Color( FLinearColor::White ), Parent(0), dirty(1)
+  function< int (FVector2D mouse) > OnDrop;
+  void defaults()
   {
+    align = Top | Left;
+    hidden = 0;
+    displayTime = 0.f;
+    Pos = FVector2D(0,0);
+    Size = FVector2D(32,32);
+    Color = FLinearColor::White;
+    Parent = 0;
+    dirty = 1;
+    bubbleUp = 1;
+  }
+  HotSpot() {
+    defaults();
+  }
+  HotSpot( FVector2D pos ) {
+    defaults();
+    Pos = pos;
+  }
+  HotSpot( FVector2D pos, FVector2D size ) {
+    defaults();
+    Pos = pos;
+    Size = size;
   }
   virtual ~HotSpot(){ Clear(); }
 protected:
   virtual void render( FVector2D offset )
   {
+    if( hidden ) return;
     // When the base class renders, it calls render on all the children.
     for( int i = 0 ; i < children.size(); i++ )
       children[i]->render( offset + Pos );
@@ -95,27 +122,60 @@ public:
   // they all kick-off to subclass::render( FVector2D(0,0) )
   virtual void render(){ if( hidden ) return; render( FVector2D(0,0) ); }
   void repad( FVector2D pad ) {
+    // repad's the widget to enclose everything,
+    // including the children.
+    // *** widget grows infinitely if you push a child to the edge of the bounds
+    // each frame, unless you keep it inside within an epsilon. ***
     Size = GetChildBounds().Size() + pad;
   }
+
+  // reflushes to parent widget
+  void reflushToParent( FVector2D pad ) {
+    if( !Parent )
+    {
+      UE_LOG( LogTemp, Warning, TEXT( "Cannot reflush to null parent" ) );
+      return; // cannot reflush
+    }
+    FVector2D PSize = Parent->Size;
+
+    if( align & Left )  Pos.X = pad.X;
+    else if( align & Right )  Pos.X = PSize.X - Size.X - pad.X;
+    else if( align & HCenter )  Pos.X = (PSize.X - Size.X)/2; // centering
+    else if( align & ToLeftOfParent )  Pos.X = -Size.X;
+    else if( align & ToRightOfParent )  Pos.X = PSize.X;
+    else if( align & ToHCenterInParent )  Pos.X = (PSize.X - Size.X)/2;
+
+    if( align & Top )  Pos.Y = pad.Y;
+    else if( align & Bottom )  Pos.Y = PSize.Y + Size.Y + pad.Y;
+    else if( align & VCenter ) Pos.Y = (PSize.Y - Size.Y)/2;
+    else if( align & ToBottomOfParent )  Pos.Y = PSize.Y;
+    else if( align & ToTopOfParent )  Pos.Y = -Size.Y;
+    else if( align & ToVCenterInParent )  Pos.Y = -Size.Y;
+  }
+
   float left(){ return Pos.X; }
 	float right(){ return Pos.X + Size.X; }
 	float top(){ return Pos.Y; }
 	float bottom(){ return Pos.Y + Size.Y; }
-	//bool hit( FVector2D v )
-	//{
-	//	// +---+ top (0)
-	//	// |   |
-	//	// +---+ bottom (2) (bottom > top)
-	//	// L   R
-	//	return left() < v.X   &&   v.X < right() &&
-  //         top()  < v.Y   &&   v.Y < bottom();
-	//}
-  // Check main bounds
+  FVector2D GetAbsPos(){
+    // traces back up to the parent and finds the absolute position of this widget
+    HotSpot *h = this;
+    FVector2D p = Pos;
+    while( h->Parent ) { h = h->Parent ; p += h->Pos ; }
+    return p;
+  }
+  //bool hit( FVector2D v ) {
+  //  FBox2DU bounds = GetBounds();
+  //  return bounds.IsInside( v ); // check if v is inside the box (<-)
+  //}
+
+  // This function checks absolute coordinates
+	// Check main bounds
   bool hit( FVector2D v ) {
     FBox2DU bounds = GetBounds();
     return bounds.IsInside( v ); // check if v is inside the box (<-)
   }
-  FVector2D getHitPercent( FVector2D v ) { return (v - Pos)/Size; }
+  
   FBox2DU GetBounds( FVector2D offset ){
     FBox2DU bounds;
 
@@ -140,23 +200,69 @@ public:
     }
     return bounds;
   }
+  // Get the bounds of just this widget, excluding the children
+  // used for when flushing position of something inside a widget
+  // towards the right or left. if you get bounds including the
+  // children it will tend accumulate an overflow right/left if it overflows.
+  FBox2DU GetBoundsExcludingChildren()
+  {
+    FBox2DU bounds;
+    bounds += Pos;
+    bounds += Pos + Size;
+    return bounds;
+  }
   void Clear(){
     for( int i = 0; i < children.size(); i++ )
       delete children[i];
     children.clear();
   }
-  void Click( FVector2D v ) {
-    // Check if hit parent. sometimes children are outside parent, which
-    // is why
-    if( OnClicked && hit( v ) )  OnClicked(v);
+
+  bool Act( FVector2D v, FVector2D offset, function< int (FVector2D) > HotSpot::* f )
+  {
+    // Look into deepest child first.
     for( int i = 0; i < children.size(); i++ )
-      children[i]->Click( v - Pos ); // relatively position click point to parent
+    {
+      // check if a child is hit by the click.
+      HotSpot *child = children[i];
+      bool h = child->Act( v, offset+Pos, f );  // offset accumulates absolute position offset of widget
+      if( h )  return 1; // If the hit was intercepted, return.
+    }
+
+    // Actually perform hit checking, if this provides the function f.
+    if( this->*f && hit( v - offset ) )
+    {
+      (this->*f)( v - offset - Pos ); // pass in relative coordinates
+      // If the widget doesn't bubble events, then you must return that it hit here
+
+      // If the widget consumes events, then halt propagation
+      // Deepest child gets searched, then we return from here
+      if( !bubbleUp ) return 1;
+    }
+    return 0; //not hit or bubbles are allowed.
   }
-  void Hover( FVector2D v ) {
-    if( OnHover && hit( v ) )  OnHover(v);
-    for( int i = 0; i < children.size(); i++ )
-      children[i]->Hover( v - Pos );
+
+  // returns true when the point hits the widget (or a child)
+  bool Click( FVector2D v, FVector2D offset )
+  {
+    return Act( v, FVector2D(0,0), &HotSpot::OnClicked );
   }
+  bool RightClick( FVector2D v, FVector2D offset )
+  {
+    return Act( v, FVector2D(0,0), &HotSpot::OnRightClicked );
+  }
+  bool Hover( FVector2D v )
+  {
+    return Act( v, FVector2D(0,0), &HotSpot::OnHover );
+  }
+  bool Drag( FVector2D v )
+  {
+    return Act( v, FVector2D(0,0), &HotSpot::OnDrag );
+  }
+  bool Drop( FVector2D v )
+  {
+    return Act( v, FVector2D(0,0), &HotSpot::OnDrop );
+  }
+
 };
 
 struct TextWidget : public HotSpot
@@ -168,10 +274,12 @@ public:
   TextWidget( FString fs ) : Text( fs )
   {
     // Measures size in Text using HUD object (must be init & ready)
+    Name = "TextWidget";
     SetText( fs );
   }
   TextWidget( FString fs, FVector2D pos ) : HotSpot( pos ), Text( fs )
   {
+    Name = "TextWidget";
     SetText( fs );
   }
   virtual ~TextWidget(){}
@@ -198,6 +306,7 @@ protected:
   // canvas is ready (ie during render() calls)
   virtual void render( FVector2D offset ) override
   {
+    if( hidden ) return;
     if( dirty ) { // It seems in first calls to render(), Measure() does not properly measure text width
       Measure();
       dirty = 0;
@@ -218,6 +327,7 @@ struct ImageWidget : public HotSpot
   
   ImageWidget( UTexture* pic ) : Icon( pic ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
+    Name = "ImageWidget";
     if( Icon ){
       Size.X = Icon->GetSurfaceWidth();
       Size.Y = Icon->GetSurfaceHeight();
@@ -226,6 +336,7 @@ struct ImageWidget : public HotSpot
   ImageWidget( UTexture* pic, FVector2D pos ) :
     Icon( pic ), HotSpot( pos ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
+    Name = "ImageWidget";
     if( Icon ){
       Size.X = Icon->GetSurfaceWidth();
       Size.Y = Icon->GetSurfaceHeight();
@@ -234,12 +345,14 @@ struct ImageWidget : public HotSpot
   ImageWidget( UTexture* pic, FVector2D pos, FVector2D size ) :
     Icon( pic ), HotSpot( pos, size ), uv( 1, 1 ), hotpoint(0,0), Color(FLinearColor::White)
   {
+    Name = "ImageWidget";
   }
   virtual ~ImageWidget(){}
 
 protected:
   virtual void render( FVector2D offset ) override 
   {
+    if( hidden ) return;
     FVector2D renderPos = Pos - hotpoint;
     if( !Icon )
     {
@@ -249,6 +362,8 @@ protected:
       UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget" ) );
       // render should not be called when the texture is hidden
     }
+
+    // If hidden, do not draw
     hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color );
     HotSpot::render( offset );
   }
@@ -360,20 +475,20 @@ struct CostWidget : public ImageWidget
     topText = new TextWidget( "TopText", pad/2 );
     Add(topText);
 
-    UE_LOG( LogTemp, Warning, TEXT( "topText->GetBounds()" ) );
+    //UE_LOG( LogTemp, Warning, TEXT( "topText->GetBounds()" ) );
     FBox2DU bounds = topText->GetBounds();
     bounds.print("toptext");
     cost = new ResourcesWidget(16, 4, FVector2D( pad.X/2, topText->GetBounds().bottom() + vSpacing ) );
     Add(cost);
 
-    UE_LOG( LogTemp, Warning, TEXT( "cost pos: %f %f" ), cost->Pos.X, cost->Pos.Y );
-    UE_LOG( LogTemp, Warning, TEXT( "cost->GetBounds()" ) );
+    //UE_LOG( LogTemp, Warning, TEXT( "cost pos: %f %f" ), cost->Pos.X, cost->Pos.Y );
+    //UE_LOG( LogTemp, Warning, TEXT( "cost->GetBounds()" ) );
     bounds = cost->GetBounds();
     bounds.print("costbounds");
     bottomText = new TextWidget( "BottomText", FVector2D( pad.X/2, cost->GetBounds().bottom() + vSpacing ) );
     Add(bottomText);
 
-    UE_LOG( LogTemp, Warning, TEXT( "bottomText->GetBounds()" ) );
+    //UE_LOG( LogTemp, Warning, TEXT( "bottomText->GetBounds()" ) );
     bounds = bottomText->GetBounds();
     bounds.print("bottomText");
     
@@ -390,6 +505,7 @@ struct CostWidget : public ImageWidget
 
   virtual void render( FVector2D offset ) override
   {
+    if( hidden ) return;
     if( dirty )
     {
       repad( Pad ) ;
@@ -397,7 +513,6 @@ struct CostWidget : public ImageWidget
     }
     ImageWidget::render( offset );
   }
-
 };
 
 struct Tooltip : public ImageWidget
@@ -411,7 +526,6 @@ public:
   {
     Text = new TextWidget( txt );
     Add( Text );
-    
     Set( txt );
   }
   virtual ~Tooltip(){}
@@ -425,8 +539,9 @@ public:
   }
 
   virtual void render( FVector2D offset ) override {
+    if( hidden ) return;
     //re-measure the background's size if the text has changed
-    //if( dirty )
+    if( dirty )
     {
       repad( Pad );
       dirty = 0;
@@ -435,25 +550,38 @@ public:
   }
 };
 
+struct SlotPalette;
+
 struct SlotEntry : public ImageWidget
 {
-  TextWidget *qty;   // The quantity of the item
-  SlotEntry( UTexture* tex, FVector2D pos, FVector2D size ) : ImageWidget( tex, pos, size )
+  SlotPalette* Parent; // hides base member
+  int Quantity; // the numeric quantity remaining
+  TextWidget* TextQuantity;   // The quantity of the item
+  
+  SlotEntry( SlotPalette *palette, UTexture* tex, FVector2D pos, FVector2D size, int qty ) :
+    Parent(palette), ImageWidget( tex, pos, size ), Quantity( qty )
   {
-    qty = new TextWidget( "1" );
-    Add( qty );
-    FBox2DU bounds = GetBounds();
-    qty->Pos.X = bounds.right() - qty->Size.X;
-
-    hidden = 1; // defaults hidden with NULL texture.
+    TextQuantity = new TextWidget( "A" );
+    TextQuantity->align = Right|Bottom;
+    Add( TextQuantity );
+    dirty = 1;
+    //SetQuantity( qty );
+    //hidden = 1; // defaults hidden with NULL texture.
   }
+
+  void SetTexture( UTexture* tex, FVector2D originalPos );
 
   void SetQuantity( int quantity )
   {
-    qty->SetText( FString::Printf( TEXT("%d"), quantity ) );
-    FBox2DU bounds = GetBounds();
-    qty->Pos.X = bounds.right() - qty->Size.X;
+    Quantity = quantity;
+    TextQuantity->SetText( FString::Printf( TEXT("%d"), quantity ) );
+    dirty = 1;
+    // 0 qty means qty widget disappears.
+    //if( !quantity )  TextQuantity->hidden = 1;
+    //else  TextQuantity->hidden = 0;
   }
+
+  virtual void render( FVector2D offset ) override;
 };
 
 struct SlotPalette : public ImageWidget
@@ -461,16 +589,18 @@ struct SlotPalette : public ImageWidget
   FVector2D SlotSize;
   ImageWidget* Drag;
   static UTexture* SlotPaletteTexture;
+  FVector2D Pad;
   int Rows, Cols;
 
   // Drag & Drop for items from slots
   // The item we are dragging (subhotspot)
-  SlotPalette( UTexture* bkg, FVector2D pos, FVector2D size, int rows, int cols ) : 
-    Rows(rows), Cols(cols), ImageWidget( bkg, pos, size )
+  SlotPalette( UTexture* bkg, FVector2D pos, FVector2D size,
+    int rows, int cols, FVector2D pad ) : 
+    Rows(rows), Cols(cols), Pad(pad), ImageWidget( bkg, pos, size )
   {
     // Init w/ # slots used in this palette
-    // The stock size of the width is 100px/slot. We re-calculate the slotsize though
-    // based on # slots used.
+    // The stock size of the width is 100px/slot.
+    // We re-calculate the slotsize though based on # slots used.
     Drag = 0;
     SetNumSlots( rows, cols );
   }
@@ -503,26 +633,27 @@ struct SlotPalette : public ImageWidget
       children[i]->hidden = 1;
   }
 
-  ImageWidget* SetSlot( int i, UTexture* icon )
+  SlotEntry* SetSlotTexture( int i, UTexture* tex )
   {
-    ImageWidget* slot = GetSlot(i);
-    slot->hidden = 0; // unhide it if hidden when set with a texture
-    slot->Icon = icon;
-
-    // center the child image a bit
-    FVector2D originalPos = GetSlotPosition( i );
-
+    FVector2D texSize( tex->GetSurfaceWidth(), tex->GetSurfaceHeight() );
+    SlotEntry* slot = GetSlot( i );
+    slot->SetTexture( tex, GetSlotPosition(i) );
     return slot;
   }
 
   // Widget's by themselves are just hotspots
-  vector<ImageWidget*> SetNumSlots( int rows, int cols )
+  vector<SlotEntry*> SetNumSlots( int rows, int cols )
   {
     Rows = rows;
     Cols = cols;
+    vector<SlotEntry*> slots;
+
+    hidden = !rows && !cols;
+    if( hidden ) return slots; // don't change the size vars when 0 size because
+    // it will corrupt the variables
 
     //SlotSize = Size / FVector2D( cols, rows );
-    SlotSize.X = Size.X / cols; // = FVector2D(100,100);//Size / FVector2D( cols, rows );
+    SlotSize.X = Size.X / cols;
     SlotSize.Y = Size.Y / rows;
     int numSlots = rows*cols;
 
@@ -532,14 +663,19 @@ struct SlotPalette : public ImageWidget
     Clear();    // Remove the old ImageWidgets.
     
     // The size of this widget set here.
-    vector<ImageWidget*> slots;
     for( int i = 0; i < numSlots; i++ )
     {
-      ImageWidget *iw = new ImageWidget( Icon, GetSlotPosition(i), SlotSize );
-      iw->hidden = 1; // initialize as hidden, until texture is set.
+      /// initialize with 0 of item
+      SlotEntry *iw = new SlotEntry( this, Icon, GetSlotPosition(i), SlotSize, 0 );
+      
+      //iw->hidden = 1; // initialize as hidden, until texture is set.
       slots.push_back( iw );
       Add( iw );
     }
+
+    // Change the size of the panel to being 
+    Size = SlotSize * FVector2D( cols, rows );
+
     return slots;
   }
 };
@@ -648,7 +784,8 @@ struct Panel : public ImageWidget
     SolidWidget *leftBorder = new SolidWidget( FVector2D( -4, 0 ), FVector2D( margin, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
     Add( leftBorder );
 
-    abilities = new SlotPalette( SlotPalette::SlotPaletteTexture, FVector2D( margin, s+margin ), FVector2D(s,s), 2, 3 );
+    abilities = new SlotPalette( SlotPalette::SlotPaletteTexture, FVector2D( margin, s+margin ),
+      FVector2D(s,s), 2, 3, FVector2D(8,8) );
     Add( abilities );
 
     minimap = new Minimap( texMinimap, FVector2D(0, abilities->GetBounds().bottom()+margin),
@@ -700,17 +837,8 @@ struct UserInterface : public HotSpot
     itemBelt = 0, buffs = 0, building = 0, statusBar = 0, mouseCursor = 0;
   }
 
-  ~UserInterface(){
-    //delete resources;
-    //delete rightPanel;
-    //delete costWidget;
-    //delete tooltip;
-    //delete itemBelt;
-    //delete buffs;
-    //delete building;
-    //delete statusBar;
-    //delete mouseCursor;
-  }
+  // don't need to explicitly delete children of the UI object
+  virtual ~UserInterface(){ }
 
   // layout all widgets based on canvas (screen) size
   void layout( FVector2D canvasSize )

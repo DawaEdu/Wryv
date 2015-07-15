@@ -15,7 +15,7 @@ void ARTSGameGameMode::BeginDestroy()
   //UE_LOG( LogTemp, Warning, TEXT("ARTSGameGameMode::BeginDestroy()") );
   for( pair< int, Team* > p : teams )  delete p.second;
 
-  Super::BeginDestroy();
+  Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
 }
 
 void ARTSGameGameMode::StartPlay()
