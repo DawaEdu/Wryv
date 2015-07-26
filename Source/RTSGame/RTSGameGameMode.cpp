@@ -8,6 +8,7 @@ ARTSGameGameMode::ARTSGameGameMode(const FObjectInitializer& PCIP) : Super( PCIP
 {
   PrimaryActorTick.bCanEverTick = true;
   UE_LOG( LogTemp, Warning, TEXT("ARTSGameGameMode::ARTSGameGameMode()") );
+  state = GameState::Menu; // Start at the title screen
 }
 
 void ARTSGameGameMode::BeginDestroy()
@@ -25,6 +26,8 @@ void ARTSGameGameMode::StartPlay()
   // In AGameObject::BeginPlay(), we have use of this object from Game->gm,
   // so it has to be initialized here.
   Game->gm = this;
+
+  // this is before actors have ::BeginPlay() called on them.
 
   // Calls all ::BeginPlay()
   Super::StartPlay();
@@ -46,7 +49,12 @@ void ARTSGameGameMode::InitGame( const FString& MapName,
 
   enemyTeam = teams[ 2 ] = new Team( 2, "Opponent" );
   teams[ 2 ]->alliance = Alliance::Enemy;
+
+  //UGameplayStatics::OpenLevel( GetWorld(), FName( "map5" ) );
+
 }
+
+
 
 void ARTSGameGameMode::Tick(float t)
 {
@@ -54,7 +62,10 @@ void ARTSGameGameMode::Tick(float t)
   //UE_LOG( LogTemp, Warning, TEXT("ARTSGameGameMode::Tick(%d)"), Game->tick );
   Super::Tick( t );
   
-  if( !Game->IsReady() )  return;
+  if( !Game->IsReady() )
+  {
+    return;
+  }
 
   // Each AI Team makes a decision on what it wants to do next
   // by evaluating:
@@ -65,7 +76,7 @@ void ARTSGameGameMode::Tick(float t)
   for( int i = 0; i < teams.size(); i++ )
   {
     // Update the team's AI by evaluating the map.
-    teams[i]->runAI( t );
+    //teams[i]->runAI( t );
   }
 }
 

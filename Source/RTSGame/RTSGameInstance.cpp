@@ -25,7 +25,8 @@ URTSGameInstance::URTSGameInstance(const FObjectInitializer& PCIP) : Super(PCIP)
 
 bool URTSGameInstance::IsReady()
 {
-  return !IsDestroyStarted && init && myhud && pc && gm && gs && flycam;
+  return !IsDestroyStarted && init && myhud && pc && gm && gs && 
+    flycam && flycam->pathfinder;
 }
 
 void URTSGameInstance::BeginDestroy()
@@ -66,7 +67,7 @@ void URTSGameInstance::Init()
 
   if( !DataTable )
   {
-    UE_LOG( LogTemp, Warning, TEXT("Datatable not initialized -- there may be a bug in UE 4.7.6") );
+    UE_LOG( LogTemp, Warning, TEXT("Datatable not initialized") );
     return;
   }
   else

@@ -5,7 +5,7 @@
 #include "UnitTypeUClassPair.generated.h"
 
 USTRUCT()
-struct RTSGAME_API FUnitTypeUClassPair : public FTableRowBase
+struct RTSGAME_API FUnitTypeUClassPair
 {
   GENERATED_USTRUCT_BODY()
 public:

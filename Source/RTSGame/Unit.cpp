@@ -84,19 +84,19 @@ void AUnit::OnSelected()
       itemBelt->GetSlot(i)->OnHover = [slot,item,data,tooltip](FVector2D mouse){
         // display a tooltip describing the current item.
         // or could add as a child of the img widget
-        ///FWidgetData w = Game->myhud->widgets[ item.Type ];
-        ///Game->myhud->ui->tooltip->Set( w.Label + FString(": ") + w.Tooltip );
-        ///// put the tooltip as a child of the slot
+        //FWidgetData w = Game->myhud->widgets[ item.Type ];
+        //Game->myhud->ui->tooltip->Set( w.Label + FString(": ") + w.Tooltip );
+        //// put the tooltip as a child of the slot
         //slot->Add( tooltip );
-
         CostWidget* costWidget = Game->myhud->ui->costWidget;
         FUnitsDataRow data = Game->unitsData[ item.Type ];
         costWidget->Set( data.Name, data.GoldCost, data.LumberCost, data.StoneCost, data.Description );
+        costWidget->hidden = 1;
         slot->Add( costWidget );
 
         // Set the costWidget's position based on the slot size.
-        costWidget->align = HotSpot::ToHCenterInParent | HotSpot::ToVCenterInParent;
-        costWidget->reflushToParent( FVector2D(0,0) );
+        costWidget->align = HotSpot::HCenter | HotSpot::OnTopOfParent;
+        costWidget->realignInParent();
 
         ///Game->myhud->ui->itemBelt->Add( costWidget );
         ///costWidget->Pos.Y = - costWidget->Size.Y - 8;
@@ -111,7 +111,6 @@ void AUnit::OnSelected()
   }
 
   SlotPalette* abilities = Game->myhud->ui->rightPanel->abilities;
-  abilities->ResetSlots();
   // Things it can spawn. Make sure abilities size is at least right size for it.
   for( int i = 0; i < UnitsData.Spawns.Num(); i++ ) // DRAW SPAWNS (with costs)
   {

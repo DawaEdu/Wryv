@@ -37,6 +37,9 @@ void UTipsBox::OkButtonClicked_Implementation()
 {
   UE_LOG( LogTemp, Warning, TEXT("UTipsBox::OkButtonClicked()") );
   RemoveFromViewport();
+
+  //Game->flycam->LoadLevel( Game->flycam->LevelMap );
+
 }
 
 void UTipsBox::NextTipButtonClicked_Implementation()

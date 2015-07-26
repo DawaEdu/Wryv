@@ -7,7 +7,6 @@
 #include "Peasant.h"
 #include "CombatUnit.h"
 #include "FlyCam.h"
-#include "GroundPlane.h"
 
 Team::Team()
 {
@@ -27,7 +26,7 @@ void Team::Defaults()
 {
   Gold = 500;
   Lumber = 500;
-  Stone = 200;
+  Stone = 250;
   DamageRepairThreshold = 2.f/3.f;
   alliance = Alliance::Neutral;
 }
@@ -211,7 +210,10 @@ void Team::runAI( float t )
       if( !units[i]->attackTarget )
         group.push_back( units[i] );
     // Find a random location on the map, and send the group off towards it
-    FVector randomLocation = Game->flycam->floor->getRandomLocation();
+    FBox box = Game->flycam->floor->GetComponentsBoundingBox();
+    FVector randomLocation = Rand( box.Min, box.Max );
+    randomLocation.Z = box.Max.Z;
+
     ai.timeSinceLastScout = 0.f;
   }
 

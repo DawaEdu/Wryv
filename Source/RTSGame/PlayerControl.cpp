@@ -5,7 +5,29 @@
 
 APlayerControl::APlayerControl( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  UE_LOG( LogTemp, Warning, TEXT("APlayerControl::APlayerControl") );
+  UE_LOG( LogTemp, Warning, TEXT("APlayerControl::APlayerControl()") );
+
+  PrimaryActorTick.bTickEvenWhenPaused = 1;
+}
+
+void APlayerControl::SetupInputComponent()
+{
+  PlayerInput->AddActionMapping( FInputActionKeyMapping( "KKey", EKeys::K, 0, 0, 0, 0 ) );
+
+  static const FName InputComponentName(TEXT("PlayerControllerInputComponent"));
+	InputComponent = NewObject<UInputComponent>(this, InputComponentName);
+
+  InputComponent->BindAction( TEXT("KKey"), EInputEvent::IE_Pressed, this, &APlayerControl::K );
+}
+
+void APlayerControl::SetupInactiveStateInputComponent(UInputComponent* InComponent)
+{
+  UE_LOG( LogTemp, Warning, TEXT("APlayerControl::SetupPlayerInputComponent() has %d components"), CurrentInputStack.Num() );
+}
+
+void APlayerControl::K()
+{
+  UE_LOG( LogTemp, Warning, TEXT("APlayerControl::K()") );
 }
 
 FSceneView* APlayerControl::GetSceneView(ULocalPlayer* LocalPlayer)
@@ -120,9 +142,31 @@ bool APlayerControl::Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& 
 	return false;
 }
 
+vector<FVector> APlayerControl::GetFrustumCorners()
+{
+  vector<FVector> v;
+  return v;
+}
+
+vector<FVector> APlayerControl::GetFrustumIntersectionWith( AActor* actor )
+{
+  vector<FVector> v;
+  return v;
+}
+
 bool APlayerControl::IsDown( FKey key )
 {
   return GetInputKeyTimeDown( key ) != 0.f;
+}
+
+void APlayerControl::Tick( float t )
+{
+  Super::Tick( t );
+
+  //CurrentInputStack.Add( 
+
+  // Tick Player Input as if unpaused, regardless
+  TickPlayerInput( t, 0 );
 }
 
 

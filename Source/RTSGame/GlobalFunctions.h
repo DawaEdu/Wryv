@@ -144,6 +144,12 @@ inline bool Intersects( FBox& box, FVector& pt )
          box.Min.Z < pt.Z && pt.Z < box.Max.Z ;
 }
 
+inline void print( FBox& box )
+{
+  UE_LOG( LogTemp, Warning, TEXT("%.2f %.2f %.2f,  %.2f %.2f %.2f"),
+    box.Min.X,box.Min.Y,box.Min.Z, box.Max.X,box.Max.Y,box.Max.Z );
+}
+
 struct Bezier
 {
   FVector P0, P1, P2, P3;

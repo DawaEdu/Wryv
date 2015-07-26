@@ -52,8 +52,6 @@
     <None Include="..\..\Config\DefaultInput.ini" />
     <ClCompile Include="..\..\Source\RTSGame\AI.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\AI.h" />
-    <ClCompile Include="..\..\Source\RTSGame\Avatar.cpp" />
-    <ClInclude Include="..\..\Source\RTSGame\Avatar.h" />
     <ClCompile Include="..\..\Source\RTSGame\Building.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\Building.h" />
     <ClCompile Include="..\..\Source\RTSGame\CombatUnit.cpp" />
@@ -66,13 +64,7 @@
     <ClCompile Include="..\..\Source\RTSGame\GameObject.cpp" />
     <ClInclude Include="..\..\Source\RTSGame\GameObject.h" />
     <ClInclude Include="..\..\Source\RTSGame\GlobalFunctions.h" />
-    <ClCompile Include="..\..\Source\RTSGame\GroundPlane.cpp" />
-    <ClInclude Include="..\..\Source\RTSGame\GroundPlane.h" />
-    <ClCompile Include="..\..\Source\RTSGame\Icon.cpp" />
-    <ClCompile Include="..\..\Source\RTSGame\IconGroup.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\Item.cpp" />
-    <ClInclude Include="..\..\Source\RTSGame\Icon.h" />
-    <ClInclude Include="..\..\Source\RTSGame\IconGroup.h" />
     <ClInclude Include="..\..\Source\RTSGame\Item.h" />
     <ClCompile Include="..\..\Source\RTSGame\ItemQuantity.cpp" />
     <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp" />

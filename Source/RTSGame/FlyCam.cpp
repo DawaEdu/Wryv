@@ -6,7 +6,6 @@
 #include "GameObject.h"
 #include "Building.h"
 #include "GlobalFunctions.h"
-#include "GroundPlane.h"
 #include "RTSGameInstance.h"
 #include "RTSGameGameMode.h"
 #include "Pathfinder.h"
@@ -15,32 +14,58 @@
 #include "DialogBox.h"
 #include "TipsBox.h"
 
+#include "GameFramework/PlayerInput.h"
+
 // Sets default values
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
 {
+  UE_LOG( LogTemp, Warning, TEXT( "AFlyCam::AFlyCam() ctor" ) );
   // Set this character to call Tick() every frame.
   // Turn this off to improve performance if you don't need it.
   PrimaryActorTick.bCanEverTick = true;
+  PrimaryActorTick.bTickEvenWhenPaused = 1;
+  
   ghost = 0;
   floor = 0;
-  setup = 0;
-
+  pathfinder = 0;
+  setupLevel = 0;
+  
   dialogBox = 0;
   menu = 0;
   tipsBox = 0;
 
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>(
     this, ADefaultPawn::MovementComponentName );
+  MovementComponent->SetTickableWhenPaused( true );
   movementSpeed = 1000.f;
 }
 
 void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
 {
+  UE_LOG( LogTemp, Warning, TEXT( "AFlyCam::SetupPlayerInputComponent()" ) );
   check( InputComponent );
   Super::SetupPlayerInputComponent( InputComponent );
-  InitializeDefaultPawnInputBindings();
-  camera = GetComponentByName<UCameraComponent>( this, "Camera" );
+  this->InputComponent = InputComponent;
+  this->InputComponent->SetTickableWhenPaused(true);
 
+  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
+  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraDown", EKeys::PageDown, 1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::W, 1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::S, -1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Up, 1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Down, -1.f));
+  
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::D, 1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::A, -1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Right, 1.f));
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Left, -1.f));
+
+  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MouseClickedLMB", EKeys::Q, -1.f));
+
+  camera = GetComponentByName<UCameraComponent>( this, "Camera" );
+  
+  // The "string" (eg. "Forward") is the mapping as defined in Project Settings / Input / Action Mappings.
+  // We just associate the "Forward" action (which is bound to a key in 
   InputComponent->BindAxis( "Forward", this, &AFlyCam::MoveForward );
   InputComponent->BindAxis( "Left", this, &AFlyCam::MoveLeft );
   InputComponent->BindAxis( "Back", this, &AFlyCam::MoveBack );
@@ -62,9 +87,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   InputComponent->BindKey( EKeys::F10, IE_Pressed, this, &AFlyCam::DisplayMenu );
   //InputComponent->BindKey( EKeys::PageUp, IE_Pressed, this, &AFlyCam::MoveCameraZUp );
   //InputComponent->BindKey( EKeys::PageDown, IE_Pressed, this, &AFlyCam::MoveCameraZDown );
-  FindFloor();
-  //Setup();
-
+  
   // Start the background music. Since we don't want attenuation,
   // we play the sound attached to the RootComponent of the Camera object,
   // and supply no further arguments.
@@ -76,7 +99,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   if( !menu ) menu = CreateWidget< UMenu >( GetWorld()->GetFirstPlayerController(), MenuBlueprint );
   if( !tipsBox ) {
     tipsBox = CreateWidget< UTipsBox >( GetWorld()->GetFirstPlayerController(), TipsBoxBlueprint );
-    tipsBox->AddToViewport();
+    //tipsBox->AddToViewport();
   }
 
   // Select a random tip
@@ -85,39 +108,136 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
     tipsBox->SetText( Tips[ tipNumber ] );
 }
 
-void AFlyCam::InitializeDefaultPawnInputBindings()
+void AFlyCam::LoadLevel( FName levelName )
 {
-  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
-  //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraDown", EKeys::PageDown, 1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::W, 1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::S, -1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Up, 1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveForward", EKeys::Down, -1.f));
+  Game->gm->state = ARTSGameGameMode::GameState::Running;
+
+  // synchrononously loads level
+  Game->pc->Pause(); // pause so no actors tick.
+
+  // unload level out from under the actors.
+  UE_LOG( LogTemp, Warning, TEXT( "Loading level %s" ), *levelName.GetPlainNameString() );
+  UnloadLevel() ; // unload the current level and dispose of all info in it
+  UGameplayStatics::OpenLevel( GetWorld(), levelName );
+  OnLevelLoaded();
+
+  // unpause so actors tick again.. 
+  Game->pc->SetPause( false ); // pause so no actors tick.
+}
+
+void AFlyCam::OnLevelLoaded()
+{
+  // retrieves pointers to main objects for this frame
+  // Frame setup. Runs at beginning of game frame.
+  Game->myhud->Setup(); // init selectors and renderers
+  RetrievePointers();
+  InitializePathfinding();
+  setupLevel = 1;
+}
+
+void AFlyCam::InitializePathfinding()
+{
+  FindFloor();
+  if( !floor ) return ; // means
+  FBox box = floor->GetComponentsBoundingBox();
+
+  // Initialize a bunch of bounding spheres
+  if( !Rows )  Rows = Cols = 20;
+  if( pathfinder ) delete pathfinder;
+  pathfinder = new Pathfinder( Rows, Cols );
   
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::D, 1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::A, -1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Right, 1.f));
-  UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Left, -1.f));
-}
+  FVector diff = box.Max - box.Min;
+  vector<Types> intTypes;
+  intTypes.push_back( Types::RESTREE );
+  intTypes.push_back( Types::RESSTONE );
+  intTypes.push_back( Types::RESGOLDMINE );
+  
+  // get the actual spacing between nodes, then divide by 2
+  float radius = 0.95f*(1.f/Coord::Rows * diff.X)/2.f; // use 95% prox to ensure that
+  // adjacent spheres don't overlap
 
-void AFlyCam::MoveCameraZUp( float amount )
-{
-  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZUp(%f)"), amount );
-  if( Controller && amount )
+  for( int i = 0; i < Coord::Rows; i++ )
   {
-    FVector up( 0, 0, 1 );
-    AddMovementInput( up, movementSpeed*amount );
+    for( int j = 0; j < Coord::Cols; j++ )
+    {
+      Coord coord( i, j );
+      FVector perc( (float)i/Coord::Rows, (float)j/Coord::Cols, 0 );
+
+      // For the landscape, the lower left is actually box.Min + ext.XY0.
+      FVector ext = box.GetExtent();
+      ext.Z = 0.f;
+      FVector ll = box.Min;// + ext; // the center of the box is actually the lower left
+      FVector p = perc*ll + (FVector(1.f, 1.f, 0.f) - perc)*box.Max;
+      p.Z = box.Max.Z + radius;
+
+      p = getHitFloor( p, FVector(0,0,-1) );
+
+      int idx = coord.index();
+      pathfinder->nodes[ idx ]->index = idx;
+      pathfinder->nodes[ idx ]->point = p;
+      
+      AActor *sphere = MakeSphere( p, radius, White );
+      
+      // if the actor intersects any other bodies inside the game
+      // then don't use it
+      if( !intersectsAnyOfType( sphere, intTypes ) ) {
+        pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
+        SetColor( sphere, White );
+      }
+      else {
+        pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
+        SetColor( sphere, Red );
+      }
+
+      pathfinder->updateGraphConnections( coord );
+      sphere->SetActorScale3D( FVector( radius/2.f ) );
+
+      if( !VizGrid )  sphere->Destroy(); // Don't show the sphere visualization
+    }
+  }
+  
+  if( !VizGrid )  return;
+
+  // Visualization of graph
+  set<Edge*> edges;
+  for( int i = 0; i < pathfinder->nodes.size(); i++ )
+  {
+    GraphNode *node = pathfinder->nodes[i];
+    //if( node->terrain == Passible )  MakeSphere( node->point, radius, White );
+    // create a node and edge connections
+    for( int j = 0; j < node->edges.size(); j++ )
+      edges.insert( node->edges[j] );
+  }
+
+  for( Edge* e : edges )
+  {
+    FVector dir = e->dst->point - e->src->point;
+    // set size of edge proportional to distance between nodes
+    MakeLine( e->src->point, e->dst->point, White );
   }
 }
 
-void AFlyCam::MoveCameraZDown( float amount )
+void AFlyCam::UnloadLevel()
 {
-  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZDown(%f)"), amount );
-  if( Controller && amount )
+  //Game->pc->EndPlay( EEndPlayReason::LevelTransition );
+  //GetWorld()->GetLevel(0)->Actors[0]->EndPlay( EEndPlayReason::Destroyed );
+  Game->gm->EndPlay( EEndPlayReason::LevelTransition );
+  
+  // destroy all the actors
+  for( int i = 0; i < GetWorld()->GetLevel(0)->Actors.Num(); i++ )
   {
-    FVector down( 0, 0, -1 );
-    AddMovementInput( down, movementSpeed*amount );
+    AActor *a = GetWorld()->GetLevel(0)->Actors[i];
+    if( a )  a->EndPlay( EEndPlayReason::Destroyed );
   }
+
+  //Game->pc->EndPlay( EEndPlayReason::LevelTransition );
+
+  ghost = 0;
+  floor = 0;
+  delete pathfinder;
+  pathfinder = 0;
+  setupLevel = 0;
+
 }
 
 void AFlyCam::SetCameraPosition( FVector2D perc )
@@ -130,8 +250,17 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   // Find coordinates of click on ground plane
   // X & Y are reversed because Y goes right, X goes fwd.
   // Extents are HALF extents
+
+  // Normal object (with centered origin)
   FVector G = box.Min + box.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
-  G.Z = box.Max.Z;
+  
+  //FVector ext = box.GetExtent();
+  //ext.Z = 0; // no z-measure
+  //FVector G = (box.Min + ext) + ext * FVector( 1.f-perc.Y, perc.X, 0 );
+
+  // for the ground when its not a plane
+  //G.Z = box.Max.Z;
+
   float len = FVector::Dist( P, G );
 
   FVector P2 = G - len * fwd;
@@ -148,6 +277,14 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   FQuat q( 0.f, 0.f, 0.f, 0.f );
   //UE_LOG( LogTemp, Warning, TEXT( "New camera loc %f %f %f" ), pos.X, pos.Y, pos.Z );
   SetActorLocationAndRotation( P2, q );
+
+  // Compute frustum corners collision with ground plane.
+  // find the frustum corners
+  //FConvexVolume frustum;
+  //GetViewFrustumBounds( frustum, this->camera->MarkRenderTransformDirty
+  
+  
+
 }
 
 void AFlyCam::NextTip()
@@ -260,97 +397,13 @@ AActor* AFlyCam::MakeLine( FVector a, FVector b, UMaterial* color )
   return line;
 }
 
-void AFlyCam::InitLevel()
+void AFlyCam::RetrievePointers()
 {
-  FBox box = floor->GetComponentsBoundingBox();
-  
-  // Initialize a bunch of bounding spheres
-  if( !Rows )  Rows = Cols = 20;
-  pathfinder = new Pathfinder( Rows, Cols );
-  
-  FVector diff = box.Max - box.Min;
-  vector<Types> intTypes;
-  intTypes.push_back( Types::RESTREE );
-  intTypes.push_back( Types::RESSTONE );
-  intTypes.push_back( Types::RESGOLDMINE );
-  
-  // get the actual spacing between nodes, then divide by 2
-  float radius = 0.95f*(1.f/Coord::Rows * diff.X)/2.f; // use 95% prox to ensure that
-  // adjacent spheres don't overlap
-
-  for( int i = 0; i < Coord::Rows; i++ )
-  {
-    for( int j = 0; j < Coord::Cols; j++ )
-    {
-      Coord coord( i, j );
-      FVector perc( (float)i/Coord::Rows, (float)j/Coord::Cols, 0 );
-      FVector p = perc*box.Min + (FVector(1.f, 1.f, 1.f) - perc)*box.Max;
-      p.Z = box.Max.Z + radius;
-
-      int idx = coord.index();
-      pathfinder->nodes[ idx ]->index = idx;
-      pathfinder->nodes[ idx ]->point = p;
-      
-      AActor *sphere = MakeSphere( p, radius, White );
-      
-      // if the actor intersects any other bodies inside the game
-      // then don't use it
-      if( !intersectsAnyOfType( sphere, intTypes ) ) {
-        pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
-        SetColor( sphere, White );
-      }
-      else {
-        pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
-        SetColor( sphere, Red );
-      }
-
-      pathfinder->updateGraphConnections( coord );
-      sphere->SetActorScale3D( FVector( radius/2.f ) );
-
-      if( !VizGrid )  sphere->Destroy(); // Don't show the sphere visualization
-    }
-  }
-  
-  if( !VizGrid )  return;
-
-  // Visualization of graph
-  set<Edge*> edges;
-  for( int i = 0; i < pathfinder->nodes.size(); i++ )
-  {
-    GraphNode *node = pathfinder->nodes[i];
-    //if( node->terrain == Passible )  MakeSphere( node->point, radius, White );
-    // create a node and edge connections
-    for( int j = 0; j < node->edges.size(); j++ )
-      edges.insert( node->edges[j] );
-  }
-
-  for( Edge* e : edges )
-  {
-    FVector dir = e->dst->point - e->src->point;
-    // set size of edge proportional to distance between nodes
-    MakeLine( e->src->point, e->dst->point, White );
-  }
-}
-
-void AFlyCam::Setup()
-{
-  // Frame setup. Runs at beginning of game frame.
   Game->pc = Cast<APlayerControl>( GetWorld()->GetFirstPlayerController() );
   HotSpot::hud = Game->myhud = Cast<AMyHUD>( Game->pc->GetHUD() );
   Game->gm = (ARTSGameGameMode*)GetWorld()->GetAuthGameMode();
+  Game->gs = (ARTSGameState*)GetWorld()->GetGameState();
   Game->flycam = this;
-
-  
-  if( !setup )
-  {
-    Game->myhud->Setup();
-    
-    // Initialize the data table.
-    Game->Init();
-  
-    InitLevel(); // create the "gutter"
-    setup = 1;
-  }
 }
 
 void AFlyCam::debug( int slot, FColor color, FString mess )
@@ -382,7 +435,7 @@ void AFlyCam::setGhost( Types ut )
   }
   else
   {
-    //UE_LOG( LogTemp, Warning, TEXT( "Cannot setGhost() to Nothing" ) );
+    UE_LOG( LogTemp, Warning, TEXT( "Cannot setGhost() to Nothing" ) );
   }
 }
 
@@ -409,6 +462,14 @@ vector<FHitResult> AFlyCam::getAllHitGeometry()
   vector<FHitResult> hits;
   Game->pc->TraceMulti( mouse, hits );
   return hits;
+}
+
+FVector AFlyCam::getHitFloor(FVector eye, FVector look)
+{
+  FHitResult hit;
+  FCollisionQueryParams fcqp( "dest trace", true );
+  floor->ActorLineTraceSingle( hit, eye, eye + look*1e6f, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
+  return hit.ImpactPoint;
 }
 
 FVector AFlyCam::getHitFloor()
@@ -515,11 +576,10 @@ void AFlyCam::FindFloor()
     
     //UE_LOG( LogTemp, Warning, TEXT("Actor: %s"), *a->GetName() );
     // This is the actor we're checking for intersections with:
-    // Cast to ground plane to check if the object is a GroundPlane object.
-    if( a->IsA<AGroundPlane>() )
+    if( a->GetName() == "floor" )
     {
-      //UE_LOG( LogTemp, Warning, TEXT("Found the floor `%s`"), *a->GetName() );
-      floor = (AGroundPlane*)a;
+      UE_LOG( LogTemp, Warning, TEXT("Found the floor `%s`"), *a->GetName() );
+      floor = a;
     }
   }
   
@@ -658,7 +718,15 @@ void AFlyCam::MouseRightDown()
     // An actor was hit by the click
     if( lo )
     {
-      lo->SetTarget( Cast<AGameObject>( hit.Actor.Get() ) );
+      AGameObject *go = Cast<AGameObject>( hit.Actor.Get() );
+      if( go )
+      {
+        lo->SetTarget( Cast<AGameObject>( hit.Actor.Get() ) );
+      }
+      else
+      {
+        UE_LOG( LogTemp, Warning, TEXT( "Cannot target non-gameobject %s" ), *hit.Actor.Get()->GetName() ) ;
+      }
     }
   }
   else
@@ -683,7 +751,13 @@ void AFlyCam::MouseRightUp()
 void AFlyCam::MouseMoved()
 {
   //UE_LOG( LogTemp, Warning, TEXT("MouseMoved() frame %d"), Game->tick );
-  Setup(); // This is here because it runs first for some reason (before ::Tick())
+  RetrievePointers();
+
+  if( !setupLevel )
+  {
+    OnLevelLoaded(); // This is here because it runs first for some reason (before ::Tick())
+  }
+
   FVector2D mouse = getMousePos();
   Game->myhud->MouseMoved( mouse );
 
@@ -692,7 +766,6 @@ void AFlyCam::MouseMoved()
   if( leftMouseDown )
   {
     // drag event, would be used for multiple object placement, or brushes.
-    
   }
   else
   {
@@ -719,22 +792,46 @@ void AFlyCam::MouseMovedY( float amount )
   MouseMoved();
 }
 
+void AFlyCam::MoveCameraZUp( float amount )
+{
+  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZUp(%f)"), amount );
+  if( Controller && amount )
+  {
+    FVector up( 0, 0, 1 );
+    AddMovementInput( up, movementSpeed*amount );
+  }
+}
+
+void AFlyCam::MoveCameraZDown( float amount )
+{
+  //UE_LOG( LogTemp, Warning, TEXT("MoveCameraZDown(%f)"), amount );
+  if( Controller && amount )
+  {
+    FVector down( 0, 0, -1 );
+    AddMovementInput( down, movementSpeed*amount );
+  }
+}
+
 void AFlyCam::MoveForward( float amount )
 {
+  // Gets called EACH FRAME. Only apply movement input when
+  // both Controller init && amount has a value.
   // Don't enter the body of this function if Controller is
   // not set up yet, or if the amount to move is equal to 0 
   if( Controller && amount )
   {
     FVector fwd( 1, 0, 0 );
     AddMovementInput( fwd, movementSpeed*amount );
+    UE_LOG( LogTemp, Warning, TEXT("MoveForward %f"), amount );
   }
 }
 
 void AFlyCam::MoveBack( float amount )
 {
+  //UE_LOG( LogTemp, Warning, TEXT("MoveBack %f"), amount );
+
   if( Controller && amount )
   {
-    //UE_LOG( LogTemp, Warning, TEXT("MoveBack %f"), amount );
     FVector back( -1, 0, 0 );
     AddMovementInput( back, movementSpeed*amount );
   }
@@ -742,9 +839,9 @@ void AFlyCam::MoveBack( float amount )
 
 void AFlyCam::MoveLeft( float amount )
 {
+  //UE_LOG( LogTemp, Warning, TEXT("MoveLeft %f"), amount );
   if( Controller && amount )
   {
-    //UE_LOG( LogTemp, Warning, TEXT("MoveLeft %f"), amount );
     FVector left( 0, -1, 0 );
     AddMovementInput( left, movementSpeed*amount );
   }
@@ -752,9 +849,9 @@ void AFlyCam::MoveLeft( float amount )
 
 void AFlyCam::MoveRight( float amount )
 {
+  //UE_LOG( LogTemp, Warning, TEXT("MoveRight %f"), amount );
   if( Controller && amount )
   {
-    //UE_LOG( LogTemp, Warning, TEXT("MoveRight %f"), amount );
     FVector right( 0, 1, 0 );
     AddMovementInput( right, movementSpeed*amount );
   }
@@ -764,6 +861,9 @@ void AFlyCam::MoveRight( float amount )
 void AFlyCam::BeginPlay()
 {
 	Super::BeginPlay();
+
+  // We find ourselves inside the level of choice here.
+  // From here, we decide what UI set to load.
 }
 
 // Called every frame

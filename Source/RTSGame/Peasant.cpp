@@ -4,7 +4,6 @@
 #include "RTSGameInstance.h"
 #include "RTSGameGameMode.h"
 #include "FlyCam.h"
-#include "GroundPlane.h"
 #include "Pathfinder.h"
 #include "AI.h"
 #include "Building.h"

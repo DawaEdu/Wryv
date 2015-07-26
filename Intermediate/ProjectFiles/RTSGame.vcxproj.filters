@@ -49,9 +49,6 @@
     <Filter Include="Source\RTSGame\Buildings">
       <UniqueIdentifier>{cf071ebe-db83-4335-b7f0-6c010c3d9e0c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\RTSGame\UI">
-      <UniqueIdentifier>{4ce67a63-6ae9-4d79-bdd2-1288a52a4d86}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\RTSGame\Data">
       <UniqueIdentifier>{a4b3b09a-78a7-4a3a-9f3e-f317f2bee79c}</UniqueIdentifier>
     </Filter>
@@ -61,14 +58,14 @@
     <Filter Include="Source\RTSGame\Util">
       <UniqueIdentifier>{20564de1-ed88-428b-bb5c-a976ab538717}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\RTSGame\Data\unused">
-      <UniqueIdentifier>{e8734ccc-1059-41dc-a3e5-7ff817a04409}</UniqueIdentifier>
+    <Filter Include="Source\RTSGame\UMG_UI">
+      <UniqueIdentifier>{4ce67a63-6ae9-4d79-bdd2-1288a52a4d86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\RTSGame\UI">
+      <UniqueIdentifier>{4b69f9f2-486e-41d7-9449-2cb4249297ca}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Source\RTSGame\Avatar.cpp">
-      <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\CombatUnit.cpp">
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClCompile>
@@ -76,16 +73,16 @@
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\DialogBox.cpp">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\TipsBox.cpp">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\Item.cpp">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\Menu.cpp">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\Peasant.cpp">
       <Filter>Source\RTSGame\GameObjects</Filter>
@@ -141,32 +138,20 @@
     <ClCompile Include="..\..\Source\RTSGame\PlayerControl.cpp">
       <Filter>Source\RTSGame\GAME</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\GroundPlane.cpp">
-      <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\Building.cpp">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\ItemShop.cpp">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\Widget.cpp">
-      <Filter>Source\RTSGame\Data</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\IconGroup.cpp">
-      <Filter>Source\RTSGame\Data\unused</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\RTSGame\Icon.cpp">
-      <Filter>Source\RTSGame\Data\unused</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\RTSGame\ItemQuantity.cpp">
       <Filter>Source\RTSGame\Data</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\RTSGame\Widget.cpp">
+      <Filter>Source\RTSGame\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Source\RTSGame\Avatar.h">
-      <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\CombatUnit.h">
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClInclude>
@@ -174,16 +159,16 @@
       <Filter>Source\RTSGame\GameObjects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\DialogBox.h">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\TipsBox.h">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Item.h">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Menu.h">
-      <Filter>Source\RTSGame\UI</Filter>
+      <Filter>Source\RTSGame\UMG_UI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Peasant.h">
       <Filter>Source\RTSGame\GameObjects</Filter>
@@ -257,29 +242,20 @@
     <ClInclude Include="..\..\Source\RTSGame\GlobalFunctions.h">
       <Filter>Source\RTSGame\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\GroundPlane.h">
-      <Filter>Source\RTSGame\GameObjects</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\Building.h">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\ItemShop.h">
       <Filter>Source\RTSGame\Buildings</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\Widget.h">
-      <Filter>Source\RTSGame\Data</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\IconGroup.h">
-      <Filter>Source\RTSGame\Data\unused</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\RTSGame\Icon.h">
-      <Filter>Source\RTSGame\Data\unused</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\CursorTexture.h">
       <Filter>Source\RTSGame\Data</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\RTSGame\ItemQuantity.h">
       <Filter>Source\RTSGame\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\RTSGame\Widget.h">
+      <Filter>Source\RTSGame\UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

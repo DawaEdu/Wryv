@@ -9,11 +9,12 @@
 #include "UnitsData.h"
 #include "RTSGameInstance.h"
 #include "RTSGameGameMode.h"
-#include "GroundPlane.h"
 #include "Spell.h"
 #include "GlobalFunctions.h"
 #include "Widget.h"
 #include "DrawDebugHelpers.h"
+
+#include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 
 AMyHUD::AMyHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
@@ -31,24 +32,45 @@ void AMyHUD::BeginPlay()
 {
   Super::BeginPlay();
   UE_LOG( LogTemp, Warning, TEXT("AMyHUD::BeginPlay()") );
-
   LoadUClasses();
 }
 
 void AMyHUD::BeginDestroy()
 {
+  UE_LOG( LogTemp, Warning, TEXT( "AMyHUD::BeginDestroy()" ) );
   if( ui ) {
     delete ui;
     ui = 0;
   }
   Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
 }
+
+TArray<FAssetData> AMyHUD::ScanFolder( FName folder )
+{
+  // Create an AssetRegistry to list folder data
+  FAssetRegistryModule& AssetRegistry =
+    FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+    FName("AssetRegistry"));
   
+  // Switch into the SubPaths folder. Required for 
+  // GetAssetsByPath to work properly (even if we don't use the pathList)
+  TArray<FString> pathList;
+  AssetRegistry.Get().GetSubPaths( folder.ToString(), pathList, 1 );
+  TArray<FAssetData> assets;
+  AssetRegistry.Get().GetAssetsByPath( folder, assets );
+
+  for( int i = 0; i < assets.Num(); i++ )
+  {
+    UE_LOG( LogTemp, Warning, TEXT("%s"), *assets[i].AssetName.ToString() );
+  }
+  return assets;
+}
 
 void AMyHUD::InitWidgets()
 {
   if( Init ) return;
   Init = 1;
+
   UE_LOG( LogTemp, Warning, TEXT( "InitWidgets()" ) );
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
@@ -60,6 +82,21 @@ void AMyHUD::InitWidgets()
 
   ui = new UserInterface(FVector2D(0,0), FVector2D(Canvas->SizeX, Canvas->SizeY));
   ui->Name = "UI-root";
+  
+  // connect the mouse drag functions 
+  ui->selectBox = new Border( FBox2DU(FVector2D(0,0),FVector2D(0,0)),8.f,FLinearColor::Green);
+
+  // attach selectBox manipulation functions to ui's function handlers
+  ui->OnClicked = [this]( FVector2D mouse ){
+    ui->selectBox->Set( FBox2DU( mouse, mouse ) );
+    return 0;
+  };
+  ui->OnDrag = [this]( FVector2D mouse ){
+    FBox2DU box = ui->selectBox->Box;
+    box.Max = mouse;
+    ui->selectBox->Set( box );
+    return 0;
+  };
 
   ui->resources = new ResourcesWidget( 16, 4, FVector2D(0,0) );
   ui->Add( ui->resources );
@@ -72,7 +109,7 @@ void AMyHUD::InitWidgets()
   ui->rightPanel->Name = "Right side panel";
 
   // Attach functionality for minimap
-  Minimap *minimap = ui->rightPanel->minimap;
+  Minimap* minimap = ui->rightPanel->minimap;
   minimap->OnClicked = [minimap](FVector2D mouse){
     Game->flycam->SetCameraPosition( mouse / minimap->Size );
     return 0;
@@ -81,15 +118,15 @@ void AMyHUD::InitWidgets()
     Game->flycam->SetCameraPosition( mouse / minimap->Size );
     return 0;
   };
-  minimap->Name = "Minimap";
 
   // Keep one of these for showing costs on flyover
   ui->costWidget = new CostWidget( TooltipBackgroundTexture, FVector2D(16,13), 8 );
   ui->Add( ui->costWidget );
   ui->costWidget->align = HotSpot::HCenter | HotSpot::VCenter;
   ui->costWidget->Pos = FVector2D(0,0);
-  ui->costWidget->reflushToParent( FVector2D(0,0) );
+  ui->costWidget->realignInParent();
   ui->costWidget->Name = "Cost widget";
+  ui->costWidget->hidden = 1;
 
   ui->tooltip = new Tooltip( TooltipBackgroundTexture, FString("tooltip"), FVector2D(8,8) );
   ui->Add( ui->tooltip );
@@ -109,15 +146,52 @@ void AMyHUD::InitWidgets()
   ui->statusBar->Name = "Status bar";
 
   // Create the panel for containing items/inventory
-  FVector2D size( 400, 100 );
-  FVector2D pos( ( Canvas->SizeX - size.X )/2, Canvas->SizeY - size.Y - ui->statusBar->Size.Y );
-  ui->itemBelt = new SlotPalette( SlotPaletteTexture, pos, size, 1, 4, FVector2D( 8,8 ) );
+  ui->itemBelt = new SlotPalette( SlotPaletteTexture, 1, 4, FVector2D( 100,100 ), FVector2D( 8,8 ) );
   ui->Add( ui->itemBelt );
+  ui->itemBelt->align = HotSpot::HCenter | HotSpot::Bottom;
+  ui->itemBelt->realignInParent();
   ui->itemBelt->Name = "Item belt";
 
-  ui->mouseCursor = new ImageWidget( MouseCursorHand.Texture, FVector2D(Canvas->SizeX/2,Canvas->SizeY/2) );
+  ui->controls = new Controls( PauseButtonTexture );
+  ui->controls->pause->OnClicked = [this]( FVector2D mouse ){
+    Game->pc->SetPause( !Game->pc->IsPaused() );  // pauses or unpauses the game
+    if( Game->pc->IsPaused() )  ui->controls->pause->Icon = ResumeButtonTexture;
+    else  ui->controls->pause->Icon = PauseButtonTexture;
+    return 0;
+  };
+  ui->controls->align = HotSpot::HAlign::ToLeftOfParent | HotSpot::VAlign::Top;
+  ui->rightPanel->Add( ui->controls );
+
+  function< void (FString text) > f = [](FString text) {
+    FName name( *text );
+    //Game->flycam->LoadLevel( name );
+  };
+  // Map selection screen
+  ui->mapSelectionScreen = new MapSelectionScreen( ui->Size, TitleNameTexture,
+    MapSlotEntryBackgroundTexture,
+    FVector2D( 200, 75 ), FVector2D(8,4), largeFont, f );
+  ui->mapSelectionScreen->align = HotSpot::HFull | HotSpot::VFull;
+  ui->Add( ui->mapSelectionScreen );
+  
+  /////
+  // List the maps in the folder at the left side
+  TArray<FAssetData> maps = ScanFolder( "/Game/Maps" );
+  for( int i = 0; i < maps.Num(); i++ )
+    ui->mapSelectionScreen->AddText( maps[i].AssetName.ToString(),
+      HotSpot::HCenter | HotSpot::VCenter );
+  ui->mapSelectionScreen->reflow();  // Reflow the screen.
+
+  ui->missionObjectivesScreen = new MissionObjectivesScreen(
+    MapSlotEntryBackgroundTexture, FVector2D( 300, 100 ), FVector2D( 8, 8 ) );
+  ui->Add( ui->missionObjectivesScreen );
+
+  // Add the mouseCursor last so that it renders last.
+  ui->mouseCursor = new ImageWidget( MouseCursorHand.Texture );
   ui->Add( ui->mouseCursor );
   ui->mouseCursor->Name = "Mouse cursor";
+
+  ui->Show( Game->gm->state );
+
 }
 
 void AMyHUD::LoadUClasses()
@@ -188,7 +262,7 @@ void AMyHUD::SetAttackTargetSelector( AGameObject* target )
     {
       //UE_LOG( LogTemp, Warning, TEXT("-- %s"), *Game->flycam->floor->UnitsData.Name );
       FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-      v.Z = box.Max.Z;
+      v.Z = box.Min.Z;
     }
     selectorAttackTarget->SetActorLocation( v );
   }
@@ -308,36 +382,48 @@ void AMyHUD::DrawHUD()
   // Canvas is only initialized here.
   Super::DrawHUD();
   HotSpot::hud = this;
+
   InitWidgets();
 
   UpdateDisplayedResources();
   UpdateSelectedObjectStats();
   UpdateMouse();
   
-  // Render the minimap
-  float boxMax = Game->flycam->floor->GetComponentsBoundingBox().GetExtent().GetMax();
-  RenderScreen( rendererMinimap, texMinimap, Game->flycam->floor->Pos(), boxMax, FVector( 0, 0, -1 ) );
-  
-  // Buffs appear in lower center
+  // Render the minimap, only if the floor is present
+  if( Game->flycam->floor ) {
+    FBox box = Game->flycam->floor->GetComponentsBoundingBox();
+    FVector p = box.GetCenter();
+    RenderScreen( rendererMinimap, texMinimap, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
+  }
+
+  // reflush the layout
   ui->layout( FVector2D( Canvas->SizeX, Canvas->SizeY ) );
 
   // Render the entire UI
   ui->render();
+
+  /// Doesnt' want to render cinematic
+  //DrawMaterial( matMedia, 400, 400, 256, 256, 0, 0, 1, 1, 1.f );
+  //DrawTexture( texMedia, 300, 300, 256, 256, 0, 0, 1, 1 );
+  //DrawMaterialSimple( matMedia, 500,500, 640, 480, 1.f, 0 );
 }
 
 // Detect clicks and mouse moves on the HUD
 bool AMyHUD::MouseLeftDown( FVector2D mouse )
 {
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseLeftDown()") );
   return ui->Click( mouse, FVector2D(0,0) );
 }
 
 bool AMyHUD::MouseLeftUp( FVector2D mouse )
 {
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseLeftUp()") );
   return ui->Drop( mouse );
 }
 
 bool AMyHUD::MouseRightDown( FVector2D mouse )
 {
+  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseRightDown()") );
   return ui->RightClick( mouse, FVector2D(0,0) );
 }
 
@@ -389,7 +475,7 @@ void AMyHUD::Tick( float t )
   {
     FVector v = SelectedObject->Pos();
     FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-    v.Z = box.Max.Z;
+    v.Z = box.Min.Z;
     selector->SetActorLocation( v );
   }
 }

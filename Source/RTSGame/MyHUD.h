@@ -4,8 +4,6 @@
 #include <map>
 using namespace std;
 
-#include "Icon.h"
-#include "IconGroup.h"
 #include "Widget.h"
 #include "UnitsData.h"
 #include "WidgetData.h"
@@ -13,19 +11,22 @@ using namespace std;
 #include "Team.h"
 #include "CursorTexture.h"
 #include "GameFramework/HUD.h"
-
+//#include "Runtime/MediaAssets/Public/MediaTexture.h"
+#include "Runtime/Media/Public/IMediaPlayer.h"
 #include "MyHUD.generated.h"
 
 class APlayerControl;
 class AFlyCam;
 class AGameObject;
-struct SlotPalette;
-struct Tooltip;
-struct CostWidget;
-struct ImageWidget;
-struct Panel;
-struct StackPanel;
-struct UserInterface;
+class SlotPalette;
+class Tooltip;
+class CostWidget;
+class ImageWidget;
+class StackPanel;
+class UserInterface;
+class FAssetRegistryModule;
+class UMediaTexture;
+//class UMediaPlayer;
 
 UCLASS()
 class RTSGAME_API AMyHUD : public AHUD
@@ -42,6 +43,11 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TooltipBackgroundTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleScreenTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleNameTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MapSlotEntryBackgroundTexture;
   
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
@@ -64,9 +70,13 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< FUnitTypeUClassPair > UnitTypeUClasses;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *texIcon;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *texMinimap;
-  
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* texMedia;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* matMedia;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
+
   // The font used to render the text in the HUD.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *hudFont;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
   // The texture etc to use for last clicked object
   AGameObject *SelectedObject;
@@ -86,7 +96,13 @@ public:
   AMyHUD(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
   virtual void BeginDestroy() override;
+
+  TArray<FAssetData> ScanFolder( FName folder );
   void InitWidgets();
+  void InitTitleScreenWidgets();
+  void InitMenuWidgets();
+  void InitInGameWidgets();
+
   void LoadUClasses();
   void Setup();
   void SetAttackTargetSelector( AGameObject* target );

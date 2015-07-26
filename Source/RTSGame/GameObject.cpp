@@ -4,7 +4,6 @@
 #include "MyHUD.h"
 #include "RTSGameInstance.h"
 #include "RTSGameGameMode.h"
-#include "GroundPlane.h"
 #include "FlyCam.h"
 #include "Spell.h"
 #include "Pathfinder.h"
@@ -24,7 +23,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
 // Called when the game starts or when spawned
 void AGameObject::BeginPlay()
 {
-  UE_LOG( LogTemp, Warning, TEXT("AMyHUD::BeginPlay()") );
+  UE_LOG( LogTemp, Warning, TEXT("AGameObject::BeginPlay(): %s"), *UnitsData.Name );
 
   Super::BeginPlay();
   dest = Pos();  // set the position to where the thing is.
@@ -264,6 +263,13 @@ void AGameObject::Tick( float t )
 {
 	Super::Tick( t );
 
+  // Don't tick when the game's not ready
+  // this happens due to async load, esp between loading levels.
+  if( !Game->IsReady() )
+  {
+    return;
+  }
+
   // Recover HP at stock recovery rate
   if( repairing ) {
     hp += UnitsData.RepairHPFractionCost*t;
@@ -300,14 +306,7 @@ void AGameObject::Tick( float t )
       {
         FVector d = q + fromTarget*UnitsData.AttackRange;
         // move the unit only far enough so that it is within the attack range
-        if( Game->flycam )
-        {
-          waypoints = Game->flycam->pathfinder->findPath( p, d );
-        }
-        else
-        {
-          UE_LOG( LogTemp, Warning, TEXT("Flycam not initialized") );
-        }
+        waypoints = Game->flycam->pathfinder->findPath( p, d );
       }
     }
 
@@ -449,9 +448,9 @@ void AGameObject::SetDestination( FVector d )
   waypoints = Game->flycam->pathfinder->findPath( p, d );
   
   // Fix waypoints z value so they sit on ground plane
-  FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-  for( int i = 0; i < waypoints.size(); i++ )
-    waypoints[i].Z = box.Max.Z;
+  //FBox box = Game->flycam->floor->GetComponentsBoundingBox();
+  //for( int i = 0; i < waypoints.size(); i++ )
+  //  waypoints[i].Z = box.Max.Z;
 
   if( waypoints.size() >= 3 )
   {

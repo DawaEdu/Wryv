@@ -16,6 +16,11 @@ class RTSGAME_API ARTSGameGameMode : public AGameMode
 {
   GENERATED_BODY()
 public:
+  enum GameState{
+    Title, Menu, Running
+  };
+  GameState state;
+
   // Groups of teams.. this is the stock location for the Team objects.
   map< int32, Team* > teams;
   Team *neutralTeam, *playersTeam, *enemyTeam;
