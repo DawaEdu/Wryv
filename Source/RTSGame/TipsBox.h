@@ -20,7 +20,7 @@ public:
   void NextTipButtonClicked();
 
   // Changes the text in the tip.
-  void SetText( FString text );
+  void Set( FString text );
 };
 
 

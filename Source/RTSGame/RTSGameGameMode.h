@@ -17,7 +17,7 @@ class RTSGAME_API ARTSGameGameMode : public AGameMode
   GENERATED_BODY()
 public:
   enum GameState{
-    Title, Menu, Running
+    Title, MapSelect, Running
   };
   GameState state;
 

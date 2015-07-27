@@ -49,9 +49,9 @@ void UTipsBox::NextTipButtonClicked_Implementation()
   Game->flycam->NextTip();
 }
 
-void UTipsBox::SetText( FString text )
+void UTipsBox::Set( FString text )
 {
-  //tip->SetText( FText::FromString(text) );
+  //tip->Set( FText::FromString(text) );
   tip = (UMultiLineEditableTextBox*)GetWidgetFromName( TEXT("tip") ); // refresh variable from widget
   tip->SetText( FText::FromString(text) );
 }

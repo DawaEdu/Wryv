@@ -15,6 +15,7 @@
 #include "DrawDebugHelpers.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
+#include "Editor/UnrealEd/Public/AssetThumbnail.h"
 
 AMyHUD::AMyHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
@@ -33,16 +34,6 @@ void AMyHUD::BeginPlay()
   Super::BeginPlay();
   UE_LOG( LogTemp, Warning, TEXT("AMyHUD::BeginPlay()") );
   LoadUClasses();
-}
-
-void AMyHUD::BeginDestroy()
-{
-  UE_LOG( LogTemp, Warning, TEXT( "AMyHUD::BeginDestroy()" ) );
-  if( ui ) {
-    delete ui;
-    ui = 0;
-  }
-  Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
 }
 
 TArray<FAssetData> AMyHUD::ScanFolder( FName folder )
@@ -79,6 +70,7 @@ void AMyHUD::InitWidgets()
   ResourcesWidget::StoneTexture = StoneIconTexture;
   SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
+  StackPanel::StackPanelTexture = StackPanelTexture;
 
   ui = new UserInterface(FVector2D(0,0), FVector2D(Canvas->SizeX, Canvas->SizeY));
   ui->Name = "UI-root";
@@ -102,10 +94,10 @@ void AMyHUD::InitWidgets()
   ui->Add( ui->resources );
   ui->resources->Name = "Resources";
 
-  ui->rightPanel = new Panel( RightPanelTexture, texMinimap, FVector2D( 256, Canvas->SizeY ), 4 );
+  ui->rightPanel = new Panel( RightPanelTexture, MinimapTexture, FVector2D( 256, Canvas->SizeY ), 4 );
   ui->Add( ui->rightPanel );
 
-  ui->rightPanel->portrait->Icon = texIcon;
+  ui->rightPanel->portrait->Icon = PortraitTexture;
   ui->rightPanel->Name = "Right side panel";
 
   // Attach functionality for minimap
@@ -122,7 +114,7 @@ void AMyHUD::InitWidgets()
   // Keep one of these for showing costs on flyover
   ui->costWidget = new CostWidget( TooltipBackgroundTexture, FVector2D(16,13), 8 );
   ui->Add( ui->costWidget );
-  ui->costWidget->align = HotSpot::HCenter | HotSpot::VCenter;
+  ui->costWidget->Align = HotSpot::HCenter | HotSpot::VCenter;
   ui->costWidget->Pos = FVector2D(0,0);
   ui->costWidget->realignInParent();
   ui->costWidget->Name = "Cost widget";
@@ -133,22 +125,25 @@ void AMyHUD::InitWidgets()
   ui->tooltip->hidden = 1;
   ui->tooltip->Name = "Tooltip";
 
-  ui->buffs = new StackPanel( FVector2D( 24, 24 ), FVector2D( 4, 4 ) );
+  ui->buffs = new StackPanel( 0, FVector2D( 24, 24 ) );
+  ui->buffs->Pad = FVector2D( 4, 4 );
   ui->Add( ui->buffs );
-  ui->buffs->Name = "Buffs";
+  ui->buffs->Name = "Buffs panel";
 
-  ui->building = new StackPanel( FVector2D( 50, 50 ), FVector2D( 4, 4 ) );
+  ui->building = new StackPanel( 0, FVector2D( 50, 50 ) );
+  ui->building->Pad = FVector2D( 4, 4 );
   ui->Add( ui->building );
-  ui->building->Name = "Building";
+  ui->building->Name = "Building panel";
 
   ui->statusBar = new StatusBar( FVector2D(Canvas->SizeX,Canvas->SizeY), 22, FLinearColor::Black );
   ui->Add( ui->statusBar );
   ui->statusBar->Name = "Status bar";
+  HotSpot::TooltipWidget = ui->statusBar->Text; // Setup the default tooltip location
 
   // Create the panel for containing items/inventory
   ui->itemBelt = new SlotPalette( SlotPaletteTexture, 1, 4, FVector2D( 100,100 ), FVector2D( 8,8 ) );
   ui->Add( ui->itemBelt );
-  ui->itemBelt->align = HotSpot::HCenter | HotSpot::Bottom;
+  ui->itemBelt->Align = HotSpot::HCenter | HotSpot::Bottom;
   ui->itemBelt->realignInParent();
   ui->itemBelt->Name = "Item belt";
 
@@ -159,30 +154,54 @@ void AMyHUD::InitWidgets()
     else  ui->controls->pause->Icon = PauseButtonTexture;
     return 0;
   };
-  ui->controls->align = HotSpot::HAlign::ToLeftOfParent | HotSpot::VAlign::Top;
+  ui->controls->Align = HotSpot::Top | HotSpot::ToLeftOfParent;
   ui->rightPanel->Add( ui->controls );
 
-  function< void (FString text) > f = [](FString text) {
-    FName name( *text );
-    //Game->flycam->LoadLevel( name );
-  };
   // Map selection screen
-  ui->mapSelectionScreen = new MapSelectionScreen( ui->Size, TitleNameTexture,
+  MapSelectionScreen *mss = ui->mapSelectionScreen = new MapSelectionScreen( ui->Size,
+    TitleNameTexture,
+    SolidWhiteTexture,
     MapSlotEntryBackgroundTexture,
-    FVector2D( 200, 75 ), FVector2D(8,4), largeFont, f );
-  ui->mapSelectionScreen->align = HotSpot::HFull | HotSpot::VFull;
+    PortraitTexture,
+    FVector2D( 120, 24 ), largeFont );
+
+  ui->mapSelectionScreen->Align = HotSpot::CenterCenter;
   ui->Add( ui->mapSelectionScreen );
-  
+  ui->mapSelectionScreen->OKButton->OnClicked = [mss](FVector2D mouse){
+    // OK button clicked, so load the map if there is a selected widget
+    // else display error message
+    if( mss->Selected )
+      Game->flycam->LoadLevel( FName( *mss->Selected->GetText() ) );
+    else
+      Game->myhud->ui->statusBar->Set( "Select a map to load first" ) ;
+    return 0;
+  };
+
   /////
   // List the maps in the folder at the left side
   TArray<FAssetData> maps = ScanFolder( "/Game/Maps" );
-  for( int i = 0; i < maps.Num(); i++ )
-    ui->mapSelectionScreen->AddText( maps[i].AssetName.ToString(),
-      HotSpot::HCenter | HotSpot::VCenter );
+
+  for( int i = 0; i < maps.Num(); i++ ) {
+    ui->mapSelectionScreen->AddText( maps[i].AssetName.ToString(), HotSpot::CenterCenter );
+
+    // Generate a thumbnail
+    //UWorld* world = Cast<UWorld>( maps[i].GetAsset() );
+    //if( world )
+    //{
+    //  UE_LOG( LogTemp, Warning, TEXT( "Loaded world map %s" ), *world->GetName() );
+    //}
+    //else
+    //{
+    //  UE_LOG( LogTemp, Warning, TEXT( "Could not load the world" ) );
+    //}
+    //static FAssetThumbnailPool pool( 5 );
+    //FAssetThumbnail thumb( maps[i].GetAsset(), 256, 256, pool );
+  }
   ui->mapSelectionScreen->reflow();  // Reflow the screen.
 
   ui->missionObjectivesScreen = new MissionObjectivesScreen(
-    MapSlotEntryBackgroundTexture, FVector2D( 300, 100 ), FVector2D( 8, 8 ) );
+    MapSlotEntryBackgroundTexture, MapSlotEntryBackgroundTexture, 
+    FVector2D( 300, 100 ), FVector2D( 8, 8 ) );
   ui->Add( ui->missionObjectivesScreen );
 
   // Add the mouseCursor last so that it renders last.
@@ -304,12 +323,12 @@ void AMyHUD::UpdateSelectedObjectStats()
     // render last-clicked object to texture
     // zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, texIcon, SelectedObject->Pos(), SelectedObject->GetBoundingRadius(), camDir );
+    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->Pos(), SelectedObject->GetBoundingRadius(), camDir );
     
     // 2. Text stats:
     // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
     // Print unit's stats into the stats panel
-    ui->rightPanel->unitStats->SetText( SelectedObject->PrintStats() );
+    ui->rightPanel->unitStats->Set( SelectedObject->PrintStats() );
     ui->rightPanel->portrait->Icon = SelectedObject->Widget.Icon;
 
     // 3. buffs. PER-FRAME: Clear & then re-draw the buffs
@@ -393,7 +412,7 @@ void AMyHUD::DrawHUD()
   if( Game->flycam->floor ) {
     FBox box = Game->flycam->floor->GetComponentsBoundingBox();
     FVector p = box.GetCenter();
-    RenderScreen( rendererMinimap, texMinimap, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
+    RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
   }
 
   // reflush the layout
@@ -402,38 +421,38 @@ void AMyHUD::DrawHUD()
   // Render the entire UI
   ui->render();
 
-  /// Doesnt' want to render cinematic
-  //DrawMaterial( matMedia, 400, 400, 256, 256, 0, 0, 1, 1, 1.f );
-  //DrawTexture( texMedia, 300, 300, 256, 256, 0, 0, 1, 1 );
-  //DrawMaterialSimple( matMedia, 500,500, 640, 480, 1.f, 0 );
+  // Render the cinematic from the material (must be setup to use
+  // an Emissive channel)
+  //DrawMaterial( MediaMaterial, 0, 0,
+  //  Canvas->SizeX, Canvas->SizeY, 0, 0, 1, 1, 1.f );
 }
 
 // Detect clicks and mouse moves on the HUD
-bool AMyHUD::MouseLeftDown( FVector2D mouse )
+HotSpot* AMyHUD::MouseLeftDown( FVector2D mouse )
 {
   UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseLeftDown()") );
   return ui->Click( mouse, FVector2D(0,0) );
 }
 
-bool AMyHUD::MouseLeftUp( FVector2D mouse )
+HotSpot* AMyHUD::MouseLeftUp( FVector2D mouse )
 {
   UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseLeftUp()") );
   return ui->Drop( mouse );
 }
 
-bool AMyHUD::MouseRightDown( FVector2D mouse )
+HotSpot* AMyHUD::MouseRightDown( FVector2D mouse )
 {
   UE_LOG( LogTemp, Warning, TEXT("AMyHUD::MouseRightDown()") );
   return ui->RightClick( mouse, FVector2D(0,0) );
 }
 
-bool AMyHUD::MouseRightUp( FVector2D mouse )
+HotSpot* AMyHUD::MouseRightUp( FVector2D mouse )
 {
   // Right up isn't handled.
-  return 1;
+  return 0;
 }
 
-bool AMyHUD::MouseMoved( FVector2D mouse )
+HotSpot* AMyHUD::MouseMoved( FVector2D mouse )
 {
   if( !Init )  return 0;
 
@@ -451,19 +470,19 @@ bool AMyHUD::MouseMoved( FVector2D mouse )
   return 0;
 }
 
-bool AMyHUD::MouseHovered( FVector2D mouse )
+HotSpot* AMyHUD::MouseHovered( FVector2D mouse )
 {
   // Check against all ui widgets that require hover.
   return ui->Hover( mouse );
 }
 
-bool AMyHUD::MouseDragged( FVector2D mouse )
+HotSpot* AMyHUD::MouseDragged( FVector2D mouse )
 {
   // Drag event.
   return ui->Drag( mouse );
 }
 
-bool AMyHUD::MouseDropped( FVector2D mouse )
+HotSpot* AMyHUD::MouseDropped( FVector2D mouse )
 {
   // Drop event.
   return ui->Drop( mouse );
@@ -518,4 +537,13 @@ void AMyHUD::RenderScreen( USceneCaptureComponent2D* renderer,
   renderer->SetRelativeLocationAndRotation( renderPos, cameraDir.Rotation().Quaternion() );
 }
 
+void AMyHUD::BeginDestroy()
+{
+  UE_LOG( LogTemp, Warning, TEXT( "AMyHUD::BeginDestroy()" ) );
+  if( ui ) {
+    delete ui;
+    ui = 0;
+  }
+  Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
+}
 

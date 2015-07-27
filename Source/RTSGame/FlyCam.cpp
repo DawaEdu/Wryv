@@ -105,7 +105,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   // Select a random tip
   tipNumber = randInt( 0, Tips.Num() );
   if( Tips.Num() )
-    tipsBox->SetText( Tips[ tipNumber ] );
+    tipsBox->Set( Tips[ tipNumber ] );
 }
 
 void AFlyCam::LoadLevel( FName levelName )
@@ -293,7 +293,7 @@ void AFlyCam::NextTip()
   if( Tips.Num() )
   {
     tipNumber %= Tips.Num();
-    tipsBox->SetText( Tips[ tipNumber ] );
+    tipsBox->Set( Tips[ tipNumber ] );
   }
 }
 

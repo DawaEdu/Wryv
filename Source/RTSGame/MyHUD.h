@@ -41,6 +41,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StoneIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* RightPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StackPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TooltipBackgroundTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
@@ -68,10 +69,10 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UClass *uClassSelectorShop;
   // DO NOT USE this TArray, use Game->unitsData.uClass instead.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< FUnitTypeUClassPair > UnitTypeUClasses;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *texIcon;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *texMinimap;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* texMedia;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* matMedia;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *PortraitTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D *MinimapTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
 
   // The font used to render the text in the HUD.
@@ -95,7 +96,6 @@ public:
   
   AMyHUD(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
-  virtual void BeginDestroy() override;
 
   TArray<FAssetData> ScanFolder( FName folder );
   void InitWidgets();
@@ -111,18 +111,20 @@ public:
   void UpdateSelectedObjectStats();
   void UpdateDisplayedResources();
   void UpdateMouse();
+
+  bool Valid() { return IsCanvasValid_WarnIfNot() ; }
   virtual void DrawHUD() override;
 
   // Which widget was hit by the mouse
-  bool MouseLeftDown( FVector2D mouse );
-  bool MouseLeftUp( FVector2D mouse );
-  bool MouseRightDown( FVector2D mouse );
-  bool MouseRightUp( FVector2D mouse );
+  HotSpot* MouseLeftDown( FVector2D mouse );
+  HotSpot* MouseLeftUp( FVector2D mouse );
+  HotSpot* MouseRightDown( FVector2D mouse );
+  HotSpot* MouseRightUp( FVector2D mouse );
   
-  bool MouseMoved( FVector2D mouse );
-  bool MouseHovered( FVector2D mouse );
-  bool MouseDragged( FVector2D mouse );
-  bool MouseDropped( FVector2D mouse );
+  HotSpot* MouseMoved( FVector2D mouse );
+  HotSpot* MouseHovered( FVector2D mouse );
+  HotSpot* MouseDragged( FVector2D mouse );
+  HotSpot* MouseDropped( FVector2D mouse );
 
   virtual void Tick( float t );
   // Get the Z distance that an object should be placed
@@ -140,4 +142,5 @@ public:
   // has FOV=fovyDegrees
   float GetPxWidth( float radiusWorldUnits, float distanceToObject, float texW, float fovyDegrees );
   void RenderScreen( USceneCaptureComponent2D* renderer, UTextureRenderTarget2D* tt, FVector objectPos, float radiusWorldUnits, FVector cameraDir );
+  virtual void BeginDestroy() override;
 };

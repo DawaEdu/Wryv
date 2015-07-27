@@ -27,7 +27,9 @@ struct FBox2DU : public FBox2D
     Min.X = Min.Y = 1e6f;
     Max.X = Max.Y = -1e6f;
   }
-
+  // Translates the box by V
+  FBox2DU operator+( FVector2D v ){ return FBox2DU( Min+v, Max+v ); }
+  FBox2DU operator-( FVector2D v ){ return FBox2DU( Min-v, Max-v ); }
   float left(){ return Min.X; }
 	float right(){ return Max.X; }
 	float top(){ return Min.Y; }
@@ -49,31 +51,50 @@ struct FBox2DU : public FBox2D
 
 class AGameObject;
 
+class TextWidget;
+class AMyHUD;
+
 class HotSpot
 {
 public:
   string Name; //the name of the widget
-  static AHUD* hud;
+  FString TooltipText; // tooltip that appears on flyover
+  static TextWidget *TooltipWidget; // Reference to the widget to send tooltip to on flyover
+  static AMyHUD* hud;
   // None (null) alignment means positioned absolutely
-  enum HAlign { None=0, Left=1<<0, HCenter=1<<1, Right =1<<2, ToLeftOfParent=1<<3, ToRightOfParent=1<<4, HFull=1<<5 };
-  enum VAlign { Top =1<<5, VCenter=1<<6, Bottom=1<<7, OnTopOfParent=1<<8,  BelowBottomOfParent=1<<9, VFull=1<<10 };
-  int align;
+  enum HAlign { None=0, Left=1<<0, HCenter=1<<1, Right=1<<2, 
+    ToLeftOfParent=1<<3, ToRightOfParent=1<<4, HFull=1<<5 };
+  enum VAlign { Top=1<<5, VCenter=1<<6, Bottom=1<<7,
+    OnTopOfParent=1<<8, BelowBottomOfParent=1<<9, VFull=1<<10 };
+  enum Alignment {
+    TopLeft=Top|Left, TopRight=Top|Right, TopCenter=Top|HCenter,
+    CenterLeft=Left|VCenter, CenterCenter=VCenter|HCenter, CenterRight=VCenter|Right,
+    BottomLeft=Left|Bottom, BottomCenter=Bottom|HCenter, BottomRight=Bottom|Right,
+  };
+  enum LayoutMode { Pixels, Percentages };
+
+  int Align;
+  int Layout;
   bool hidden;
   float displayTime; // Amount of time to display remaining
   FVector2D Pos, Size;
-  //FVector2D Pad, Margin; // Amount of padding (space inside)
+  FVector2D Pad, Margin; // Amount of padding (space inside)
   // and Margin (space outside) this widget.
+  // Margin is used for locating a widget inside the parent
+  // while Pad is used for locating children inside this widget.
+
   //
-  // +--------------------+
-  // |                    |
-  // | +----------------+ |
-  // | |                | |
-  // | |      text      | |
-  // | | padding        | |
-  // | +----------------+ |
-  // |   margin           |
-  // +--------------------+
-  
+  // +----------------------+
+  // |                      |
+  // |   Pos=[Margin]       |
+  // |   *----------------+ |
+  // |   |                | |
+  // |   |      text      | |
+  // |   |                | |
+  // |   +----------------+ |
+  // |                      |
+  // +----------------------+
+  // The Position of the widget is equal to the margin.
   FLinearColor Color;
   // Associations with AGameObject's contained in this hotspot. Empty if no objects
   // are associated with the spot (used for item slots)
@@ -91,18 +112,7 @@ public:
   function< int (FVector2D mouse) > OnDrag;
   // A function that runs when the widget is dropped @ certain location
   function< int (FVector2D mouse) > OnDrop;
-  void defaults()
-  {
-    align = Top | Left;
-    hidden = 0;
-    displayTime = 0.f;
-    Pos = FVector2D(0,0);
-    Size = FVector2D(32,32);
-    Color = FLinearColor::White;
-    Parent = 0;
-    dirty = 1;
-    bubbleUp = 1;
-  }
+  void defaults();
   HotSpot() {
     defaults();
   }
@@ -116,6 +126,14 @@ public:
     Size = size;
   }
   virtual ~HotSpot(){ Clear(); }
+
+  // Computes position in parent.
+  FVector2D pos() {
+    FVector2D p = Margin;
+    // add in parent padding.
+    if( Parent )  p += Parent->Pad;
+    return p;
+  }
 protected:
   virtual void render( FVector2D offset )
   {
@@ -125,12 +143,11 @@ protected:
       children[i]->render( offset + Pos );
   }
 public:
-  HotSpot* Add( HotSpot* w ) {
+  template <typename T>
+  T* Add( T* w ) {
     if( w->Parent )  w->Orphan();
     w->Parent = this;
     children.push_back( w );
-    // Reflow the widget inside parent
-    //repad(); // Recompute Size with new widget inside of it.
     return w;
   }
   void SetByCorners( FVector2D TL, FVector2D BR )
@@ -151,47 +168,44 @@ public:
   // they all kick-off to subclass::render( FVector2D(0,0) )
   virtual void render(){ if( hidden ) return; render( FVector2D(0,0) ); }
 
-  // Resizes the widget given children's size + padding
-  void repad() { repad( FVector2D(0,0) ); }
-  void repad( FVector2D pad ) {
-    // repad's the widget to enclose everything,
-    // including the children.
-    // *** widget grows infinitely if you push a child to the edge of the bounds
-    // each frame, unless you keep it inside within an epsilon. ***
-    Size = GetChildBounds().Size() + pad;
-  }
-
-  // 
-  void realignInParent() { realignInParent( FVector2D(0,0) ); }
-
   // reflows the contained hotspot to parent widget,
   // using ALIGNMENT settings.
   // ** TODO: can add a margin parameter for flushing outside of widget border.
-  void realignInParent( FVector2D pad ) {
+  void realignInParent()
+  {
     if( !Parent )
     {
-      UE_LOG( LogTemp, Warning, TEXT( "Cannot reflush to null parent" ) );
+      UE_LOG( LogTemp, Warning, TEXT( "Cannot realign to null parent" ) );
+      // Can reflush position based on Margins, or just leave it
+      //Pos = Margin;
       return; // cannot reflush
     }
     FVector2D PSize = Parent->Size;
+    FVector2D PM = Margin + Parent->Pad;
 
-    // Null alignment (0) means absolutely positioned (does not reflow in parent)
-    if( align & Left )  Pos.X = pad.X;
-    else if( align & Right )  Pos.X = PSize.X - Size.X - pad.X;
-    else if( align & HCenter )  Pos.X = (PSize.X - Size.X)/2; // centering
-    else if( align & ToLeftOfParent )  Pos.X = -Size.X;
-    else if( align & ToRightOfParent )  Pos.X = PSize.X;
-    else if( align & HFull )  Pos.X = 0, Size.X = PSize.X;
+    // Null alignment (0) means absolutely positioned (does not reflow in parent, Pos is
+    // just set from Margins)
+    if( Align & Left )  Pos.X = PM.X;
+    else if( Align & Right )  Pos.X = PSize.X - Size.X - PM.X;
+    else if( Align & HCenter )  Pos.X = (PSize.X - Size.X)/2; // centering
+    else if( Align & ToLeftOfParent )  Pos.X = -Size.X - Parent->Margin.X;
+    else if( Align & ToRightOfParent )  Pos.X = PSize.X + Parent->Margin.X;
+    else if( Align & HFull )  Pos.X = 0, Size.X = PSize.X;
+    //else Pos.X = Margin.X;
 
-    if( align & Top )  Pos.Y = pad.Y;
-    else if( align & Bottom )  Pos.Y = PSize.Y - Size.Y - pad.Y;
-    else if( align & VCenter ) Pos.Y = (PSize.Y - Size.Y)/2;
-    else if( align & BelowBottomOfParent )  Pos.Y = PSize.Y + pad.Y;
-    else if( align & OnTopOfParent )  Pos.Y = -Size.Y - pad.Y;
-    else if( align & VFull )  Pos.Y = 0, Size.Y = PSize.Y;
+    if( Align & Top )  Pos.Y = PM.Y;
+    else if( Align & Bottom )  Pos.Y = PSize.Y - Size.Y - PM.Y;
+    else if( Align & VCenter )  Pos.Y = (PSize.Y - Size.Y)/2;
+    else if( Align & BelowBottomOfParent )  Pos.Y = PSize.Y + Parent->Margin.Y;
+    else if( Align & OnTopOfParent )  Pos.Y = -Size.Y - Parent->Margin.Y;
+    else if( Align & VFull )  Pos.Y = 0, Size.Y = PSize.Y;
+    //else Pos.Y = Margin.Y;
   }
 
   // Reflows all children into parents according to alignment settings
+  // reflow is 2 steps:
+  //   1) --recompute size given children's size--X
+  //   2) realign the children in the parent
   void reflow()
   {
     for( int i = 0; i < children.size(); i++ )
@@ -214,7 +228,6 @@ public:
   //  FBox2DU bounds = GetBounds();
   //  return bounds.IsInside( v ); // check if v is inside the box (<-)
   //}
-
   // This function checks absolute coordinates
 	// Check main bounds
   bool hit( FVector2D v ) {
@@ -222,9 +235,9 @@ public:
     return bounds.IsInside( v ); // check if v is inside the box (<-)
   }
   
+  // ABSOLUTE bounds on the object
   FBox2DU GetBounds( FVector2D offset ){
     FBox2DU bounds;
-
     // bound this and all children
     bounds += offset + Pos;
     bounds += offset + Pos + Size;
@@ -237,10 +250,19 @@ public:
   {
     return GetBounds( FVector2D(0,0) );
   }
-  // Get bounds of children, excluding this
+
+  // Get absolute bounds containing the children, excluding this
   FBox2DU GetChildBounds()
   {
-    FBox2DU bounds;
+    FBox2DU bounds ;
+    if( !children.size() )
+    {
+      UE_LOG( LogTemp, Warning, TEXT( "Widget %s had NO CHILDREN!" ), *FString(Name.c_str()) );
+      // return the bounds of the container instead
+      //bounds += GetBounds();
+      // give 0 size box
+      bounds = FBox2DU( FVector2D(0,0), FVector2D(0,0) );
+    }
     for( int i = 0; i < children.size(); i++ ) {
       bounds += children[i]->GetBounds( Pos );
     }
@@ -271,15 +293,16 @@ public:
     children.clear();
   }
 
-  bool Act( FVector2D v, FVector2D offset, function< int (FVector2D) > HotSpot::* f )
+  // Checks if a point v hits this widget,
+  // if so, an Action (described by function f) is executed on this hotspot.
+  HotSpot* Act( FVector2D v, FVector2D offset, function< int (FVector2D) > HotSpot::* f )
   {
     // Look into deepest child first.
     for( int i = 0; i < children.size(); i++ )
     {
       // check if a child is hit by the click.
-      HotSpot *child = children[i];
-      bool h = child->Act( v, offset+Pos, f );  // offset accumulates absolute position offset of widget
-      if( h )  return 1; // If the hit was intercepted, return.
+      HotSpot *h = children[i]->Act( v, offset+Pos, f );  // offset accumulates absolute position offset of widget
+      if( h )  return children[i]; // If the hit was intercepted, return object hit.
     }
 
     // Actually perform hit checking, if this provides the function f.
@@ -290,29 +313,30 @@ public:
 
       // If the widget consumes events, then halt propagation
       // Deepest child gets searched, then we return from here
-      if( !bubbleUp ) return 1;
+      if( !bubbleUp ) return this; 
     }
+
     return 0; //not hit or bubbles are allowed.
   }
 
-  // returns true when the point hits the widget (or a child)
-  bool Click( FVector2D v, FVector2D offset )
+  // returns the child hit (or this) if event tripped, NULL if event not tripped
+  HotSpot* Click( FVector2D v, FVector2D offset )
   {
     return Act( v, FVector2D(0,0), &HotSpot::OnClicked );
   }
-  bool RightClick( FVector2D v, FVector2D offset )
+  HotSpot* RightClick( FVector2D v, FVector2D offset )
   {
     return Act( v, FVector2D(0,0), &HotSpot::OnRightClicked );
   }
-  bool Hover( FVector2D v )
+  HotSpot* Hover( FVector2D v )
   {
     return Act( v, FVector2D(0,0), &HotSpot::OnHover );
   }
-  bool Drag( FVector2D v )
+  HotSpot* Drag( FVector2D v )
   {
     return Act( v, FVector2D(0,0), &HotSpot::OnDrag );
   }
-  bool Drop( FVector2D v )
+  HotSpot* Drop( FVector2D v )
   {
     return Act( v, FVector2D(0,0), &HotSpot::OnDrop );
   }
@@ -326,50 +350,48 @@ public:
   FString Text;
   float Scale;
 
+  // During construction, we assign Text directly, then call Measure.
+  // Construction is assumed to happen when the HUD is available.
   TextWidget( FString fs, UFont *font=0, float scale=1.f ) : Text( fs ), Font(font), Scale( 1.f )
   {
     Name = TCHAR_TO_UTF8( *fs );
-    SetText( fs );
+    SetAndMeasure(fs);
   }
   TextWidget( FString fs, FVector2D pos, UFont *font=0, float scale=1.f ) : 
     HotSpot( pos ), Text( fs ), Font(0), Scale( scale )
   {
     Name = TCHAR_TO_UTF8( *fs );
-    SetText( fs );
+    SetAndMeasure(fs);
   }
   virtual ~TextWidget(){}
 
-  // Rendered size of text
-  void SetText( FString text )
+  // Modifies text inside widget, but does not remeasure text size (until next draw call)
+  void Set( FString text )
   {
     Text = text;
     dirty = 1;
-
-    Measure(); // call may fail here, but put it here anyway.
+    // We do not call Measure() here, instead we call it at the
+    // next RENDER call, since if the HUD is not available, we cannot
+    // measure the text.
+    //Measure(); 
     // [[ cannot call measure here, since may happen
     //    during callback due to mouse motion etc. ]]
   }
 
-  void Measure()
+  // Sets the text and re-measures the size of the text immediately afterwards
+  // the HUD must be ready for this
+  void SetAndMeasure( FString text )
   {
-    hud->GetTextSize( Text, Size.X, Size.Y, Font, Scale );
-    // ERROR IF THE HUD is not currently ready
-    // to draw (ie canvas size won't be available)
+    Set( text );
+    Measure();
   }
+
+  void Measure();
   
 protected:
   // We call Measure() each call to render() since text cannot be measured except when
   // canvas is ready (ie during render() calls)
-  virtual void render( FVector2D offset ) override
-  {
-    if( hidden ) return;
-    if( dirty ) { // It seems in first calls to render(), Measure() does not properly measure text width
-      Measure();
-      dirty = 0;
-    }
-    hud->DrawText( Text, Color, Pos.X + offset.X, Pos.Y + offset.Y, Font, Scale );
-    HotSpot::render( offset );
-  }
+  virtual void render( FVector2D offset ) override;
 };
 
 class ImageWidget : public HotSpot
@@ -409,26 +431,7 @@ public:
   virtual ~ImageWidget(){}
 
 protected:
-  virtual void render( FVector2D offset ) override 
-  {
-    if( hidden ) return;
-    FVector2D renderPos = Pos - hotpoint;
-    if( !Icon )
-    {
-      // We have to remove this comment for normal ops because
-      // sometimes we want to have null texes eg in slotpalette items when
-      // no item is present
-      UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget" ) );
-      // render should not be called when the texture is hidden
-    }
-
-    // If hidden, do not draw
-    hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, 
-      Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color,
-      EBlendMode::BLEND_Translucent, 1.f, 0, Rotation, PivotPoint );
-    
-    HotSpot::render( offset );
-  }
+  virtual void render( FVector2D offset ) override ;
 };
 
 class ITextWidget : public ImageWidget
@@ -437,16 +440,17 @@ class ITextWidget : public ImageWidget
 public:
   FString GetText(){ return Text->Text; }
 
-  ITextWidget( UTexture* pic, FVector2D size, FString ftext, int alignment,
+  ITextWidget( UTexture* pic, FVector2D size, FString ftext, int textAlignment,
     UFont* font=0, float scale=1.f ) :
     ImageWidget( pic, FVector2D(0,0), size )
   {
+    FString name = FString::Printf( TEXT("ITextWidget %s"), *ftext );
+    if( pic ) name += pic->GetName();
+    Name = TCHAR_TO_UTF8( *name );
     Text = new TextWidget( ftext, font, scale );
-    Text->align = alignment;
+    Text->Align = textAlignment;
     Add( Text );
-    reflow();
   }
-  
 };
 
 class SolidWidget : public ImageWidget
@@ -455,10 +459,12 @@ public:
   static UTexture* SolidWhiteTexture;
   SolidWidget( FLinearColor color ) : ImageWidget( SolidWhiteTexture )
   {
+    Name = "SolidWidget";
     Color = color;
   }
   SolidWidget( FVector2D pos, FVector2D size, FLinearColor color ) : ImageWidget( SolidWhiteTexture, pos, size )
   {
+    Name = "SolidWidget";
     Color = color;
   }
   virtual ~SolidWidget(){}
@@ -472,6 +478,7 @@ public:
   float Thickness;
   Border( FBox2DU box, float thickness, FLinearColor color )
   {
+    Name = "Border Widget";
     Thickness = thickness;
 
     left = new SolidWidget( color );
@@ -515,6 +522,7 @@ public:
   CooldownPie( FVector2D pos, FVector2D size, float t ) :
     HotSpot( pos, size ), Time(0.f), TotalTime(t)
   {
+    Name = "CooldownPie";
   }
   void update( float t ) { Time -= t; }
   void render()
@@ -541,6 +549,7 @@ public:
   // Add in all the subwidgets
   ResourcesWidget(int pxSize, int spacing, FVector2D pos) : HotSpot(pos), Px(pxSize), Spacing(spacing)
   {
+    Name = "ResourcesWidget";
     // +-----------------+
     // |G1000 W1000 S1000|
     // +-----------------+
@@ -567,9 +576,9 @@ public:
   virtual ~ResourcesWidget(){}
   void SetValues( int goldCost, int lumberCost, int stoneCost )
   {
-    gold->SetText( FString::Printf( TEXT("%d"), goldCost ) );
-    lumber->SetText( FString::Printf( TEXT("%d"), lumberCost ) );
-    stone->SetText( FString::Printf( TEXT("%d"), stoneCost ) );
+    gold->Set( FString::Printf( TEXT("%d"), goldCost ) );
+    lumber->Set( FString::Printf( TEXT("%d"), lumberCost ) );
+    stone->Set( FString::Printf( TEXT("%d"), stoneCost ) );
   }
 };
 
@@ -577,7 +586,10 @@ public:
 class UseWidget : public HotSpot
 {
   ImageWidget *mana;
-  UseWidget(){}
+  UseWidget()
+  {
+    Name = "UseWidget";
+  }
   virtual ~UseWidget(){}
 };
 
@@ -600,6 +612,7 @@ public:
   CostWidget( UTexture* bkg, FVector2D interpadding, float vSpacing ) : 
     ImageWidget( bkg ), Interpadding(interpadding)
   {
+    Name = "CostWidget";
     topText = new TextWidget( "TopText", Interpadding/2 );
     Add(topText);
 
@@ -620,14 +633,14 @@ public:
     bounds = bottomText->GetBounds();
     bounds.print("bottomText");
     
-    repad( Interpadding );
+    Size = GetChildBounds().Size() + Pad;
   }
   virtual ~CostWidget(){}
   void Set( FString top, int goldCost, int lumberCost, int stoneCost, FString bottom )
   {
-    topText->SetText( top );
+    topText->Set( top );
     cost->SetValues( goldCost, lumberCost, stoneCost );
-    bottomText->SetText( bottom );
+    bottomText->Set( bottom );
     dirty = 1;
   }
 
@@ -636,7 +649,7 @@ public:
     if( hidden ) return;
     if( dirty )
     {
-      repad( Interpadding ) ;
+      //repad() ;
       dirty = 0 ;
     }
     ImageWidget::render( offset );
@@ -657,9 +670,13 @@ public:
     Set( txt );
   }
   virtual ~Tooltip(){}
+
+  // The tooltip can be set in a callback, so it may be reset
+  // outside of a render which means that the text size
+  // measurement will be wrong. That's why we have the dirty bit.
   void Set( FString txt )
   {
-    Text->SetText( txt );
+    Text->Set( txt );
     // This is the 
     Size = Text->Size + Interspacing; /// cannot re-measure size here.
     Text->Pos = Pos + Interspacing/2;
@@ -672,7 +689,7 @@ public:
     //re-measure the background's size if the text has changed
     if( dirty )
     {
-      repad( Interspacing );
+      //repad();
       dirty = 0;
     }
     ImageWidget::render( offset );
@@ -683,15 +700,17 @@ class SlotPalette;
 
 class SlotEntry : public ImageWidget
 {
-  SlotPalette* Parent; // hides base member
+  SlotPalette* Palette; // The Palette this Entry belongs to
   int Quantity; // the numeric quantity remaining
   TextWidget* TextQuantity;   // The quantity of the item
+
 public:
-  SlotEntry( SlotPalette *palette, UTexture* tex, FVector2D pos, FVector2D size, int qty ) :
-    Parent(palette), ImageWidget( tex, pos, size ), Quantity( qty )
+  SlotEntry( SlotPalette *palette, UTexture* tex,
+    FVector2D pos, FVector2D size, int qty ) :
+    ImageWidget( tex, pos, size ), Palette(palette), Quantity( qty )
   {
     TextQuantity = new TextWidget( "A" );
-    TextQuantity->align = Right|Bottom;
+    TextQuantity->Align = Right|Bottom;
     Add( TextQuantity );
     dirty = 1;
     //SetQuantity( qty );
@@ -703,7 +722,7 @@ public:
   void SetQuantity( int quantity )
   {
     Quantity = quantity;
-    TextQuantity->SetText( FString::Printf( TEXT("%d"), quantity ) );
+    TextQuantity->Set( FString::Printf( TEXT("%d"), quantity ) );
     dirty = 1;
     // 0 qty means qty widget disappears.
     //if( !quantity )  TextQuantity->hidden = 1;
@@ -720,13 +739,13 @@ class SlotPalette : public ImageWidget
 
 public:
   FVector2D EntrySize;
-  FVector2D Pad; // The padding of each SlotEntry
+  FVector2D EntryInterPadding; // The padding of each SlotEntry
 
   static UTexture* SlotPaletteTexture;
   // Drag & Drop for items from slots
   // The item we are dragging (subhotspot)
-  SlotPalette( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D innerPadding ) : 
-    Rows(rows), Cols(cols), EntrySize(entrySize), Pad(innerPadding), ImageWidget( bkg )
+  SlotPalette( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D entryInterPadding ) : 
+    Rows(rows), Cols(cols), EntrySize(entrySize), EntryInterPadding(entryInterPadding), ImageWidget( bkg )
   {
     // Init w/ # slots used in this palette
     // The stock size of the width is 100px/slot.
@@ -804,62 +823,102 @@ public:
 };
 
 // Supports stacking-in of widgets from left/right or top/bottom
-class StackPanel : public HotSpot
+class StackPanel : public ImageWidget
 {
 public:
+  static UTexture* StackPanelTexture;
   FVector2D EntrySize; // Size of an entry in the stackpanel
-  FVector2D Interpadding;  // Padding between entries
+  //FVector2D Interspace;  // Space between entries in the stackpanel (X,Y's)
   
-  StackPanel( FVector2D entrySize, FVector2D interpadding ) :
-    HotSpot( FVector2D(0,0), FVector2D(0,0) ),
-    EntrySize( entrySize ), Interpadding( interpadding )
-  {
-  }
-  StackPanel( FVector2D pos, FVector2D size, FVector2D entrySize, FVector2D interpadding ) :
-    HotSpot( pos, size ), EntrySize( entrySize ), Interpadding( interpadding )
+  StackPanel( UTexture* bkg, FVector2D entrySize ) : ImageWidget( bkg ), EntrySize( entrySize )
   {
   }
   virtual ~StackPanel(){}
   
-  //    _ _
-  // > |_|_|
-  void StackLeft( ImageWidget* w )
+  // Prepares the widget for stacking
+  HotSpot* Prep( HotSpot *widget )
   {
-    w->Pos.X = GetBounds().left() - w->Size.X - Interpadding.X;
-    w->Size = EntrySize;
-    HotSpot::Add( w );
+    widget->Size = EntrySize;
+    widget->Pos = widget->Margin = Pad; // Set's X&Y margin's to default value,
+    // X or Y will be overwritten depending on stacking style
+    // Can use absolute positioning in the widget,
+    // or TopLeft + margins (default)
+    widget->Align = TopLeft;
+    return widget;
+  }
+
+  // Recomputes the widget's bounds size based on the size of the children
+  void recomputeSize()
+  {
+    Size = GetChildBounds().Size() + Pad;
   }
 
   //  _ _
   // |_|_| <
-  void StackRight( ImageWidget* w )
+  void StackRight( HotSpot* widget )
   {
-    w->Pos.X = GetBounds().right() + Interpadding.X;
-    w->Size = EntrySize;
-    HotSpot::Add( w );
+    recomputeSize();
+    Prep(widget);
+    // Situates the bounds @ the origin, which means its just a measure of the widget's total size.
+    widget->Margin.X = Size.X + Pad.X;
+    Add( widget );
+    recomputeSize();
+    reflow(); // reflows
+  }
+
+  //    _ _
+  // > |_|_|
+  void StackLeft( HotSpot* widget )
+  {
+    recomputeSize();
+    Prep(widget);
+
+    // Displacement we'll expand the container to the left by
+    float disp = EntrySize.X + Pad.X;
+    // Move the parent widget to the left by the size of the entry + pad
+    Margin.X -= disp;
+
+    // shove over all the children already in the widget
+    for( int i = 0 ; i < children.size(); i++ )
+      children[i]->Margin.X += disp;
+    Add( widget );
+    recomputeSize();
+    reflow(); // reflows
   }
 
   //  v
   //  _
   // |_|
   // |_|
-  void StackTop( ImageWidget* w )
+  void StackTop( HotSpot* widget )
   {
-    w->Pos.Y = GetBounds().top() - Interpadding.Y - w->Size.Y;
-    w->Size = EntrySize;
-    HotSpot::Add( w );
+    recomputeSize();
+    Prep(widget);
+    float disp = EntrySize.Y + Pad.Y;
+    Margin.Y -= disp;
+    for( int i = 0 ; i < children.size(); i++ )
+      children[i]->Margin.Y += disp;
+    Add( widget );
+    recomputeSize();
+    reflow(); // reflows
   }
 
   //  _
   // |_|
   // |_|
   //  ^
-  void StackBottom( ImageWidget* w )
+  void StackBottom( HotSpot* widget )
   {
-    FBox2DU b = GetBounds();
-    w->Pos.Y = b.bottom() + Interpadding.Y;
-    w->Size = EntrySize;
-    HotSpot::Add( w );
+    recomputeSize();
+    Prep(widget);
+    widget->Margin.Y = Size.Y + Pad.Y;
+    UE_LOG( LogTemp, Warning, TEXT( "widget->Margin( %f %f ), Size.X=%f, Size.Y=%f" ),
+      Margin.X, Margin.Y, Size.X, Size.Y );
+    Add( widget );
+    recomputeSize();
+    UE_LOG( LogTemp, Warning, TEXT( " Size.X=%f, Size.Y=%f" ),
+      Size.X, Size.Y );
+    reflow(); // reflows
   }
 };
 
@@ -867,19 +926,17 @@ class Minimap : public ImageWidget
 {
   Border* borders;
 public:
-  Minimap( UTexture* icon, FVector2D pos, FVector2D size,
-    float borderSize, FLinearColor borderColor ) : 
-    ImageWidget( icon, pos, size )
+  Minimap( UTexture* icon, float borderSize, FLinearColor borderColor ) : 
+    ImageWidget( icon )
   {
     FBox2DU box( FVector2D(0,0), Size );
     borders = new Border( box, borderSize, borderColor );
     Add( borders );
-
-
   }
   virtual ~Minimap(){}
 };
 
+// The right-side panel
 class Panel : public ImageWidget
 {
 public:
@@ -898,7 +955,7 @@ public:
   Minimap* minimap;       // the minimap widget for displaying the world map
 
   // For the group of selected units.
-  Panel( UTexture* texPanelBkg, UTexture* texMinimap, FVector2D size, float margin ) :
+  Panel( UTexture* texPanelBkg, UTexture* MinimapTexture, FVector2D size, float margin ) :
     ImageWidget( texPanelBkg, FVector2D( 0, 0 ), size )
   {
     float s = size.X - 2*margin; // padded inner size
@@ -916,9 +973,8 @@ public:
     abilities->Pos.X = margin;
     abilities->Pos.Y = unitStats->bottom() + margin;
 
-    minimap = new Minimap( texMinimap, FVector2D(0, abilities->GetBounds().bottom() + margin),
-      FVector2D( texMinimap->GetSurfaceWidth(), texMinimap->GetSurfaceHeight() ),
-      4.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
+    minimap = new Minimap( MinimapTexture, 4.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
+    minimap->Pos = FVector2D(0, abilities->GetBounds().bottom() + margin);
     Add( minimap );
     
   }
@@ -927,14 +983,19 @@ public:
 
 class StatusBar : public SolidWidget
 {
-  TextWidget* Text;
 public:
+  TextWidget* Text;
   StatusBar( FVector2D canvasSize, float height, FLinearColor bkgColor ) :
     SolidWidget( FVector2D( 0, canvasSize.Y - height ),
     FVector2D( canvasSize.X, height ), bkgColor )
   {
     Text = new TextWidget( "status text" );
     Add( Text );
+  }
+
+  void Set( FString text )
+  {
+    Text->Set( text );
   }
 };
 
@@ -954,7 +1015,7 @@ class MapSelectionScreen : public HotSpot
 {
 public:
   ImageWidget *Title;
-  StackPanel *Panel;
+  StackPanel *MapFiles;
   ImageWidget *Thumbnail;
   ITextWidget *OKButton;
   
@@ -964,53 +1025,50 @@ public:
 
   // Constructs the MapSelection Screen.
   MapSelectionScreen( FVector2D canvasSize, 
-    UTexture* titleTex, UTexture *slotBkg, FVector2D entrySize,
-    FVector2D pad, UFont* font, function< void (FString text) > OnSelect ) :
+    UTexture* titleTex,
+    UTexture* mapFilesBkg,
+    UTexture* slotBkg,
+    UTexture* thumbnailTex,
+    FVector2D entrySize,
+    UFont* font ) :
     HotSpot( FVector2D(0,0), canvasSize ),
     SlotBkg( slotBkg ), Selected( 0 ), Font( font )
   {
     // Throw in the title
     Title = new ImageWidget( titleTex );
-    Title->Pos = FVector2D( 75, 50 );
-    //Title->align = Left | Top; // no alignment
+    Title->Align = TopLeft;
+    Title->Margin = FVector2D( 75, 50 );
     Add( Title );
-
+    
     // The stack of menu items.
-    Panel = new StackPanel( entrySize, pad );
-    Panel->Pos = FVector2D( 80, 0 );
-    Panel->Size = FVector2D( 256, 256 );
-    Panel->align = Left | VCenter;
-    Add( Panel );
+    MapFiles = new StackPanel( mapFilesBkg, entrySize );
+    MapFiles->Align = TopLeft;
+    MapFiles->Margin = FVector2D( 80, 80 );
+    MapFiles->Pad = FVector2D( 8,8 );
+    Add( MapFiles );
 
-    Thumbnail = new ImageWidget( SlotBkg, FVector2D( 80, 0 ), FVector2D(256,256) );
-    Thumbnail->align = Right | VCenter;
+    Thumbnail = new ImageWidget( thumbnailTex );
+    Thumbnail->Align = CenterRight;
+    Thumbnail->Margin = FVector2D( 80, 0 );
     Add( Thumbnail );
 
-    OKButton = new ITextWidget( slotBkg, entrySize, "OK",
-      HAlign::Right | VAlign::Bottom );
-    OKButton->Pos = FVector2D( 20, 10 );
-    OKButton->OnClicked = [this,OnSelect]( FVector2D mouse ){
-      OnSelect( Selected->GetText() );
-      return 0;
-    };
+    OKButton = new ITextWidget( slotBkg, entrySize, "OK", CenterCenter );
+    OKButton->Align = BottomRight;
+    OKButton->Margin = FVector2D( 20, 10 );
+    OKButton->Size = FVector2D( 75, 50 );
+    
     Add( OKButton );
   }
 
   // Adds a slot
-  ITextWidget* AddText( FString ftext, int alignment )
+  ITextWidget* AddText( FString ftext, int textAlignment )
   {
-    ITextWidget* text = new ITextWidget( SlotBkg, Panel->EntrySize, ftext, alignment );
-    Add( text );
-    // When clicked call Select() on this textNode.
+    ITextWidget* text = new ITextWidget( SlotBkg, MapFiles->EntrySize, ftext, textAlignment );
     text->OnClicked = [this,text](FVector2D mouse){
       Select( text );
       return 0;
     };
-    
-    Panel->StackBottom( text );
-    Panel->repad();        // resize the panel with new item in it
-    Panel->reflow();
-
+    MapFiles->StackBottom( text );
     return text;
   }
 
@@ -1027,30 +1085,25 @@ public:
 };
 
 /// Displays mission objectives on screen
-class MissionObjectivesScreen : public StackPanel
+class MissionObjectivesScreen : public ImageWidget
 {
   UTexture *SlotBkg;
+  StackPanel *Objectives;
 public:
-  MissionObjectivesScreen( UTexture *slotBkg, FVector2D slotSize, FVector2D pad ) :
-    StackPanel( slotSize, pad ),
-    SlotBkg( slotBkg )
+  MissionObjectivesScreen( UTexture *bkg, UTexture *slotBkg,
+    FVector2D slotSize, FVector2D pad ) :
+    ImageWidget( bkg )
   {
     
   }
 
   // Add a series of mission objectives here
-  ImageWidget* AddText( FString text, int align )
+  ITextWidget* AddText( FString text, int align )
   {
-    ImageWidget* widget = new ImageWidget( SlotBkg, FVector2D(0,0), EntrySize );
-    TextWidget* textNode = new TextWidget( text );
-    textNode->align = align;
-    widget->Size = EntrySize;
-    widget->Add( textNode );
-    
-    Add( widget );
-    reflow();
-
-    return widget;
+    ITextWidget *tw = new ITextWidget( SlotBkg, FVector2D( 100, 40 ), text, CenterCenter );
+    tw->Margin = FVector2D( 10, 0 );
+    tw->Align = CenterLeft;
+    return Add( tw );
   }
   
 };
@@ -1098,7 +1151,7 @@ public:
 
   void Show( int mode )
   {
-    if( mode == ARTSGameGameMode::Title || mode == ARTSGameGameMode::Menu )
+    if( mode == ARTSGameGameMode::Title || mode == ARTSGameGameMode::MapSelect )
     {
       resources -> hidden = 1;
       rightPanel -> hidden = 1;
@@ -1107,14 +1160,15 @@ public:
       itemBelt -> hidden = 1;
       buffs -> hidden = 1;
       building -> hidden = 1;
-      statusBar -> hidden = 1;
+      //statusBar -> hidden = 1;
       selectBox -> hidden = 1;
       controls -> hidden = 1;
       mapSelectionScreen -> hidden = 1;
       missionObjectivesScreen -> hidden = 1;
     }
+    statusBar -> show(); // Show the status bar at all times
     
-    if( mode == ARTSGameGameMode::Menu )
+    if( mode == ARTSGameGameMode::MapSelect )
     {
       mapSelectionScreen -> show();
     }
@@ -1128,7 +1182,6 @@ public:
       itemBelt -> show();
       buffs -> show();
       building -> show();
-      statusBar -> show();
       selectBox -> show();
       controls -> show();
       mapSelectionScreen -> hide();
@@ -1148,8 +1201,8 @@ public:
     statusBar->Size.X = Size.X;
 
     // This becomes full size
-    //mapSelectionScreen->Size = Size;
-    //mapSelectionScreen->reflow();
+    mapSelectionScreen->Size = Size;
+    mapSelectionScreen->reflow();
   }
 
 };
