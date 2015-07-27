@@ -96,7 +96,6 @@ void AUnit::OnSelected()
 
         // Set the costWidget's position based on the slot size.
         costWidget->Align = HotSpot::HCenter | HotSpot::OnTopOfParent;
-        costWidget->realignInParent();
 
         ///Game->myhud->ui->itemBelt->Add( costWidget );
         ///costWidget->Pos.Y = - costWidget->Size.Y - 8;

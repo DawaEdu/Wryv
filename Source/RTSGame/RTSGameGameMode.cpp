@@ -11,6 +11,7 @@ ARTSGameGameMode::ARTSGameGameMode(const FObjectInitializer& PCIP) : Super( PCIP
 
   // Start at the Title screen
   state = GameState::MapSelect;
+  //state = GameState::Running;
 }
 
 void ARTSGameGameMode::BeginDestroy()

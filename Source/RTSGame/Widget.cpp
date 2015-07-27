@@ -23,7 +23,7 @@ void HotSpot::defaults()
   Layout = Pixels; // pixel positioning (can also use percentages of parent widths)
   hidden = 0;
   displayTime = 0.f;
-  Margin = Pad = Pos = FVector2D(0,0);
+  Margin = Pad = FVector2D(0,0);
   Size = FVector2D(32,32);
   Color = FLinearColor::White;
   Parent = 0;
@@ -36,10 +36,10 @@ void HotSpot::defaults()
     return 0;
   };
 }
+
 void ImageWidget::render( FVector2D offset )
 {
   if( hidden ) return;
-  FVector2D renderPos = Pos - hotpoint;
   if( !Icon )
   {
     // We have to remove this comment for normal ops because
@@ -48,6 +48,9 @@ void ImageWidget::render( FVector2D offset )
     UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget `%s`" ), *FString(Name.c_str()) );
     // render should not be called when the texture is hidden
   }
+
+  // The renderPosition is just the computed position minus center hotpoint
+  FVector2D renderPos = Pos() - hotpoint;
 
   // If hidden, do not draw
   hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, 
@@ -79,7 +82,8 @@ void TextWidget::render( FVector2D offset )
   if( dirty ) { // It seems in first calls to render(), Measure() does not properly measure text width
     Measure();
   }
-  hud->DrawText( Text, Color, Pos.X + offset.X, Pos.Y + offset.Y, Font, Scale );
+  FVector2D pos = Pos();
+  hud->DrawText( Text, Color, pos.X + offset.X, pos.Y + offset.Y, Font, Scale );
   HotSpot::render( offset );
 }
 
@@ -97,18 +101,6 @@ void SlotEntry::SetTexture( UTexture* tex, FVector2D originalPos )
   float minScale = scales.GetMin();
   Size = texSize * minScale;  // multiply by smaller of two scales to shrink to fit.
   FVector2D diff = Palette->EntrySize - Size;
-  Pos = originalPos + diff/2;
+  Margin = originalPos + diff/2;
 }
 
-void SlotEntry::render( FVector2D offset )
-{
-  if( hidden ) return;
-
-  //if( dirty )
-  { // It seems in first calls to render(), Measure() does not properly measure text width
-    TextQuantity->realignInParent();
-    dirty = 0;
-  }
-
-  ImageWidget::render( offset );
-}

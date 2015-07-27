@@ -72,7 +72,7 @@ void AMyHUD::InitWidgets()
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
   StackPanel::StackPanelTexture = StackPanelTexture;
 
-  ui = new UserInterface(FVector2D(0,0), FVector2D(Canvas->SizeX, Canvas->SizeY));
+  ui = new UserInterface(FVector2D(Canvas->SizeX, Canvas->SizeY));
   ui->Name = "UI-root";
   
   // connect the mouse drag functions 
@@ -90,14 +90,14 @@ void AMyHUD::InitWidgets()
     return 0;
   };
 
-  ui->resources = new ResourcesWidget( 16, 4, FVector2D(0,0) );
+  ui->resources = new ResourcesWidget( 16, 4 );
   ui->Add( ui->resources );
   ui->resources->Name = "Resources";
 
-  ui->rightPanel = new Panel( RightPanelTexture, MinimapTexture, FVector2D( 256, Canvas->SizeY ), 4 );
+  ui->rightPanel = new SidePanel( RightPanelTexture, PortraitTexture,
+    MinimapTexture, FVector2D( 280, Canvas->SizeY ), FVector2D(4,4) );
+  ui->rightPanel->Align = HotSpot::TopRight;
   ui->Add( ui->rightPanel );
-
-  ui->rightPanel->portrait->Icon = PortraitTexture;
   ui->rightPanel->Name = "Right side panel";
 
   // Attach functionality for minimap
@@ -114,9 +114,7 @@ void AMyHUD::InitWidgets()
   // Keep one of these for showing costs on flyover
   ui->costWidget = new CostWidget( TooltipBackgroundTexture, FVector2D(16,13), 8 );
   ui->Add( ui->costWidget );
-  ui->costWidget->Align = HotSpot::HCenter | HotSpot::VCenter;
-  ui->costWidget->Pos = FVector2D(0,0);
-  ui->costWidget->realignInParent();
+  ui->costWidget->Align = HotSpot::CenterCenter;
   ui->costWidget->Name = "Cost widget";
   ui->costWidget->hidden = 1;
 
@@ -143,8 +141,7 @@ void AMyHUD::InitWidgets()
   // Create the panel for containing items/inventory
   ui->itemBelt = new SlotPalette( SlotPaletteTexture, 1, 4, FVector2D( 100,100 ), FVector2D( 8,8 ) );
   ui->Add( ui->itemBelt );
-  ui->itemBelt->Align = HotSpot::HCenter | HotSpot::Bottom;
-  ui->itemBelt->realignInParent();
+  ui->itemBelt->Align = HotSpot::BottomCenter;
   ui->itemBelt->Name = "Item belt";
 
   ui->controls = new Controls( PauseButtonTexture );
@@ -177,6 +174,52 @@ void AMyHUD::InitWidgets()
     return 0;
   };
 
+
+  StackPanel *p1 = new StackPanel( SolidWhiteTexture, FVector2D(16,16) );
+  p1->Align = HotSpot::CenterLeft;
+  p1->Pad = FVector2D( 12, 12 );
+  p1->Margin = FVector2D( 40, 40 );
+  p1->StackRight( new ImageWidget( GoldIconTexture ) );
+  p1->StackRight( new ImageWidget( GoldIconTexture ) );
+  p1->StackRight( new ImageWidget( GoldIconTexture ) );
+  p1->StackRight( new ImageWidget( GoldIconTexture ) );
+  p1->StackRight( new ImageWidget( GoldIconTexture ) );
+  ui->Add( p1 );
+
+  p1 = new StackPanel( SolidWhiteTexture, FVector2D(16,16) );
+  p1->Align = HotSpot::CenterRight;
+  p1->Pad = FVector2D( 12, 12 );
+  p1->Margin = FVector2D( 40, 40 );
+  p1->StackLeft( new ImageWidget( GoldIconTexture ) );
+  p1->StackLeft( new ImageWidget( GoldIconTexture ) );
+  p1->StackLeft( new ImageWidget( GoldIconTexture ) );
+  p1->StackLeft( new ImageWidget( GoldIconTexture ) );
+  p1->StackLeft( new ImageWidget( GoldIconTexture ) );
+  ui->Add( p1 );
+
+  p1 = new StackPanel( SolidWhiteTexture, FVector2D(16,16) );
+  p1->Align = HotSpot::TopCenter;
+  p1->Pad = FVector2D( 12, 12 );
+  p1->Margin = FVector2D( 40, 40 );
+  p1->StackBottom( new ImageWidget( GoldIconTexture ) );
+  p1->StackBottom( new ImageWidget( GoldIconTexture ) );
+  p1->StackBottom( new ImageWidget( GoldIconTexture ) );
+  p1->StackBottom( new ImageWidget( GoldIconTexture ) );
+  p1->StackBottom( new ImageWidget( GoldIconTexture ) );
+  ui->Add( p1 );
+
+  p1 = new StackPanel( SolidWhiteTexture, FVector2D(16,16) );
+  p1->Align = HotSpot::BottomCenter;
+  p1->Pad = FVector2D( 12, 12 );
+  p1->Margin = FVector2D( 40, 40 );
+  p1->StackTop( new ImageWidget( GoldIconTexture ) );
+  p1->StackTop( new ImageWidget( GoldIconTexture ) );
+  p1->StackTop( new ImageWidget( GoldIconTexture ) );
+  p1->StackTop( new ImageWidget( GoldIconTexture ) );
+  p1->StackTop( new ImageWidget( GoldIconTexture ) );
+  ui->Add( p1 );
+
+
   /////
   // List the maps in the folder at the left side
   TArray<FAssetData> maps = ScanFolder( "/Game/Maps" );
@@ -197,7 +240,6 @@ void AMyHUD::InitWidgets()
     //static FAssetThumbnailPool pool( 5 );
     //FAssetThumbnail thumb( maps[i].GetAsset(), 256, 256, pool );
   }
-  ui->mapSelectionScreen->reflow();  // Reflow the screen.
 
   ui->missionObjectivesScreen = new MissionObjectivesScreen(
     MapSlotEntryBackgroundTexture, MapSlotEntryBackgroundTexture, 
@@ -384,7 +426,7 @@ void AMyHUD::UpdateDisplayedResources()
 void AMyHUD::UpdateMouse()
 {
   // Draw the mouse
-  ui->mouseCursor->Pos = Game->flycam->getMousePos();
+  ui->mouseCursor->Margin = Game->flycam->getMousePos();
   // If the `NextSpell` is selected, cross hair is used, else hand.
   if( NextSpell ) {
     ui->mouseCursor->Icon = MouseCursorCrossHairs.Texture;
