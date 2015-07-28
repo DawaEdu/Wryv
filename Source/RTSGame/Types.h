@@ -44,10 +44,19 @@ enum Types
 
   // Some kind of widget or selector
   DOODAD            UMETA(DisplayName = "Doodad"),
-  UI_ICON           UMETA(DisplayName = "UI Icon"),
+  UI_ICON           UMETA(DisplayName = "UI ICON"),
 
   MAX               UMETA(DisplayName = "Max"),
 };
+
+UENUM()
+enum GameStates
+{
+  TitleScreen = 0         UMETA(DisplayName = "TitleScreen"),
+  MapSelect         UMETA(DisplayName = "MapSelect"),
+  Running           UMETA(DisplayName = "Running"),
+};
+
 inline bool Between( int v, int lo, int hi ) {
   return lo <= v && v <= hi ;
 }

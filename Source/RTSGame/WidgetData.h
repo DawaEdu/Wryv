@@ -21,7 +21,7 @@ public:
   // The label that appears on this widget.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WidgetData) FString Label;
   // the texture this widget uses, which is different from the FUnitsDataRow pic
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WidgetData) UTexture *Icon;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WidgetData) UTexture *Tex;
   // Location of the texture, size, and text's position.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WidgetData) FVector2D Size;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WidgetData) FKey ShortcutKey; // autopopulates dialog with available keys

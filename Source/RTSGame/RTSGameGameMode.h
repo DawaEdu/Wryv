@@ -4,6 +4,7 @@
 #include <map>
 using namespace std;
 
+#include "Types.h"
 #include "Team.h"
 #include "GameFramework/GameMode.h"
 #include "RTSGameGameMode.generated.h"
@@ -16,10 +17,8 @@ class RTSGAME_API ARTSGameGameMode : public AGameMode
 {
   GENERATED_BODY()
 public:
-  enum GameState{
-    Title, MapSelect, Running
-  };
-  GameState state;
+  // Launch state
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TEnumAsByte< GameStates > state;
 
   // Groups of teams.. this is the stock location for the Team objects.
   map< int32, Team* > teams;

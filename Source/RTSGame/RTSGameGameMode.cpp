@@ -8,10 +8,6 @@ ARTSGameGameMode::ARTSGameGameMode(const FObjectInitializer& PCIP) : Super( PCIP
 {
   PrimaryActorTick.bCanEverTick = true;
   UE_LOG( LogTemp, Warning, TEXT("ARTSGameGameMode::ARTSGameGameMode()") );
-
-  // Start at the Title screen
-  state = GameState::MapSelect;
-  //state = GameState::Running;
 }
 
 void ARTSGameGameMode::BeginDestroy()

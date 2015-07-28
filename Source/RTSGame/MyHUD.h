@@ -39,6 +39,8 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* GoldIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* LumberIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StoneIconTexture;
+
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleScreenTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* RightPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StackPanelTexture;
@@ -46,7 +48,6 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleScreenTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleNameTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MapSlotEntryBackgroundTexture;
   
@@ -116,16 +117,13 @@ public:
   virtual void DrawHUD() override;
 
   // Which widget was hit by the mouse
-  HotSpot* MouseLeftDown( FVector2D mouse );
-  HotSpot* MouseLeftUp( FVector2D mouse );
-  HotSpot* MouseRightDown( FVector2D mouse );
-  HotSpot* MouseRightUp( FVector2D mouse );
+  HotSpot* MouseDownLeft( FVector2D mouse );
+  HotSpot* MouseUpLeft( FVector2D mouse );
+  HotSpot* MouseDownRight( FVector2D mouse );
+  HotSpot* MouseUpRight( FVector2D mouse );
   
   HotSpot* MouseMoved( FVector2D mouse );
-  HotSpot* MouseHovered( FVector2D mouse );
-  HotSpot* MouseDragged( FVector2D mouse );
-  HotSpot* MouseDropped( FVector2D mouse );
-
+  
   virtual void Tick( float t );
   // Get the Z distance that an object should be placed
   // when it has a world radius of radiusWorldUnits

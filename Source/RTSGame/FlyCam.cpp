@@ -13,7 +13,7 @@
 #include "Menu.h"
 #include "DialogBox.h"
 #include "TipsBox.h"
-
+#include "Types.h"
 #include "GameFramework/PlayerInput.h"
 
 // Sets default values
@@ -78,10 +78,10 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   InputComponent->BindAxis( "CameraUp", this, &AFlyCam::MoveCameraZUp );
   InputComponent->BindAxis( "CameraDown", this, &AFlyCam::MoveCameraZDown );
   
-  InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseLeftDown );
-  InputComponent->BindAction( "MouseClickedLMB", IE_Released, this, &AFlyCam::MouseLeftUp );
-  InputComponent->BindAction( "MouseClickedRMB", IE_Pressed, this, &AFlyCam::MouseRightDown );
-  InputComponent->BindAction( "MouseClickedRMB", IE_Released, this, &AFlyCam::MouseRightUp );
+  InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseDownLeft );
+  InputComponent->BindAction( "MouseClickedLMB", IE_Released, this, &AFlyCam::MouseUpLeft );
+  InputComponent->BindAction( "MouseClickedRMB", IE_Pressed, this, &AFlyCam::MouseDownRight );
+  InputComponent->BindAction( "MouseClickedRMB", IE_Released, this, &AFlyCam::MouseUpRight );
 
   // Bind a key press to displaying the menu
   InputComponent->BindKey( EKeys::F10, IE_Pressed, this, &AFlyCam::DisplayMenu );
@@ -110,7 +110,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
 
 void AFlyCam::LoadLevel( FName levelName )
 {
-  Game->gm->state = ARTSGameGameMode::GameState::Running;
+  Game->gm->state = Running;
 
   // synchrononously loads level
   Game->pc->Pause(); // pause so no actors tick.
@@ -242,6 +242,10 @@ void AFlyCam::UnloadLevel()
 
 void AFlyCam::SetCameraPosition( FVector2D perc )
 {
+  if( !floor ) {
+    UE_LOG( LogTemp, Warning, TEXT( "no floor" ) );
+    return;
+  }
   UE_LOG( LogTemp, Warning, TEXT( "startLoc %f %f" ), perc.X, perc.Y );
   FVector P = GetActorLocation(); // restore the z value after movement
   FVector fwd = camera->GetForwardVector();
@@ -590,15 +594,15 @@ void AFlyCam::FindFloor()
   }
 }
 
-void AFlyCam::MouseLeftUp()
+void AFlyCam::MouseUpLeft()
 {
-  //UE_LOG( LogTemp, Warning, TEXT("MouseLeftUp") );
-  Game->myhud->MouseLeftUp( getMousePos() );
+  //UE_LOG( LogTemp, Warning, TEXT("MouseUpLeft") );
+  Game->myhud->MouseUpLeft( getMousePos() );
 }
 
-void AFlyCam::MouseLeftDown()
+void AFlyCam::MouseDownLeft()
 {
-  //UE_LOG( LogTemp, Warning, TEXT("MouseLeftDown") );
+  //UE_LOG( LogTemp, Warning, TEXT("MouseDownLeft") );
   
   // First, test for intersect with UI
   FVector2D mouse = getMousePos();
@@ -607,7 +611,7 @@ void AFlyCam::MouseLeftDown()
   
   // Check if the mouse was clicked on the HUD.
   // If the wood panel was clicked, we would enter here as well,
-  if( Game->myhud->MouseLeftDown( mouse ) )
+  if( Game->myhud->MouseDownLeft( mouse ) )
   {
     // The HUD was clicked. The lastClickedWidget
     // is the building that was selected for placement.
@@ -708,9 +712,9 @@ void AFlyCam::MouseLeftDown()
   //UE_LOG( LogTemp, Warning, TEXT("%f %f %f"), hitPos.X, hitPos.Y, hitPos.Z );
 }
 
-void AFlyCam::MouseRightDown()
+void AFlyCam::MouseDownRight()
 {
-  UE_LOG( LogTemp, Warning, TEXT("MouseRightDown") );
+  UE_LOG( LogTemp, Warning, TEXT("MouseDownRight") );
   AGameObject *lo = Game->myhud->SelectedObject;
   FHitResult hit = getHitGeometry();
   if( hit.Actor != floor )
@@ -742,9 +746,9 @@ void AFlyCam::MouseRightDown()
   }
 }
 
-void AFlyCam::MouseRightUp()
+void AFlyCam::MouseUpRight()
 {
-  UE_LOG( LogTemp, Warning, TEXT("MouseRightUp") );
+  UE_LOG( LogTemp, Warning, TEXT("MouseUpRight") );
   
 }
 
@@ -762,10 +766,9 @@ void AFlyCam::MouseMoved()
   Game->myhud->MouseMoved( mouse );
 
   // if the mouse button is down, then its a drag event, elsee its a hover event
-  bool leftMouseDown = Game->pc->IsDown( EKeys::LeftMouseButton );
-  if( leftMouseDown )
+  if( Game->pc->IsDown( EKeys::LeftMouseButton ) )
   {
-    // drag event, would be used for multiple object placement, or brushes.
+    // 3D drag event, would be used for multiple object placement, or brushes.
   }
   else
   {

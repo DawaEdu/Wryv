@@ -56,7 +56,7 @@ void AGameObject::BeginDestroy()
   //  *go->UnitsData.Name, go->UnitsData.Team );
   if( team )
   {
-    remove( team->units, this );
+    removeElement( team->units, this );
   }
 
   removeAsTarget();
@@ -511,10 +511,10 @@ void AGameObject::SetDestination( FVector d )
 // Populate the spawnqueue
 void AGameObject::RefreshBuildingQueue()
 {
-  StackPanel* building = Game->myhud->ui->building;
+  StackPanel* buildQueue = Game->myhud->ui->gameChrome->buildQueue;
 
   // Clear existing widgets
-  building->Clear();
+  buildQueue->Clear();
 
   // Things that are spawning.
   for( int i = 0; i < spawnQueue.size(); i++ )
@@ -522,31 +522,30 @@ void AGameObject::RefreshBuildingQueue()
     SpawningObject so = spawnQueue[i];
     
     // Program-in removal logic
-    ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.Type ].Icon );
-    img->OnClicked = [this,i](FVector2D mouse){
+    ImageWidget *img = new ImageWidget( Game->myhud->widgets[ so.Type ].Tex );
+    img->OnMouseDownLeft = [this,i](FVector2D mouse){
       // Remove this entry from the spawnQueue
       // then refresh the spawn queue
       UE_LOG( LogTemp, Warning, TEXT( "Removing elt %d from spawnqueue" ), i );
-      remove( spawnQueue, i );
+      removeIndex( spawnQueue, i );
       RefreshBuildingQueue();
       return 0;
     };
     img->OnHover = [](FVector2D mouse){
       return 0;
     };
-    building->StackRight( img );
+    buildQueue->StackRight( img );
   }
 }
 
 void AGameObject::OnSelected()
 {
   // Clear the items palette
-  Game->myhud->ui->itemBelt->Clear();
-
-  Game->myhud->ui->itemBelt->SetNumSlots( 0, 0 );
+  Game->myhud->ui->gameChrome->itemBelt->Clear();
+  Game->myhud->ui->gameChrome->itemBelt->SetNumSlots( 0, 0 );
 
   // when a gameobject is selected, the picture/icon is updated
-  //Game->myhud->selectedIcon->Icon = Widget.Icon;
+  //Game->myhud->selectedIcon->Tex = Widget.Tex;
   RefreshBuildingQueue();
 
   // track object's attacktarget

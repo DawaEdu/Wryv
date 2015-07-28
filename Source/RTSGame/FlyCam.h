@@ -103,10 +103,10 @@ public:
   bool intersectsAnyOfType( AActor* actor, vector<Types>& types );
   
   void FindFloor();
-  void MouseLeftDown();
-  void MouseLeftUp();
-  void MouseRightDown();
-  void MouseRightUp();
+  void MouseDownLeft();
+  void MouseUpLeft();
+  void MouseDownRight();
+  void MouseUpRight();
   void MouseMoved();
   void MouseMovedX( float amount );
   void MouseMovedY( float amount );

@@ -49,7 +49,7 @@ void AUnit::ApplyEffect( FUnitsDataRow item )
 void AUnit::OnSelected()
 {
   AGameObject::OnSelected();
-  SlotPalette* itemBelt = Game->myhud->ui->itemBelt;
+  SlotPalette* itemBelt = Game->myhud->ui->gameChrome->itemBelt;
 
   if( Items.Num() )
   {
@@ -60,17 +60,17 @@ void AUnit::OnSelected()
     itemCols = Items.Num() % 4;
     if( !itemCols )  itemCols = 4;
 
-    vector<SlotEntry*> slots = itemBelt->SetNumSlots( itemRows, itemCols );
+    vector<ITextWidget*> slots = itemBelt->SetNumSlots( itemRows, itemCols );
     
     // The function associated with the Item is hooked up here.
     // Inventory size dictates #items.
     for( int i = 0; i < slots.size(); i++ )
     {
-      SlotEntry* slot = slots[i];
+      ITextWidget* slot = slots[i];
       FUnitsDataRow item = Items[i];
       FWidgetData &data = Game->myhud->widgets[ item.Type ];
-      itemBelt->SetSlotTexture( i, data.Icon );
-      itemBelt->GetSlot( i )->OnClicked = [this,i](FVector2D mouse){
+      itemBelt->SetSlotTexture( i, data.Tex );
+      itemBelt->GetSlot( i )->OnMouseDownLeft = [this,i](FVector2D mouse){
         // use the item. qty goes down by 1
         Items[i].Quantity--; // we don't affect the UI here, only
         // the `model` object of the player. Items[i] gets reflushed each frame.
@@ -80,7 +80,7 @@ void AUnit::OnSelected()
         return 0;
       };
 
-      Tooltip* tooltip = Game->myhud->ui->tooltip;
+      Tooltip* tooltip = Game->myhud->ui->gameChrome->tooltip;
       itemBelt->GetSlot(i)->OnHover = [slot,item,data,tooltip](FVector2D mouse){
         // display a tooltip describing the current item.
         // or could add as a child of the img widget
@@ -88,14 +88,14 @@ void AUnit::OnSelected()
         //Game->myhud->ui->tooltip->Set( w.Label + FString(": ") + w.Tooltip );
         //// put the tooltip as a child of the slot
         //slot->Add( tooltip );
-        CostWidget* costWidget = Game->myhud->ui->costWidget;
+        CostWidget* costWidget = Game->myhud->ui->gameChrome->costWidget;
         FUnitsDataRow data = Game->unitsData[ item.Type ];
         costWidget->Set( data.Name, data.GoldCost, data.LumberCost, data.StoneCost, data.Description );
-        costWidget->hidden = 1;
+        costWidget->Hide();
         slot->Add( costWidget );
 
         // Set the costWidget's position based on the slot size.
-        costWidget->Align = HotSpot::HCenter | HotSpot::OnTopOfParent;
+        costWidget->Align = HCenter | OnTopOfParent;
 
         ///Game->myhud->ui->itemBelt->Add( costWidget );
         ///costWidget->Pos.Y = - costWidget->Size.Y - 8;
@@ -109,19 +109,19 @@ void AUnit::OnSelected()
     itemBelt->SetNumSlots(0, 0);
   }
 
-  SlotPalette* abilities = Game->myhud->ui->rightPanel->abilities;
+  SlotPalette* abilities = Game->myhud->ui->gameChrome->rightPanel->abilities;
   // Things it can spawn. Make sure abilities size is at least right size for it.
   for( int i = 0; i < UnitsData.Spawns.Num(); i++ ) // DRAW SPAWNS (with costs)
   {
     Types type = UnitsData.Spawns[i];
     
     FWidgetData w = Game->myhud->widgets[ type ];
-    SlotEntry* slot = abilities->SetSlotTexture( i, w.Icon );
+    ITextWidget* slot = abilities->SetSlotTexture( i, w.Tex );
     FUnitsDataRow ud = Game->unitsData[type];
 
     // Set the hover of this slot to show the cost of the spawn
     slot->OnHover = [ud](FVector2D mouse){
-      Game->myhud->ui->costWidget->Set( ud.Name, ud.GoldCost, ud.LumberCost, ud.StoneCost, ud.Description );
+      Game->myhud->ui->gameChrome->costWidget->Set( ud.Name, ud.GoldCost, ud.LumberCost, ud.StoneCost, ud.Description );
       return 0;
     };
   }
@@ -131,7 +131,7 @@ void AUnit::OnSelected()
   {
     Types type = UnitsData.Abilities[i];
     abilities->SetSlotTexture( UnitsData.Spawns.Num() + i,
-      Game->myhud->widgets[ type ].Icon );
+      Game->myhud->widgets[ type ].Tex );
   }
 
   

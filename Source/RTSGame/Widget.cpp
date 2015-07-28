@@ -18,17 +18,22 @@ TextWidget* HotSpot::TooltipWidget = 0;
 
 void HotSpot::defaults()
 {
+  SetName( "HotSpot" );
   //TooltipText = "Tip";
+
   Align = None; // Absolute positioning as default
   Layout = Pixels; // pixel positioning (can also use percentages of parent widths)
   hidden = 0;
-  displayTime = 0.f;
+  eternal = 1;
+  displayTime = FLT_MAX; // Amount of time remaining before removal
+  // assumes extremely large number (1e37 seconds which is practically infinite)
   Margin = Pad = FVector2D(0,0);
   Size = FVector2D(32,32);
+  Dead = 0;
   Color = FLinearColor::White;
   Parent = 0;
   dirty = 1;
-  bubbleUp = 1; // events by default bubble up thru to the next widget
+  //bubbleUp = 1; // events by default bubble up thru to the next widget
 
   OnHover = [this](FVector2D mouse){
     if( !TooltipText.IsEmpty() )
@@ -40,12 +45,12 @@ void HotSpot::defaults()
 void ImageWidget::render( FVector2D offset )
 {
   if( hidden ) return;
-  if( !Icon )
+  if( !Tex )
   {
     // We have to remove this comment for normal ops because
     // sometimes we want to have null texes eg in slotpalette items when
     // no item is present
-    UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget `%s`" ), *FString(Name.c_str()) );
+    UE_LOG( LogTemp, Warning, TEXT( "Texture not set for ImageWidget `%s`" ), *Name );
     // render should not be called when the texture is hidden
   }
 
@@ -53,7 +58,7 @@ void ImageWidget::render( FVector2D offset )
   FVector2D renderPos = Pos() - hotpoint;
 
   // If hidden, do not draw
-  hud->DrawTexture( Icon, renderPos.X + offset.X, renderPos.Y + offset.Y, 
+  hud->DrawTexture( Tex, renderPos.X + offset.X, renderPos.Y + offset.Y, 
     Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color,
     EBlendMode::BLEND_Translucent, 1.f, 0, Rotation, PivotPoint );
     
@@ -79,28 +84,10 @@ void TextWidget::Measure()
 void TextWidget::render( FVector2D offset )
 {
   if( hidden ) return;
-  if( dirty ) { // It seems in first calls to render(), Measure() does not properly measure text width
-    Measure();
-  }
+  if( dirty )
+    Measure();  // when measure succeeds dirty=0
   FVector2D pos = Pos();
   hud->DrawText( Text, Color, pos.X + offset.X, pos.Y + offset.Y, Font, Scale );
   HotSpot::render( offset );
-}
-
-
-void SlotEntry::SetTexture( UTexture* tex, FVector2D originalPos )
-{
-  hidden = 0;
-  Icon = tex;
-  FVector2D texSize( tex->GetSurfaceWidth(), tex->GetSurfaceHeight() );
-
-  // decrease the slot size by the padding
-  FVector2D scales = Palette->EntrySize / (texSize + Parent->Pad);
-
-  // icons are always square so no stretch occurs to src icon images
-  float minScale = scales.GetMin();
-  Size = texSize * minScale;  // multiply by smaller of two scales to shrink to fit.
-  FVector2D diff = Palette->EntrySize - Size;
-  Margin = originalPos + diff/2;
 }
 

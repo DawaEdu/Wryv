@@ -7,42 +7,59 @@
 #include <map>
 using namespace std;
 
-
-template <typename T> bool remove( vector<T*>& v, T* elt )
+template <typename T> T* removeElement( vector<T*>& v, T* elt )
 {
   for( int i = v.size()-1 ; i >= 0; i-- )
   {
     if( v[i] == elt )
     {
       v.erase( v.begin() + i );
-      return 1;
+      return elt;
     }
   }
-
-  return 0;
+  
+  return 0;  // The element wasn't found in the list
 }
 
-/// Removes an element t from a vector v
-template <typename T> bool remove( vector<T>& v, T& elt )
+template <typename T> T* removeIndex( vector<T*>& v, int index )
 {
-  for( int i = v.size()-1 ; i >= 0; i-- )
+  if( index < 0 || index >= v.size() )
   {
-    if( v[i] == elt )
-    {
-      v.erase( v.begin() + i );
-      return 1;
-    }
+    UE_LOG( LogTemp, Warning, TEXT("vector::removeIndex(%d) OOB"), index );
+    return 0;
   }
 
-  return 0;
+  // get the element, remove from vector
+  T* elt = v[index];
+  v.erase( v.begin() + index );
+  return elt;
 }
 
-/// Removes an element t from a vector v
-template <typename T> bool remove( vector<T>& v, int index )
+template <typename T> bool removeIndex( vector<T>& v, int index )
 {
-  if( index >= v.size() )  return 0;
+  if( index < 0 || index >= v.size() )
+  {
+    UE_LOG( LogTemp, Warning, TEXT("vector::removeIndex(%d) OOB"), index );
+    return 0;
+  }
+
+  // get the element, remove from vector
   v.erase( v.begin() + index );
   return 1;
+}
+
+template <typename T> bool removeElement( vector<T>& v, T& elt )
+{
+  for( int i = v.size()-1 ; i >= 0; i-- )
+  {
+    if( v[i] == elt )
+    {
+      v.erase( v.begin() + i );
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 template <typename T> bool remove( set<T>& s, T& elt )

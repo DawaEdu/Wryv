@@ -78,7 +78,7 @@ void Team::AddUnit( AGameObject *go )
 
 void Team::RemoveUnit( AGameObject *go )
 {
-  remove( units, go );
+  removeElement( units, go );
 }
 
 bool Team::CanAfford( Types type )
