@@ -1,4 +1,4 @@
-# Python 3.4
+#!C:/Python34/python.exe
 from socket import *
 from select import select
 from struct import pack
@@ -28,13 +28,20 @@ class Status( Enum ):
   WaitingForMatch=2
   Playing=3
 
+""" Removes an item from a list if it exits, prints a warning if not """
+def rm( list, item ):
+  if item in list:
+    list.remove( item )
+  else:
+    print( "rm: Item not in list" )
+
 # the listing of stock maps (directory listing of /maps)
 StockMaps = [ 'map1', 'map2', 'map3', 'map4', 'map5', 'map6', 'map7', 'map8', 'map9' ]
   
 # Global logging functions.
 """ Redirects stdout to point to .txt file so print statements go there """
 def OpenLog( filename ):
-  sys.stdout = open( 'py-server-log.txt', 'a' )
+  sys.stdout = open( 'py-server-log.txt', 'w' )
 
 """ Logs information with timestamp """
 def Log( val ):
@@ -164,10 +171,10 @@ class Chatroom:
     
   # remove a player from chatroom to put into a game.
   def remove( self, player ):
-    chat.remove( player )
+    del self.playerPrefs[ player ]
     # search the game wait pools to remove him from all of those too
-    for (gameStyle, pool) in a.items():
-      pool.remove( player )
+    for (gameStyle, pool) in self.waitingPools.items():
+      rm( pool, player )
   
   def startMatch( self, gameStyle, players ):
     # put the game on a separate thread
@@ -175,10 +182,15 @@ class Chatroom:
     
   def pullMatchUps( self, gameStyle, players ):
     playersReqd = 2 * gameStyle.value
-    ps = []
-    for i in range( playersReqd ):
-      ps.append( players.pop(0) )
-    self.startMatch( gameStyle, ps )
+    
+    # keep pulling groups of players into games
+    # until # players reqd for match too large
+    # for # players available
+    while playersReqd <= len( players ):
+      ps = []
+      for i in range( playersReqd ):
+        ps.append( players.pop(0) )
+      self.startMatch( gameStyle, ps )
   
   # attempt to matchup given players in waitingPools
   def findMatchups( self ):
@@ -204,7 +216,7 @@ class Chatroom:
         # player has changed his preferences
         data = None
         try:
-          data = sock.recv( 1024 ) # receive 1k of data max
+          data = playerSocket.recv( 1024 ) # receive 1k of data max
         except:
           Log( 'Socket %s has gone away' % playerSocket )
           self.remove( playerSocket )
@@ -233,11 +245,11 @@ class GameServer:
   
   """Starts and runs the game server"""
   def run( self ):
-    print( 'DO NOT RUN THIS PROGRAM BY PRESSING F5 FROM THE PYTHON.ORG IDE.' )
-    print( 'Instead, run it directly (double click it from Windows explorer or call python.exe server.py)' )
+    Log( 'DO NOT RUN THIS PROGRAM BY PRESSING F5 FROM THE PYTHON.ORG IDE.' )
+    Log( 'Instead, run it directly (double click it from Windows explorer or call python.exe server.py)' )
     
     # Re-direct stdout to file for later review
-    OpenLog( 'py-server-log.txt' )
+    #OpenLog( 'py-server-log.txt' )
     Log( 'Startup' )
 
     # Try to startup the server by creating a socket and listening.
@@ -258,8 +270,9 @@ class GameServer:
       except:
         Log( "I couldn't accept a player, reason: %s" % ExcString(sys.exc_info()) )
     #/while self.Running
-    # Shutdown the listener socket
-    self.mainSock.close()
+    # close the chatroom
+    self.chatroom.Running = False
+    Log( 'MT exit' )
 
   def openListener( self ):
     s = None
@@ -291,7 +304,6 @@ class GameServer:
   """ Stop the main socket from listening for incoming connections,
       unblock & close the main socket """
   def stopListening( self ):
-    Log( 'Closing the main socket' )
     self.Running = False  
     self.Unblock()
     self.mainSock.close()
@@ -304,9 +316,8 @@ class GameServer:
     s = socket( AF_INET, SOCK_STREAM )
     # connect to self.mainSock to basically unblock it
     s.connect( ('127.0.0.1', 7070) )
-    #s.close()
+    s.close()
   #</def Unblock>
 
-  
 gs = GameServer()
 gs.run()
