@@ -12078,7 +12078,7 @@
 		<ClInclude Include="..\..\..\..\Prog\Unreal Engine\4.8\Engine\Plugins\Slate\SlateRemote\Source\SlateRemote\Private\Shared\SlateRemoteSettings.h" />
 	</ItemGroup>
 	<PropertyGroup Label="Globals">
-		<ProjectGuid>{3DCAD9AD-6806-4066-8698-B123C80DFB2E}</ProjectGuid>
+		<ProjectGuid>{2AC6B35B-3F05-4769-B306-E6FC36B9F744}</ProjectGuid>
 		<Keyword>MakeFileProj</Keyword>
 		<RootNamespace>UE4</RootNamespace>
 	</PropertyGroup>

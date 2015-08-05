@@ -1,0 +1,228 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\Wryv.uproject" />
+    <Filter Include="Source">
+      <UniqueIdentifier>{A63E0E8F-BD0F-4EC9-A452-531A7E1D467B}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\Wryv.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\Source\WryvEditor.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <Filter Include="Config">
+      <UniqueIdentifier>{591FB096-9523-4245-A7C1-7980D0077856}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\DefaultEditor.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultEngine.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultGame.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Source\Wryv">
+      <UniqueIdentifier>{283246F3-494C-4839-B88C-9516789476C4}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\Wryv\Wryv.Build.cs">
+      <Filter>Source\Wryv</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source\Wryv\UI">
+      <UniqueIdentifier>{632085c0-7e6a-432f-9333-28e27da17972}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\GameObject">
+      <UniqueIdentifier>{029ae402-1aaf-4913-9dd5-62be2f6150a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\AI">
+      <UniqueIdentifier>{efc93990-19a3-4321-b4fb-d8ebd943079d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\Buildings">
+      <UniqueIdentifier>{9d71c554-14fb-4af5-bf6b-aff9a965aa13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\Wryv">
+      <UniqueIdentifier>{a5a6e3b8-8def-4708-868f-185940be79c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\Structures">
+      <UniqueIdentifier>{987b6648-1d38-481b-b66d-88ac1b3ffa2a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Source\Wryv\AI.h">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Building.h">
+      <Filter>Source\Wryv\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\CombatUnit.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Item.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ItemShop.h">
+      <Filter>Source\Wryv\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Pathfinder.h">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Peasant.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Resource.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Spell.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Team.h">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\FlyCam.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\TheHUD.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\PlayerControl.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Settings.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Widget.h">
+      <Filter>Source\Wryv\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\CursorTexture.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ItemQuantity.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\UnitTypeUClassPair.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Types.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Unit.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Weapon.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Wryv.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\WryvGameInstance.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\WryvGameMode.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\WryvGameState.h">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\FogOfWar.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Net.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Source\Wryv\AI.cpp">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Building.cpp">
+      <Filter>Source\Wryv\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\CombatUnit.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Item.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ItemShop.cpp">
+      <Filter>Source\Wryv\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Peasant.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Resource.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Spell.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Team.cpp">
+      <Filter>Source\Wryv\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\FlyCam.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\TheHUD.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\PlayerControl.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Settings.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Widget.cpp">
+      <Filter>Source\Wryv\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ItemQuantity.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Unit.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\UnitsData.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Weapon.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Wryv.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\WryvGameInstance.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\WryvGameMode.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\WryvGameState.cpp">
+      <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\FogOfWar.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
