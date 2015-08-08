@@ -9,12 +9,10 @@
 #include "Pathfinder.h"
 #include "GlobalFunctions.h"
 
-
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
   PrimaryActorTick.bCanEverTick = true;
-  NoneObject = nullptr;
 
   hp = UnitsData.HpMax;
   speed = 0;
@@ -47,6 +45,12 @@ void AGameObject::BeginPlay()
   team = Game->gm->teams[ UnitsData.Team ];
   team->units.push_back( this );
 
+  // Instantiate abilities
+  for( int i = 0; i < UnitsData.Abilities.Num(); i++ )
+  {
+    // Look up the ability's cooldown time
+    abilities.push_back( Ability( UnitsData.Abilities[i] ) );
+  }
 }
 
 float AGameObject::centroidDistance( AGameObject *go )
@@ -200,6 +204,57 @@ void AGameObject::CastSpell( Types type, AGameObject *target )
   attackTarget = target;
 }
 
+void AGameObject::ApplyEffect( FUnitsDataRow item )
+{
+  // TimeLength, dataSet
+  LOG( "Applying %s for %f seconds", *item.Name, item.TimeLength );
+  // Don't do anything for the Nothing item
+  if( !IsItem( item.Type ) )
+  {
+    LOG( "%s NOT AN ITEM", *item.Name );
+  }
+  else
+  {
+    BonusTraits.push_back( PowerUpTimeOut( item.TimeLength, item ) );
+  }
+}
+
+void AGameObject::UseAbility( Ability& ability )
+{
+  if( ability.Done() ) // ability is ready.
+  {
+    // You can use the ability now
+     Game->unitsData[ ability.Type ];
+
+    // Reset refresh time.
+    ability.Reset(); // ability not ready now
+  }
+}
+
+void AGameObject::UseAbility( Ability& ability, AGameObject *target )
+{
+}
+
+FUnitsDataRow AGameObject::GetTraits()
+{
+  FUnitsDataRow data = UnitsData;
+  for( int i = 0; i < BonusTraits.size(); i++ )
+    data += BonusTraits[i].traits;
+  return data;
+}
+
+bool AGameObject::Build( Types type )
+{
+  // build a building of type specified, if team can afford
+  if( team->CanAfford( type ) ) {
+    buildQueue.push_back( CooldownCounter( type ) );
+    return 1;
+  }
+
+  LOG( "%s cannot afford building %s", *UnitsData.Name, *Game->unitsData[type].Name );
+  return 0; // couldn't afford building
+}
+
 bool AGameObject::Reached( FVector& v, float dist )
 {
   FVector diff = pos - v;
@@ -282,23 +337,8 @@ void AGameObject::Stop()
   attackTarget = 0;
 }
 
-// Called every frame
-void AGameObject::Tick( float t )
+void AGameObject::Move( float t )
 {
-  LOG( "%s [%s]: Frame %lld Tick size %f",
-    *UnitsData.Name, *GetName(), Game->gm->tick, t );
-
-  // Use the fixed timestep size rather than the
-  // variable timestep reported in ::Tick
-	Super::Tick( t );
-
-  // Don't tick when the game's not ready
-  // this happens due to async load, esp between loading levels.
-  if( !Game->IsReady() )
-  {
-    return;
-  }
-
   // Recover HP at stock recovery rate
   if( repairing ) {
     hp += UnitsData.RepairHPFractionCost*t;
@@ -542,6 +582,7 @@ void AGameObject::OnSelected()
   // Set this unit as selected in the game chrome.
   Game->hud->ui->gameChrome->Select( this );
 
+  // Highlight the attack target of the currently selected object
   Game->hud->SetAttackTargetSelector( attackTarget );
 }
 

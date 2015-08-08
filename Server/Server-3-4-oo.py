@@ -19,7 +19,7 @@ class GameStyle( Enum ):
   OneVsOne=1
   TwoVsTwo=2
   ThreeVsThree=3
-  FourVsFour=4
+  FourVsFour=4  
 
 """ Player goes from Chatting to WaitingForMatch, to Playing,
  then back to Chatting again when done the game. """
@@ -34,6 +34,12 @@ def rm( list, item ):
     list.remove( item )
   else:
     print( "rm: Item not in list" )
+  return list
+
+def rmall( list, item ):
+  while item in list:
+    list.remove( item )
+  return list
 
 # the listing of stock maps (directory listing of /maps)
 StockMaps = [ 'map1', 'map2', 'map3', 'map4', 'map5', 'map6', 'map7', 'map8', 'map9' ]
@@ -143,6 +149,7 @@ class GameInstance:
 class PlayerPrefs:
   gameStyle = GameStyle.OneVsOne # The selected game style to play (1v1, 2v2, 3v3 etc)
   status = Status.Chatting
+  screenName = 'player' # todo: retrieve from sqlite database
   
 class Chatroom:
   playerPrefs = {} # players connected in the chatroom. { socketId1 : Player(), socketId2 : Player() }
@@ -172,9 +179,10 @@ class Chatroom:
   # remove a player from chatroom to put into a game.
   def remove( self, player ):
     del self.playerPrefs[ player ]
-    # search the game wait pools to remove him from all of those too
+    # search the game wait pools to remove him from all of those too, if he's in any
     for (gameStyle, pool) in self.waitingPools.items():
-      rm( pool, player )
+      if player in pool:
+        pool.remove( player )
   
   def startMatch( self, gameStyle, players ):
     # put the game on a separate thread
@@ -197,11 +205,31 @@ class Chatroom:
     for (gameStyle, players) in self.waitingPools.items():
       self.pullMatchUps( gameStyle, players )
   
-  def changePlayerPrefs( self, playerSocket, data ) :
+  def changeGameStyle( self, playerSocket, newGameStyle ):
+    self.playerPrefs[ playerSocket ].gameStyle = gameStyles[ cmds[1] ] # change game style
+    Log( 'Player %s changed gameStyle to %s' % (playerSocket, gameStyles.name) )
+  
+  def broadcastChat( self, playerSocket, data ):
+    screenName = self.playerPrefs[ playerSocket ].screenName #retrieve player screen name
+    data = screenName + ': ' + data # prepend player's screenname
+    for (s, player) in self.playerPrefs.items():
+      s.send( data )
+      
+  # /game (1v1|2v2|3v3|4v4)
+  # "chat message"
+  def interpret( self, playerSocket, data ):
     # changes player preferences
-    player = self.playerPrefs[ playerSocket ]
-    player.gameStyle = data
-    
+    # if the command starts with a slash, its a command
+    # else its a chat message
+    gameStyles = { '1v1':GameStyle.OneVsOne, '2v2':GameStyle.TwoVsTwo, '3v3':GameStyle.ThreeVsThree, '4v4':GameStyle.FourVsFour }
+    if data[0] == '/':
+      cmds = rmall( data[1:].split( ' ' ), '' ) #split based on space, then remove all blank entries
+      if cmds[0] in ( 'game', 'Game' ):
+        self.changeGameStyle( playerSocket, gameStyles[ cmds[1] ] )
+    else:
+      # send chat message
+      self.broadcastChat( playerSocket, data )
+      
   """ Running the chatroom means listening to all connected clients and changing preferences appropriately,
    and slinging players into games when a match is found """
   def run( self ):
@@ -217,17 +245,14 @@ class Chatroom:
         data = None
         try:
           data = playerSocket.recv( 1024 ) # receive 1k of data max
+          if data is None or len( data ) == 0:
+            Log( 'A player %s has disconnected, abandoning session' % playerSocket )
+            self.remove( playerSocket ) # drop d/c player and move on
+          else:
+            self.interpret( playerSocket, data )
         except:
           Log( 'Socket %s has gone away' % playerSocket )
-          self.remove( playerSocket )
-          break
-        if data is None or len( data ) == 0:
-          Log( 'A player %s has disconnected, abandoning session' % playerSocket )
-          self.remove( playerSocket )
-          break
-        # otherwise, here the player @ socket has changed his gameplay preferences.
-        # interpret his gameplay prefs packet change and change data in playerPrefs
-        self.changePlayerPrefs( playerSocket, data )
+          self.remove( playerSocket )  # drop the player and move on with the next ready socket
         
       # try and matchup after options change for this player
       self.findMatchups()

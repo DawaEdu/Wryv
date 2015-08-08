@@ -41,7 +41,7 @@ void HotSpot::defaults()
   OnHover = [this](FVector2D mouse){
     if( !TooltipText.IsEmpty() )
       TooltipWidget->Set( TooltipText );
-    return 0;
+    return NotConsumed;
   };
 }
 
@@ -53,8 +53,9 @@ void ImageWidget::render( FVector2D offset )
     // We have to remove this comment for normal ops because
     // sometimes we want to have null texes eg in slotpalette items when
     // no item is present
-    LOG(  "Texture not set for ImageWidget `%s`", *Name );
+    LOG( "Texture not set for ImageWidget `%s`", *Name );
     // render should not be called when the texture is hidden
+    return;
   }
 
   // The renderPosition is just the computed position minus center hotpoint
@@ -94,46 +95,41 @@ void TextWidget::render( FVector2D offset )
   HotSpot::render( offset );
 }
 
-Cooldown::Cooldown( UTexture *tex, FLinearColor color ) : ITextWidget( tex, "0%", BottomRight )
-{
-  building = CooldownCounter( Types::BLDGBARRACKS, 10.f );
-  CreateClockMaterial();
-}
 
-Cooldown::Cooldown( UTexture *tex, FLinearColor color, CooldownCounter o ) : 
-  ITextWidget( Game->unitsData[ o.Type ].Icon, "A", BottomRight ),
-  building( o )
+Cooldown::Cooldown( FString name, FVector2D size, CooldownCounter o, FLinearColor pieColor ) : 
+  ITextWidget( Game->unitsData[ o.Type ].Icon, size, "", Alignment::BottomRight ),
+  counter( o )
 {
   // Spawn the clock material instance to apply to this widget
-  CreateClockMaterial();
+  CreateClockMaterial( pieColor );
 }
 
-void Cooldown::CreateClockMaterial()
+void Cooldown::CreateClockMaterial( FLinearColor pieColor )
 {
   clockMaterial = UMaterialInstanceDynamic::Create( Game->hud->ClockMaterialInstance, Game->hud );
   // Reset parameter values
-  clockMaterial->SetScalarParameterValue( FName( "Percent" ), 0 );
-  clockMaterial->SetVectorParameterValue( FName( "Color" ), Color );
+  clockMaterial->SetScalarParameterValue( FName( "Percent" ), 0.f );
+  clockMaterial->SetVectorParameterValue( FName( "Color" ), pieColor );
 }
 
 void Cooldown::Tick( float t )
 {
   // Update the Material's parameter
-  building.Time += t;
-  if( building.Done() ) building.Reset();
-  clockMaterial->SetScalarParameterValue( FName( "Percent" ), building.Percent() );
+  counter.Time += t;
+  if( counter.Done() ) counter.Reset();
+
+  clockMaterial->SetScalarParameterValue( FName( "Percent" ), counter.Percent() );
 
   // Print the time remaining into the widget
-  Set( FString::Printf( TEXT( "%.0f" ), building.Percent() ) );
-  ITextWidget::Tick( t );
+  ImageWidget::Tick( t );
 
   // progress animations on clock faces
   ////overlay->SetAnimationPercent( building.Percent() );
 }
-  
+
 void Cooldown::render( FVector2D offset )
 {
-  ITextWidget::render( offset );
+  ImageWidget::render( offset );
 
   // Put the overlay on top.
   FVector2D pos = Pos() + offset;
@@ -146,9 +142,10 @@ void BuildQueue::Set( AGameObject* go )
   for( int i = 0; i < go->buildQueue.size(); i++ )
   {
     Types type = go->buildQueue[i].Type;
-    Cooldown *widget = new Cooldown( Game->unitsData[ type ].Icon,
-      FLinearColor( 0.15, 0.15, 0.15, 0.15 ),
-      CooldownCounter( type, Game->unitsData[ type ].BuildTime ) );
+    Cooldown *widget = new Cooldown( 
+      Game->unitsData[ type ].Name + FString( "'s cooldown" ),
+      EntrySize, CooldownCounter( type ),
+      FLinearColor( 0.15, 0.15, 0.15, 0.15 ) );
     StackRight( widget );
 
     // Register a function to remove the widget from this queue when clicked.
@@ -164,31 +161,61 @@ void BuildQueue::Set( AGameObject* go )
   }
 }
 
+void AbilitiesPanel::Set( AGameObject *go )
+{
+  // Set abilities. Abilities panel always has [2 rows, 3 cols]
+  // We line up each ability with the slot number.
+  for( int i = 0; i < go->abilities.size(); i++ )
+  {
+    Ability ability = go->abilities[i];
+    FUnitsDataRow abilityData = Game->unitsData[ability.Type];
+    
+    // Want to change texture, it recenters the texture in case it is
+    // the incorrect size for the slot.
+    SetSlotTexture( i, abilityData.Icon );
+
+    ITextWidget* button = GetSlot( i );
+    
+    // Attach button with invokation of i'th ability
+    button->OnMouseDownLeft = [go,i,abilityData]( FVector2D mouse ) {
+      LOG( "%s used ability %s", *go->UnitsData.Name, *abilityData.Name );
+      go->UseAbility( go->abilities[i] );
+      return Consumed;
+    };
+  }
+}
+
+void BuildPanel::Set( AGameObject *go )
+{
+  for( int i = 0; i < go->UnitsData.Spawns.Num(); i++ )
+  {
+    Types spawn = go->UnitsData.Spawns[i];
+    // Construct buttons that run abilities of the object.
+    SetSlotTexture( i, Game->unitsData[ spawn ].Icon );
+    ITextWidget* button = GetSlot( i );
+    button->OnMouseDownLeft = [go,i]( FVector2D mouse ){
+      // try spawn the object type listed
+      go->Build( go->UnitsData.Spawns[i] );
+      return Consumed;
+    };
+  }
+}
+
 void GameChrome::Select( AGameObject *go )
 {
   // on selection, populate the itemBelt and other widgets
   // Clear the items palette
   itemBelt->Clear();
   itemBelt->SetNumSlots( 0, 0 );
-
+  
   // Set the build queue from this also
   buildQueue->Set( go );
 
-  // Set abilities
-  for( int i = 0; i < go->UnitsData.Abilities.Num(); i++ )
-  {
-    Types ability = go->UnitsData.Abilities[i];
+  // Set with the abilities of the object
+  rightPanel->actions->abilities->Set( go );
 
-    // Construct buttons that run abilities of the object.
-    rightPanel->abilities->SetSlotTexture( i, Game->unitsData[ ability ].Icon );
-  }
-  
-  for( int i = 0; i < go->UnitsData.Spawns.Num(); i++ )
-  {
-    Types spawn = go->UnitsData.Spawns[i];
+  // Set with the spawns of the object
+  rightPanel->actions->buildings->Set( go );
 
-    // Construct buttons that run abilities of the object.
-    rightPanel->buildings->SetSlotTexture( i, Game->unitsData[ spawn ].Icon );
-  }
 }
 

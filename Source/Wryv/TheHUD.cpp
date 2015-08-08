@@ -13,6 +13,7 @@
 #include "GlobalFunctions.h"
 #include "Widget.h"
 #include "DrawDebugHelpers.h"
+#include "CombatUnit.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
@@ -24,7 +25,8 @@ ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   selectorAttackTarget = 0;
   selectorShopPatron = 0;
   SelectedObject = 0;
-  
+  WillSelectNextFrame = 0;
+
   Init = 0; // Have the slots & widgets been initialied yet? can only happen
   // in first call to draw.
 }
@@ -68,7 +70,7 @@ void ATheHUD::InitWidgets()
   if( Init ) return;
   Init = 1;
 
-  LOG(  "InitWidgets()");
+  LOG( "InitWidgets()" );
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
   ResourcesWidget::GoldTexture = GoldIconTexture;
@@ -81,30 +83,11 @@ void ATheHUD::InitWidgets()
   ui = new UserInterface(FVector2D(Canvas->SizeX, Canvas->SizeY));
   GameChrome *gChrome = ui->gameChrome;
 
-  // attach selectBox manipulation functions to ui's function handlers
-  ui->OnMouseDownLeft = [this]( FVector2D mouse ){
-    // Set the opening of the select box
-    ui->selectBox->SetStart( mouse );
-    ui->selectBox->Show();
-    return NotConsumed;
-  };
-
-  ui->OnHover = [this]( FVector2D mouse ){
-    // Regular hover event
-    return NotConsumed;
-  };
-  // Mouse motion with mouse down.
-  ui->OnMouseDragLeft = [this]( FVector2D mouse ){
-    ui->selectBox->SetEnd( mouse );
-    ui->selectBox->Show();
-    return NotConsumed;
-  };
-  // Mouse up event, after having Dragged 
-  ui->OnMouseUpLeft = [this]( FVector2D mouse ){
-    // form selection of elements contained in box & hide box select
-    ui->selectBox->Hide();
-    return NotConsumed;
-  };
+  // When you down the mouse on the HUD, you begin box selection
+  ui->OnMouseDownLeft = [this]( FVector2D mouse ){ return BeginBoxSelect( mouse ); };
+  ui->OnHover = [this]( FVector2D mouse ) { return Hover( mouse ); };
+  ui->OnMouseDragLeft = [this]( FVector2D mouse ) { return DragBoxSelect( mouse ); };
+  ui->OnMouseUpLeft = [this]( FVector2D mouse ){ return EndBoxSelect( mouse ); };
 
   gChrome->rightPanel = new SidePanel( RightPanelTexture, PortraitTexture,
     MinimapTexture, FVector2D( 280, Canvas->SizeY ), FVector2D(8,8) );
@@ -116,15 +99,9 @@ void ATheHUD::InitWidgets()
   controls->Align = Top | ToLeftOfParent;
   
   // flush top with 0 top of parent
-  controls->Margin.Y = - gChrome->rightPanel->Pad.Y;
-  controls->Margin.X = 4;
-  controls->Pause->OnMouseDownLeft = [this,controls]( FVector2D mouse ){
-    Game->pc->SetPause( !Game->pc->IsPaused() );  // pauses or unpauses the game
-    if( Game->pc->IsPaused() )
-      controls->Pause->Tex = ResumeButtonTexture;
-    else
-      controls->Pause->Tex = PauseButtonTexture;
-    return 0;
+  controls->Margin = FVector2D( 4, - gChrome->rightPanel->Pad.Y );
+  controls->Pause->OnMouseDownLeft = [this](FVector2D mouse){
+    return TogglePause();
   };
   
   // Attach functionality for minimap
@@ -152,7 +129,7 @@ void ATheHUD::InitWidgets()
   gChrome->buffs->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buffs );
 
-  gChrome->buildQueue = new BuildQueue( "Building Queue", TooltipBackgroundTexture );
+  gChrome->buildQueue = new BuildQueue( "Building Queue", TooltipBackgroundTexture, FVector2D( 128, 128 ) );
   gChrome->buildQueue->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buildQueue );
 
@@ -201,35 +178,57 @@ void ATheHUD::InitWidgets()
   /// Set the screen's to correct one for the gamestate
   ui->SetScreen( Game->gm->state );
 
-  // Throw on some Cooldown objects
-  for( int i = 0 ; i < 12; i++ )
-  {
-    // The background texture is covered by a clock.
-    Cooldown *cd = new Cooldown( SolidWhiteTexture, FLinearColor::Green );
-    int row = i / 4, col = i % 4;
-    cd->Margin = FVector2D( col * (SolidWhiteTexture->GetSurfaceWidth() + 32),
-      row * (SolidWhiteTexture->GetSurfaceHeight() + 32) );
-    ui->Add( cd );
-  }
-  
-  
-  
 }
 
+EventCode ATheHUD::BeginBoxSelect( FVector2D mouse ){
+  // Set the opening of the select box
+  ui->selectBox->SetStart( mouse );
+  ui->selectBox->Show();
+  return NotConsumed;
+}
+
+EventCode ATheHUD::Hover( FVector2D mouse ){
+  // Regular hover event
+  return NotConsumed;
+}
+
+// Mouse motion with mouse down.
+EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
+  ui->selectBox->SetEnd( mouse );
+  ui->selectBox->Show();
+  return NotConsumed;
+}
+
+// Mouse up event, after having Dragged 
+EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
+  // form selection of elements contained in box & hide box select
+  //BoxSelect( ui->selectBox->Box ); // Call this in the next draw call
+  WillSelectNextFrame = 1;
+  ui->selectBox->Hide();
+  return NotConsumed;
+}
+
+EventCode ATheHUD::TogglePause()
+{
+  // pauses or unpauses the game
+  Game->pc->SetPause( !Game->pc->IsPaused() );
+  if( Game->pc->IsPaused() )
+    ui->gameChrome->controls->Pause->Tex = ResumeButtonTexture;
+  else
+    ui->gameChrome->controls->Pause->Tex = PauseButtonTexture;
+  return Consumed;
+}
 
 void ATheHUD::Setup()
 {
   LOG( "ATheHUD::Setup()");
-
   FVector v(0.f);
   FRotator r(0.f);
   if( !selector )  selector = GetWorld()->SpawnActor<AActor>( uClassSelector, v, r );
   if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AActor>( uClassSelectorA, v, r );
   if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AActor>( uClassSelectorShop, v, r );
-  
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" ); //rs[0];
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" ); //rs[1];
-
 }
 
 void ATheHUD::SetAttackTargetSelector( AGameObject* target )
@@ -266,6 +265,18 @@ void ATheHUD::SetShopTargetSelector( AGameObject* target )
   {
     // Put the ring out somewhere else
     selectorShopPatron->SetActorLocation( FVector(0.f) );
+  }
+}
+
+void ATheHUD::BoxSelect( FBox2DU box )
+{
+  TArray<AActor*> actors;
+  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
+    box.TL(), box.BR(), actors );
+  LOG( "Selected %d actors", actors.Num() );
+  for( int i = 0; i < actors.Num(); i++ )
+  {
+    LOG( "Selected %s", *actors[i]->GetName() );
   }
 }
 
@@ -396,7 +407,7 @@ void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
   FVector2D canvasSize( Width, Height );
   FBox floorBox = Game->flycam->floorBox;
   FVector2D floorBoxSize( floorBox.GetSize().X, floorBox.GetSize().Y );
-  FVector2D warBlotSize( WarBlot->GetSurfaceWidth(), WarBlot->GetSurfaceHeight() );
+  
   // Just use the X value (width) (or possibly maximum extent) to find the worldScale
   for( int i = 0; i < Game->gm->playersTeam->units.size(); i++ )
   {
@@ -416,7 +427,7 @@ void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
     FVector2D blotPos = percPos * canvasSize;
     float radiusPX = radiusU * canvasSize.X; // canvas is square
 
-    DrawTexture( canvas, WarBlot, blotPos.X, blotPos.Y, radiusPX, radiusPX, 0, 0, 1, 1 );
+    DrawMaterial( canvas, WarBlot, blotPos.X, blotPos.Y, radiusPX, radiusPX, 0, 0, 1, 1 );
     // another approach would be to render actual SPHERES in the place
     // of the objects. you can Mark ALL objects as HIDDEN
     // https://forums.unrealengine.com/showthread.php?2964-Hiding-certain-objects-from-being-drawn-on-a-camera-or-SceneCapture2D-object
@@ -431,6 +442,12 @@ void ATheHUD::DrawHUD()
   HotSpot::hud = this;
 
   InitWidgets();
+
+  if( WillSelectNextFrame )
+  {
+    BoxSelect( ui->selectBox->Box );
+    WillSelectNextFrame = 0;
+  }
 
   UpdateDisplayedResources();
   UpdateSelectedObjectStats();

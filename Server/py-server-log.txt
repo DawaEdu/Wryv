@@ -1,0 +1,116 @@
+08/05/15 14:50:12 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 14:50:33 :  Shutting down the server... 
+
+08/05/15 14:50:33 :  Closing the main socket 
+
+08/05/15 14:50:33 :  Unblocking the main socket 
+
+08/05/15 14:50:33 :  A player is here, ip=127.0.0.1, port=34510 
+
+08/05/15 14:50:33 :  Socket <socket.socket fd=396, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34510)> has gone away 
+
+08/05/15 14:55:34 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 14:55:43 :  Shutting down the server... 
+
+08/05/15 14:55:43 :  Closing the main socket 
+
+08/05/15 14:55:43 :  Unblocking the main socket 
+
+08/05/15 14:55:43 :  A player is here, ip=127.0.0.1, port=34544 
+
+08/05/15 14:55:43 :  Socket <socket.socket fd=392, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34544)> has gone away 
+
+08/05/15 14:58:17 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 14:58:18 :  Shutting down the server... 
+
+08/05/15 14:58:18 :  Closing the main socket 
+
+08/05/15 14:58:18 :  Unblocking the main socket 
+
+08/05/15 14:58:18 :  A player is here, ip=127.0.0.1, port=34546 
+
+08/05/15 14:58:18 :  A player <socket.socket fd=396, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34546)> has disconnected, abandoning session 
+
+08/05/15 14:59:20 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 14:59:20 :  Shutting down the server... 
+
+08/05/15 14:59:20 :  Closing the main socket 
+
+08/05/15 14:59:20 :  Unblocking the main socket 
+
+08/05/15 14:59:20 :  A player is here, ip=127.0.0.1, port=34548 
+
+08/05/15 14:59:20 :  A player <socket.socket fd=396, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34548)> has disconnected, abandoning session 
+
+08/05/15 15:03:06 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 15:03:07 :  Shutting down the server... 
+
+08/05/15 15:03:07 :  Closing the main socket 
+
+08/05/15 15:03:07 :  Unblocking the main socket 
+
+08/05/15 15:03:07 :  A player is here, ip=127.0.0.1, port=34584 
+
+08/05/15 15:03:07 :  A player <socket.socket fd=400, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34584)> has disconnected, abandoning session 
+
+08/05/15 15:03:18 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 15:03:18 :  Shutting down the server... 
+
+08/05/15 15:03:18 :  Closing the main socket 
+
+08/05/15 15:03:18 :  Unblocking the main socket 
+
+08/05/15 15:03:18 :  A player is here, ip=127.0.0.1, port=34585 
+
+08/05/15 15:03:18 :  A player <socket.socket fd=400, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34585)> has disconnected, abandoning session 
+
+08/05/15 15:05:19 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 15:05:20 :  Shutting down the server... 
+
+08/05/15 15:05:20 :  Closing the main socket 
+
+08/05/15 15:05:20 :  Unblocking the main socket 
+
+08/05/15 15:05:20 :  A player is here, ip=127.0.0.1, port=34598 
+
+08/05/15 15:05:20 :  A player <socket.socket fd=400, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34598)> has disconnected, abandoning session 
+
+rm: Item not in list
+rm: Item not in list
+rm: Item not in list
+rm: Item not in list
+08/05/15 15:07:01 :  Startup 
+
+
+Type anything and press <ENTER> to stop the server and disconnect all people
+08/05/15 15:07:02 :  Shutting down the server... 
+
+08/05/15 15:07:02 :  Closing the main socket 
+
+08/05/15 15:07:02 :  Unblocking the main socket 
+
+08/05/15 15:07:02 :  A player is here, ip=127.0.0.1, port=34599 
+
+08/05/15 15:07:02 :  A player <socket.socket fd=400, family=AddressFamily.AF_INET, type=SocketType.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 7070), raddr=('127.0.0.1', 34599)> has disconnected, abandoning session 
+

@@ -16,6 +16,7 @@ enum Types
   UNITPEASANT       UMETA(DisplayName = "Peasant"),
   UNITFOOTMAN       UMETA(DisplayName = "Footman"),
   UNITARCHER        UMETA(DisplayName = "Archer"),
+  UNITMAGE          UMETA(DisplayName = "Mage"),
 
   // Resources.
   RESTREE           UMETA(DisplayName = "Resource Tree"),
@@ -37,6 +38,13 @@ enum Types
   SPELLICESPLASH        UMETA(DisplayName = "Spell Ice Splash"),
   SPELLLIGHTNINGSPLASH  UMETA(DisplayName = "Spell Lightning Splash"),
 
+  // Ability to boost own speed
+  ABILITYMOVE          UMETA(DisplayName = "Ability Move"),
+  ABILITYATTACK        UMETA(DisplayName = "Ability Attack"),
+  ABILITYHOLDGROUND    UMETA(DisplayName = "Ability Hold Ground"),
+  ABILITYHASTE         UMETA(DisplayName = "Ability Haste"),
+  ABILITYDOUBLEDAMAGE  UMETA(DisplayName = "Ability 2x damage" ),
+
   // Items.
   ITEMSPEEDUP       UMETA(DisplayName = "Item Speedup"),
   ITEMATTACKSTR     UMETA(DisplayName = "Item Attack Strength"),
@@ -55,21 +63,6 @@ enum GameStates
   TitleScreen = 0   UMETA(DisplayName = "TitleScreen"),
   MapSelect         UMETA(DisplayName = "MapSelect"),
   Running           UMETA(DisplayName = "Running"),
-};
-
-// Structure representing a building (or unit) that is in progress
-struct CooldownCounter
-{
-  Types Type; // The type of unit that is building or that can cast.
-  float Time, TotalTime; // Time it has been building for, and total time it will build for
-  
-  CooldownCounter() : Time(0.f), TotalTime(1.f), Type(Types::NOTHING) {}
-  CooldownCounter( Types type, float totalTime ) :
-    Type(type), Time(0.f), TotalTime(totalTime) {}
-  float Percent() { return Time/TotalTime; }
-  void Tick( float t ){ Time += t ; }
-  bool Done() { return Time >= TotalTime; }
-  void Reset() { Time = 0.f; }
 };
 
 inline bool Between( int v, int lo, int hi ) {
@@ -96,3 +89,4 @@ inline FString GetEnumName( Types enumValue )
   const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT("Types"), true);
   return EnumPtr->GetDisplayNameText(enumValue).ToString();
 }
+

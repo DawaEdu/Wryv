@@ -287,10 +287,14 @@ void APeasant::SetTarget( AGameObject* go )
   }
 }
 
-void APeasant::Tick( float t )
+void APeasant::ai( float t )
 {
-  Super::Tick( t );
+  // Assign a function to the object by what the AI wants the peasant to do
+}
 
+void APeasant::Move( float t )
+{
+  // Moves the Peasant object 
   // Work on the current building.
   Build( t );
   
@@ -307,9 +311,5 @@ void APeasant::Tick( float t )
   }
 }
 
-void APeasant::ai( float t )
-{
-  // Assign a function to the object by what the AI wants the peasant to do
-}
 
 

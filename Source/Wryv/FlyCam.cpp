@@ -571,39 +571,24 @@ void AFlyCam::MouseUpLeft()
 
 void AFlyCam::MouseDownLeft()
 {
-  //LOG( "MouseDownLeft");
+  // Since the FlyCam is the only PAWN in the game,
+  // we must pass off the call to the HUD.
+  // If the mouse click intersected a HUD element,
+  // we don't let the click pass through to the 3d surface below it.
+  if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
   
-  // First, test for intersect with UI
-  FVector2D mouse = getMousePos();
-
+  // Next, we decide what to do with the click based on
+  // what the current GameState is. If a spell is queued, we cast the spell.
   AGameObject* lo = Game->hud->SelectedObject;
-  
-  // Check if the mouse was clicked on the HUD.
-  // If the wood panel was clicked, we would enter here as well,
-  if( Game->hud->MouseDownLeft( mouse ) )
-  {
-    // The HUD was clicked. The lastClickedWidget
-    // is the building that was selected for placement.
-    // Can be NULL if no building button was pushed.
-    setGhost( Game->hud->NextBuilding );
-
-    // The mouse hit something on the HUD, so we don't trace into the scene
-    return;
-  }
   
   // Get the geometry that was hit.
   FHitResult hitResult = getHitGeometry();
   AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
-  if( hit )
-  {
-    //LOG( "Clicked on %s", *hit->UnitsData.Name );
-  }
-  else
-  {
-    //LOG( "Nothing was selected");
-    return;
-  }
 
+  // If no gameobject was clicked on
+  if( !hit ) return;
+  
+  //LOG( "Clicked on %s", *hit->UnitsData.Name );
   // The hit object won't be the floor, it'll be the
   // "ghost" object (object being placed)
   // 

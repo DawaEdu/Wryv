@@ -29,7 +29,7 @@ public:
   void Mine( float t );
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   virtual void SetTarget( AGameObject* go );
-  virtual void Tick( float t );
+  virtual void Move( float t );
   virtual void ai( float t );
   bool isBusy(){ return building!=NULL || attackTarget!=NULL; }
   

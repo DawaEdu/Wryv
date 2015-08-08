@@ -8,6 +8,7 @@ using namespace std;
 
 #include "Types.h"
 #include "UnitsData.h"
+#include "Ability.h"
 #include "GameFramework/Actor.h"
 #include "GameObject.generated.h"
 
@@ -20,15 +21,15 @@ class WRYV_API AGameObject : public AActor
 {
   GENERATED_UCLASS_BODY()
 public:
-  // For comparison with NULL inside blueprints (used for checking if
-  // attackTarget or followTarget is set.)
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* NoneObject;
   // The position of the gameobject. This is actually a mirror of RootComponent->GetActorLocation()
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector pos;
   // The velocity of the game object
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector vel;
   // The full set of units data.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow UnitsData;
+
+  // Instances of units abilities and their cooldown (if any)
+  vector<Ability> abilities;
   
   float hp;             // Current hp. float, so heal/dmg can be continuous (fractions of hp)
   float speed;          // Current speed. modified from UnitsData.Speed (depending on buffs applied).
@@ -58,6 +59,10 @@ public:
   Types NextSpell;
   Team *team;   // Contains the team logic.
 
+  // List set of traits that gets applied due to powerups
+  //   0.025 => FUnitsDataRow(),  0.150 => FUnitsDataRow(),  0.257 => FUnitsDataRow()
+  vector< PowerUpTimeOut > BonusTraits;
+
   // The queue of objects being spawned. Each has a time before it is spawned.
   vector<CooldownCounter> buildQueue;
   template <typename T> vector<T*> GetComponentsByType() {
@@ -79,14 +84,26 @@ public:
   void SetPos(const FVector& pos);
   FRotator GetRot();
   void SetRot( FRotator & ro );
+
   void CastSpell( Types type, AGameObject *target );
+  void ApplyEffect( FUnitsDataRow item );
+  // Use an ability. Abilities with a target
+  // will switch the game's UI mode into a "select target" mode.
+  void UseAbility( Ability& ability );
+  // Invokation of an ability with a target.
+  void UseAbility( Ability& ability, AGameObject *target );
+  FUnitsDataRow GetTraits();
+  bool Build( Types type );
+
   bool Reached( FVector& v, float dist );
   void UpdateDestination();
   void MoveTowards( float t );
   virtual void SetTarget( AGameObject* go );
   void StopMoving();
   void Stop();
-  virtual void Tick( float t ) override;
+  // Game's Move function. This is separate from UE4's ::Tick() function,
+  // to create deterministic call order.
+  virtual void Move( float t );
   virtual void ai( float t );
   void fight( float t );
   float hpPercent();

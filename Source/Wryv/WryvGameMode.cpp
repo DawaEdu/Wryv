@@ -35,12 +35,10 @@ void AWryvGameMode::StartPlay()
   Super::StartPlay();
 }
 
-void AWryvGameMode::InitGame( const FString& MapName,
-  const FString& Options, FString& ErrorMessage )
+void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage )
 {
   Super::InitGame( MapName, Options, ErrorMessage );
-  LOG( "AWryvGameMode::InitGame(%s, %s, %s)",
-    *MapName, *Options, *ErrorMessage );
+  LOG( "AWryvGameMode::InitGame(%s, %s, %s)", *MapName, *Options, *ErrorMessage );
 
   neutralTeam = teams[ 0 ] = new Team( 0, "Neutral" ); // neutral team
   teams[ 0 ]->alliance = Alliance::Neutral;
@@ -53,18 +51,13 @@ void AWryvGameMode::InitGame( const FString& MapName,
   teams[ 2 ]->alliance = Alliance::Enemy;
 
   //UGameplayStatics::OpenLevel( GetWorld(), FName( "map5" ) );
-
 }
 
 void AWryvGameMode::Tick(float t)
 {
   // ::Tick() function progresses the game. Progress all Team AI.
-  
   tick++;
-  LOG( "Begin frame %llu", tick );
   Time += T; // Increase total gametime elapsed.
-
-  //LOG( "AWryvGameMode::Tick(%d)", Game->tick );
   Super::Tick( t );
   
   if( !Game->IsReady() )
@@ -72,16 +65,12 @@ void AWryvGameMode::Tick(float t)
     return;
   }
 
-  // Each AI Team makes a decision on what it wants to do next
-  // by evaluating:
-  //   - Food usage % (need for farms)
-  //   - Resources (are we low on certain types of resources)
-  //   - The units its team has the map
-  //   - The units the enemy AI has on the map
+  // Go through teams in deterministic order.
+  // (player 1 is first, player 2 is second.. etc).
   for( int i = 0; i < teams.size(); i++ )
   {
     // Update the team's AI by evaluating the map.
-    //teams[i]->runAI( t );
+    teams[i]->Move( t );
   }
 }
 

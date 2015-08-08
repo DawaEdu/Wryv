@@ -54,7 +54,10 @@ public:
   
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
-  
+
+  // Because canvas has to be valid for box selection to work it seems
+  bool WillSelectNextFrame;
+
   // The buttons currently showing on the user interface.
   UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
   
@@ -85,8 +88,9 @@ public:
 
   // Make a texture for rendering the fog of war to
   UCanvasRenderTarget2D* RTFogOfWar; // : UTexture
-  // The blot in the texture to use as a fogofwar blot
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture *WarBlot;
+
+  // The blot in the material to use as a fogofwar blot
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial *WarBlot;
 
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
@@ -95,6 +99,12 @@ public:
   ATheHUD(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
   
+  EventCode BeginBoxSelect( FVector2D mouse );
+  EventCode Hover( FVector2D mouse );
+  EventCode DragBoxSelect( FVector2D mouse );
+  EventCode EndBoxSelect( FVector2D mouse );
+  EventCode TogglePause();
+
   TArray<FAssetData> ScanFolder( FName folder );
   void InitWidgets();
   void InitTitleScreenWidgets();
@@ -104,6 +114,7 @@ public:
   void Setup();
   void SetAttackTargetSelector( AGameObject* target );
   void SetShopTargetSelector( AGameObject* target );
+  void BoxSelect( FBox2DU box );
   
   void UpdateSelectedObjectStats();
   void UpdateDisplayedResources();

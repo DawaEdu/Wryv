@@ -50,7 +50,9 @@
     <None Include="..\..\Config\DefaultEngine.ini" />
     <None Include="..\..\Config\DefaultGame.ini" />
     <None Include="..\..\Config\DefaultInput.ini" />
+    <ClCompile Include="..\..\Source\Wryv\Ability.cpp" />
     <ClCompile Include="..\..\Source\Wryv\AI.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\Ability.h" />
     <ClInclude Include="..\..\Source\Wryv\AI.h" />
     <ClCompile Include="..\..\Source\Wryv\Building.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Building.h" />
@@ -71,7 +73,6 @@
     <ClCompile Include="..\..\Source\Wryv\ItemShop.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ItemShop.h" />
     <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp" />
-    <ClInclude Include="..\..\Source\Wryv\Net.h" />
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />

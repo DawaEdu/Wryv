@@ -22,27 +22,9 @@ AUnit::AUnit( const FObjectInitializer& PCIP ) : AGameObject( PCIP )
 void AUnit::BeginPlay()
 {
   Super::BeginPlay();
-
   for( int i = 0; i < StartingItems.Num(); i++ )
   {
     Items.Push( Game->unitsData[ StartingItems[i] ] );
-  }
-}
-
-void AUnit::ApplyEffect( FUnitsDataRow item )
-{
-  // timeLength, dataSet
-  LOG( "Applying %s for %f seconds",
-    *item.Name, item.TimeLength );
-
-  // don't do anything for the Nothing item
-  if( !IsItem( item.Type ) )
-  {
-    LOG( "%s NOT AN ITEM", *item.Name );
-  }
-  else
-  {
-    BonusTraits.push_back( PowerUpTimeOut( item.TimeLength, item ) );
   }
 }
 
@@ -76,52 +58,31 @@ void AUnit::OnSelected()
         ApplyEffect( Items[i] );
         if( !Items[i].Quantity )
           Items[i].Type = Types::NOTHING;
-        return 0;
+        return Consumed;
       };
 
       Tooltip* tooltip = Game->hud->ui->gameChrome->tooltip;
-      itemBelt->GetSlot(i)->OnHover = [slot,item,tooltip](FVector2D mouse){
+      itemBelt->GetSlot(i)->OnHover = [slot,item,tooltip](FVector2D mouse)
+      {
         // display a tooltip describing the current item.
         // or could add as a child of the img widget
-        
-        //Game->hud->ui->tooltip->Set( w.Label + FString(": ") + w.Tooltip );
-        //// put the tooltip as a child of the slot
-        //slot->Add( tooltip );
-        CostWidget* costWidget = Game->hud->ui->gameChrome->costWidget;
-        costWidget->Set( item.Name, item.GoldCost, item.LumberCost, item.StoneCost, item.Description );
-        costWidget->Hide();
-        slot->Add( costWidget );
-
-        // Set the costWidget's position based on the slot size.
-        costWidget->Align = HCenter | OnTopOfParent;
-
-        ///Game->hud->ui->itemBelt->Add( costWidget );
-        ///costWidget->Pos.Y = - costWidget->Size.Y - 8;
-        return 0;
+        tooltip->Set( item.Name + FString(": ") + item.Description, 5.f );
+        tooltip->Align = HCenter | OnTopOfParent;
+        // put the tooltip as a child of the slot
+        slot->Add( tooltip );
+        return Consumed;
       };
     }
   }
   else
   {
-    // No items in the belt.
+    // No items in the belt. Empty the belt.
     itemBelt->SetNumSlots(0, 0);
   }
-
-  
 }
 
-FUnitsDataRow AUnit::GetTraits()
+void AUnit::Move( float t )
 {
-  FUnitsDataRow data = UnitsData;
-  for( int i = 0; i < BonusTraits.size(); i++ )
-    data += BonusTraits[i].traits;
-  return data;
-}
-
-void AUnit::Tick( float t )
-{
-  Super::Tick( t );
-
   // Tick all the traits
   for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
     BonusTraits[i].time -= t;
@@ -129,3 +90,5 @@ void AUnit::Tick( float t )
       BonusTraits.erase( BonusTraits.begin() + i );
   }
 }
+
+

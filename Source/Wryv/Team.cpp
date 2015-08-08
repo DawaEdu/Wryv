@@ -29,6 +29,7 @@ void Team::Defaults()
   Stone = 250;
   DamageRepairThreshold = 2.f/3.f;
   alliance = Alliance::Neutral;
+  researchLevelMeleeWeapons = researchLevelRangedWeapons = researchLevelArmor = 0;
 }
 
 APeasant* Team::GetNextAvailablePeasant()
@@ -81,10 +82,28 @@ void Team::RemoveUnit( AGameObject *go )
   removeElement( units, go );
 }
 
+bool Team::Has( Types objectType )
+{
+  for( int i = 0; i < units.size(); i++ )
+    if( units[i]->UnitsData.Type == objectType )
+     return 1;
+  return 0;
+}
+
 bool Team::CanAfford( Types type )
 {
-  FUnitsDataRow row = Game->unitsData[ type ];
-  return Gold >= row.GoldCost && Lumber >= row.LumberCost && Stone  >= row.StoneCost;
+  FUnitsDataRow ud = Game->unitsData[ type ];
+  return Gold >= ud.GoldCost && Lumber >= ud.LumberCost && Stone >= ud.StoneCost;
+}
+
+bool Team::CanBuild( Types buildingType )
+{
+  // Requirements for building an object of a certain type.
+  // Must have an object of required types to build, as well as afford.
+  for( int i = 0; i < Game->unitsData[ buildingType ].Requirements.Num(); i++ )
+    if( !Has( buildingType ) )
+      return 0;
+  return 1; // Had all required buildings.
 }
 
 bool Team::Spend( Types type )
@@ -99,7 +118,6 @@ bool Team::Spend( Types type )
   }
   return 0;
 }
-
 
 // Usage of food by units in the game.
 int Team::computeFoodUsage()
@@ -167,13 +185,13 @@ void Team::runAI( float t )
   map< AGameObject*, int > numAttackers;
   for( int i = 0; i < Game->gm->teams.size(); i++ )
   {
-    Team *oTeam = Game->gm->teams[i];
-    if( oTeam == this || oTeam->alliance == Alliance::Neutral ) continue; // skip same || neutral team
+    Team* oTeam = Game->gm->teams[i];
+    if( oTeam == this || oTeam->alliance == Alliance::Neutral )
+      continue; // skip same || neutral team
     
     for( int j = 0; j < oTeam->units.size(); j++ )
     {
-      // Look for units engaged with members of this team
-      // from opposing teams.
+      // Look for units engaged with members of this team from opposing teams.
       AGameObject* g = oTeam->units[j];
 
       // If the attack target of the opponent piece is for a unit on this team, count it.
@@ -240,4 +258,9 @@ void Team::runAI( float t )
   {
     Construct( Types::BLDGBARRACKS );
   }
+}
+
+void Team::Move( float t )
+{
+  runAI( t );
 }

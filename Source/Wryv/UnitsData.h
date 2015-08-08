@@ -64,21 +64,23 @@ public:
   // Type of unit spawned when this widget is pressed.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte<Types> > Spawns;
   // The abilities this unit has.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte<Types> > Abilities;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
+  // Required buildings to have built or possess to be able to build this object
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
   // The blueprint from which class instance came from
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UClass* uClass;
 
-  FUnitsDataRow()
-  {
-    Type = NOTHING;
-    GoldCost = LumberCost = StoneCost = BuildTime = SpeedMax = HpMax = Armor = SightRange = 
-      AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
-    Quantity = 1;
-    TimeLength = 0.f;
-    uClass = 0;
-    PickupRange = 100;
-    SpeedMax = 100;
-  }
+  //FUnitsDataRow()
+  //{
+  //  Type = NOTHING;
+  //  GoldCost = LumberCost = StoneCost = BuildTime = SpeedMax = HpMax = Armor = SightRange = 
+  //    AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
+  //  Quantity = 1;
+  //  TimeLength = 0.f;
+  //  uClass = 0;
+  //  PickupRange = 100;
+  //  SpeedMax = 100;
+  //}
 
   FUnitsDataRow operator+=( const FUnitsDataRow& row )
   {
@@ -112,3 +114,14 @@ public:
   }
 
 };
+
+struct PowerUpTimeOut
+{
+  float time;
+  FUnitsDataRow traits;
+  PowerUpTimeOut():time(0.f){}
+  PowerUpTimeOut( float t, FUnitsDataRow &iTraits ) :
+    time( t ), traits( iTraits ) { }
+  void Tick( float t ) { time += t; }
+};
+

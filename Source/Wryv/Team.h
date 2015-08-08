@@ -30,6 +30,7 @@ struct Team
   float DamageRepairThreshold;
   // Groups of buildings, peasants, and units sit in the same collection.
   vector<AGameObject*> units;
+  int researchLevelMeleeWeapons, researchLevelArmor, researchLevelRangedWeapons;
 
   Team();
   Team( int iTeamId, FString str );
@@ -42,7 +43,9 @@ struct Team
   void RemoveUnit( AGameObject *go );
 
   // Check if this team can afford to build a unit of UnitType
+  bool Has( Types objectType );
   bool CanAfford( Types buildingType );
+  bool CanBuild( Types buildingType );
   bool Spend( Types buildingType );
 
   // Usage of food by units in the game.
@@ -56,5 +59,6 @@ struct Team
   bool isNeedsFood();
   Types GetNeededResourceType();
   void runAI( float t );
+  void Move( float t );
 };
 

@@ -58,7 +58,9 @@ public:
   
   virtual void BeginPlay() override;
 	  
-  // Called to bind functionality to input
+  // Called to bind functionality to input.
+  // SetupPlayerInputComponent only exists in APawn, so we attach
+  // functionality to each input component
   virtual void SetupPlayerInputComponent( UInputComponent* InputComponent ) override;
   
   // Start to load the map in levelName
