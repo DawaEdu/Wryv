@@ -85,7 +85,7 @@ void Team::RemoveUnit( AGameObject *go )
 bool Team::Has( Types objectType )
 {
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->UnitsData.Type == objectType )
+    if( units[i]->Stats.Type == objectType )
      return 1;
   return 0;
 }
@@ -125,7 +125,7 @@ int Team::computeFoodUsage()
   /// Units use food
   int foodUse = 0;
   for( int i = 0; i < units.size(); i++ )
-    foodUse += units[i]->UnitsData.FoodUsed;
+    foodUse += units[i]->Stats.FoodUsed;
   return foodUse;
 }
 
@@ -135,7 +135,7 @@ int Team::computeFoodSupply()
   int foodSupply = 0;
   // The food supply is from Farm objects
   for( int i = 0; i < units.size(); i++ )
-    foodSupply += units[i]->UnitsData.FoodProvided;
+    foodSupply += units[i]->Stats.FoodProvided;
   return foodSupply;
 }
 
@@ -143,7 +143,7 @@ int Team::GetNumberOf( Types type )
 {
   int count = 0;
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->UnitsData.Type == type )
+    if( units[i]->Stats.Type == type )
       count++;
   return count;
 }
@@ -151,7 +151,7 @@ int Team::GetNumberOf( Types type )
 AGameObject* Team::GetFirstOfType( Types type )
 {
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->UnitsData.Type == type )
+    if( units[i]->Stats.Type == type )
       return units[i];
   return 0; // not found
 }
@@ -161,8 +161,8 @@ FVector Team::GetTownCentroid()
 {
   FVector v;
   for( int i = 0; i < units.size(); i++ )
-    if( IsBuilding( units[i]->UnitsData.Type ) )
-      v += units[i]->pos;
+    if( IsBuilding( units[i]->Stats.Type ) )
+      v += units[i]->Pos;
   return v;
 }
 
@@ -216,7 +216,7 @@ void Team::runAI( float t )
   // Send the units after most attacked unit on your team
   for( int i = 0; i < units.size(); i++ )
     if( !units[i]->attackTarget )
-      units[i]->SetDestination( target->pos );
+      units[i]->SetDestination( target->Pos );
 
   // Scout militia if they aren't engaged
   if( ai.timeSinceLastScout > ai.scoutInterval )
@@ -262,5 +262,7 @@ void Team::runAI( float t )
 
 void Team::Move( float t )
 {
-  runAI( t );
+  //runAI( t );
+  for( int i = 0; i < units.size(); i++ )
+    units[i]->Move( t );
 }

@@ -118,13 +118,11 @@ void Cooldown::Tick( float t )
   counter.Time += t;
   if( counter.Done() ) counter.Reset();
 
-  clockMaterial->SetScalarParameterValue( FName( "Percent" ), counter.Percent() );
+  // progress animations on clock faces
+  ////clockMaterial->SetScalarParameterValue( FName( "Percent" ), counter.Percent() );
 
   // Print the time remaining into the widget
   ImageWidget::Tick( t );
-
-  // progress animations on clock faces
-  ////overlay->SetAnimationPercent( building.Percent() );
 }
 
 void Cooldown::render( FVector2D offset )
@@ -133,7 +131,7 @@ void Cooldown::render( FVector2D offset )
 
   // Put the overlay on top.
   FVector2D pos = Pos() + offset;
-  ((AHUD*)hud)->DrawMaterial( clockMaterial, pos.X, pos.Y, Size.X, Size.Y, 0, 0, 1, 1 );
+  ////((AHUD*)hud)->DrawMaterial( clockMaterial, pos.X, pos.Y, Size.X, Size.Y, 0, 0, 1, 1 );
 }
 
 void BuildQueue::Set( AGameObject* go )
@@ -165,9 +163,9 @@ void AbilitiesPanel::Set( AGameObject *go )
 {
   // Set abilities. Abilities panel always has [2 rows, 3 cols]
   // We line up each ability with the slot number.
-  for( int i = 0; i < go->abilities.size(); i++ )
+  for( int i = 0; i < go->Abilities.size() && i < GetNumSlots(); i++ )
   {
-    Ability ability = go->abilities[i];
+    Ability ability = go->Abilities[i];
     FUnitsDataRow abilityData = Game->unitsData[ability.Type];
     
     // Want to change texture, it recenters the texture in case it is
@@ -175,27 +173,37 @@ void AbilitiesPanel::Set( AGameObject *go )
     SetSlotTexture( i, abilityData.Icon );
 
     ITextWidget* button = GetSlot( i );
-    
+    button->Show();
+
     // Attach button with invokation of i'th ability
     button->OnMouseDownLeft = [go,i,abilityData]( FVector2D mouse ) {
-      LOG( "%s used ability %s", *go->UnitsData.Name, *abilityData.Name );
-      go->UseAbility( go->abilities[i] );
+      LOG( "%s used ability %s", *go->Stats.Name, *abilityData.Name );
+      go->UseAbility( go->Abilities[i] );
       return Consumed;
     };
+  }
+
+  // the rest of the abilities can be set to null
+  for( int i = go->Abilities.size(); i < GetNumSlots(); i++ )
+  {
+    // Turn off the function object, jsut in case
+    GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+    // hide slot 
+    GetSlot(i)->Hide();
   }
 }
 
 void BuildPanel::Set( AGameObject *go )
 {
-  for( int i = 0; i < go->UnitsData.Spawns.Num(); i++ )
+  for( int i = 0; i < go->Stats.Spawns.Num(); i++ )
   {
-    Types spawn = go->UnitsData.Spawns[i];
+    Types spawn = go->Stats.Spawns[i];
     // Construct buttons that run abilities of the object.
     SetSlotTexture( i, Game->unitsData[ spawn ].Icon );
     ITextWidget* button = GetSlot( i );
     button->OnMouseDownLeft = [go,i]( FVector2D mouse ){
       // try spawn the object type listed
-      go->Build( go->UnitsData.Spawns[i] );
+      go->Build( go->Stats.Spawns[i] );
       return Consumed;
     };
   }
@@ -211,6 +219,12 @@ void GameChrome::Select( AGameObject *go )
   // Set the build queue from this also
   buildQueue->Set( go );
 
+  // 2. Text stats:
+  // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
+  // Print unit's stats into the stats panel
+  rightPanel->unitStats->Set( go->PrintStats() );
+  rightPanel->portrait->Tex = go->Stats.Icon;
+  
   // Set with the abilities of the object
   rightPanel->actions->abilities->Set( go );
 
@@ -219,3 +233,10 @@ void GameChrome::Select( AGameObject *go )
 
 }
 
+void GameChrome::Select( TArray<AGameObject*> objects )
+{
+  // Select all units in the array, but put the front item's options
+  // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
+  // Print unit's stats into the stats panel
+  Select( objects[0] );
+}

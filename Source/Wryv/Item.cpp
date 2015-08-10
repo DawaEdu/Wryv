@@ -22,7 +22,7 @@ void AItem::BeginPlay()
   {
     m->OnComponentBeginOverlap.AddDynamic( this, &AItem::ProxPickup );
     LOG( "Registering item prox pickup %s (%s)",
-      *UnitsData.Name, *m->GetName() );
+      *Stats.Name, *m->GetName() );
   }
 }
 
@@ -32,8 +32,8 @@ void AItem::ProxPickup_Implementation( AActor* OtherActor, UPrimitiveComponent* 
   // Apply the powerup to the otheractor
   if( AUnit *unit = Cast<AUnit>( OtherActor ) )
   {
-    unit->Items.Push( UnitsData );
-    LOG( "%s picked up a %s", *unit->UnitsData.Name, *UnitsData.Name );
+    unit->Items.Push( Stats );
+    LOG( "%s picked up a %s", *unit->Stats.Name, *Stats.Name );
     Destroy();
   }
 

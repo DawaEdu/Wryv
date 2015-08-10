@@ -85,7 +85,8 @@ public:
   FVector2D getMousePos();
   FHitResult getHitGeometry();
   vector<FHitResult> getAllHitGeometry();
-  FVector getHitFloor(FVector eye, FVector look);
+  FVector getHitFloor( FVector eye, FVector look );
+  FVector getHitFloor( FVector eye );
   FVector getHitFloor();
   bool intersectsAny( AActor* actor );
   bool intersectsAny( AActor* actor, vector<AActor*>& except );

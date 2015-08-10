@@ -83,6 +83,8 @@ void AUnit::OnSelected()
 
 void AUnit::Move( float t )
 {
+  Super::Move( t );
+
   // Tick all the traits
   for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
     BonusTraits[i].time -= t;

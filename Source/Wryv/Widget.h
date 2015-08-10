@@ -530,7 +530,6 @@ public:
   }
   void Set( int v )
   {
-    #define FS(x,...) FString::Printf( TEXT(x), __VA_ARGS__ )
     Set( FS( "%d", v ) );
   }
 
@@ -1248,7 +1247,7 @@ public:
   SlotPalette* itemBelt;  // things this unit is carrying, at the bottom of the screen
   StackPanel* buffs;      // list of buffs applied to this unit
   BuildQueue* buildQueue; // Queue of things we are building (in order)
-  Controls* controls;
+  Controls* controls;     // 
   
   GameChrome( FString name ) : Screen( name )
   {
@@ -1260,6 +1259,7 @@ public:
   }
 
   void Select( AGameObject *go );
+  void Select( TArray<AGameObject*> objects );
 };
 
 class Title : public Screen
@@ -1334,7 +1334,6 @@ public:
     else if( mode == Running )  gameChrome->Show();
 
     statusBar->Show(); // Show the status bar at all times
-    selectBox->Show();
     mouseCursor->Show();
   }
 

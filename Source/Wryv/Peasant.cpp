@@ -20,22 +20,22 @@ void APeasant::BeginPlay()
   Super::BeginPlay();
 }
 
-AGameObject* APeasant::Build( Types type, FVector pos )
+AGameObject* APeasant::Build( Types type, FVector location )
 {
   // Builds the building @ pos.
-  ABuilding* b = Cast<ABuilding>( Game->Make( type, pos, team->teamId ) );
+  ABuilding* b = Cast<ABuilding>( Game->Make( type, location, team->teamId ) );
 
   // Try and place the building can be placed @ position
-  if( PlaceBuilding( b, pos ) )  return b;
+  if( PlaceBuilding( b, location ) )  return b;
   else  return NULL;
 }
 
-bool APeasant::PlaceBuilding( ABuilding* b, FVector pos )
+bool APeasant::PlaceBuilding( ABuilding* b, FVector location )
 {
   // Check if building is placeable here.
   // Uses the graph to determine placeability, and puts nodes to blocked
   // if makes region impassible.
-  b->SetPos( pos );
+  Pos = location;
   FBox box = b->GetComponentsBoundingBox();
   for( int i = 0; i < Game->flycam->pathfinder->nodes.size(); i++ )
   {
@@ -78,26 +78,26 @@ AGameObject* APeasant::PlaceBuildingAtRandomLocation( Types type )
   FBox newBldgExtents = building->GetComponentsBoundingBox();
 
   // Search for building location
-  team = Game->gm->teams[ UnitsData.Team ];
+  team = Game->gm->teams[ Stats.Team ];
   AGameObject* townhall = team->GetFirstOfType( Types::BLDGTOWNHALL );
   FVector loc;
   
   // Place it around the townhall
-  if( townhall )  loc = townhall->pos;
+  if( townhall )  loc = townhall->Pos;
   else  loc = team->GetTownCentroid();
 
   // Jitter the location. Get the map size.
-  FVector floorpos, floorext, pos, ext;
+  FVector floorpos, floorext, placementPos, ext;
   FBox extents = Game->flycam->floor->GetComponentsBoundingBox();
   extents.GetCenterAndExtents( floorpos, floorext );
   extents = townhall->GetComponentsBoundingBox();
-  extents.GetCenterAndExtents( pos, ext );
+  extents.GetCenterAndExtents( placementPos, ext );
     
   // Search in location surrounding townhall or loc.
   FVector floorll = floorpos - floorext/2.f;
   FVector floortr = floorpos + floorext/2.f;
-  FVector ll = pos - ext/2.f;
-  FVector tr = pos + ext/2.f;
+  FVector ll = placementPos - ext/2.f;
+  FVector tr = placementPos + ext/2.f;
 
   // Say try a 10x10 square around the townhall or town centroid.
   // if the town gets larger or there is no room, then don't build the building
@@ -110,7 +110,7 @@ AGameObject* APeasant::PlaceBuildingAtRandomLocation( Types type )
       FVector p = loc;
       p.X += newBldgExtents.GetExtent().X * i;
       p.Y += newBldgExtents.GetExtent().Y * j;
-      building->SetPos( p );
+      building->Pos = p;
 
       // If the building can be placed here, we place it.
       if( !Game->flycam->intersectsAny( building ) )
@@ -134,7 +134,7 @@ void APeasant::Build( float t )
     // if multiple peasants are building the same building, then
     // the building progresses faster
     building->buildProgress += t;
-    if( building->buildProgress > building->UnitsData.BuildTime )
+    if( building->buildProgress > building->Stats.BuildTime )
     {
       // building is complete.
       building = 0;
@@ -154,12 +154,12 @@ void APeasant::Repair( float t )
   // If no building was found for repair, don't try and repair null object
   if( repair )
   {
-    // repairs hp gradually to a building at a fraction of the building's original construction cost.
+    // repairs Hp gradually to a building at a fraction of the building's original construction cost.
     // cost the team resources for repairing this building.
-    float hpRecovered = repair->UnitsData.RepairRate * t; // HP/s*time
-    float goldCost   = repair->UnitsData.RepairHPFractionCost * hpRecovered * repair->UnitsData.GoldCost;
-    float lumberCost = repair->UnitsData.RepairHPFractionCost * hpRecovered * repair->UnitsData.LumberCost;
-    float stoneCost  = repair->UnitsData.RepairHPFractionCost * hpRecovered * repair->UnitsData.StoneCost;
+    float hpRecovered = repair->Stats.RepairRate * t; // HP/s*time
+    float goldCost   = repair->Stats.RepairHPFractionCost * hpRecovered * repair->Stats.GoldCost;
+    float lumberCost = repair->Stats.RepairHPFractionCost * hpRecovered * repair->Stats.LumberCost;
+    float stoneCost  = repair->Stats.RepairHPFractionCost * hpRecovered * repair->Stats.StoneCost;
 
     // Can only repair if won't dip values below zero
     if( team->Gold >= goldCost   &&   team->Lumber >= lumberCost   &&   team->Stone >= stoneCost )
@@ -167,7 +167,7 @@ void APeasant::Repair( float t )
       team->Gold   -= goldCost;
       team->Lumber -= lumberCost;
       team->Stone  -= stoneCost;
-      repair->hp   += hpRecovered;
+      repair->Hp   += hpRecovered;
     }
 
     // if it has completed repair, deselect for repair
@@ -186,7 +186,7 @@ void APeasant::Mine( float t )
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
-    if( outsideDistance( attackTarget )   <=   UnitsData.AttackRange )
+    if( outsideDistance( attackTarget )   <=   Stats.AttackRange )
     {
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTime -= t;   // Progress mining.
@@ -199,7 +199,7 @@ void APeasant::Mine( float t )
       if( MiningTime < 0 )
       {
         // Just mined it. Get the resource.
-        switch( mining->UnitsData.Type )
+        switch( mining->Stats.Type )
         {
           case RESTREE:  team->Lumber += mining->Multiplier;  break;
           case RESGOLDMINE:  team->Gold += mining->Multiplier;  break;
@@ -210,7 +210,7 @@ void APeasant::Mine( float t )
         mining->Amount--;
         
         // Reset mining time. TimeLength is a polymorphic property.
-        MiningTime = Game->unitsData[ mining->UnitsData.Type ].TimeLength;
+        MiningTime = Game->unitsData[ mining->Stats.Type ].TimeLength;
         
         if( !mining->Amount )
         {
@@ -232,7 +232,7 @@ void APeasant::Mine( float t )
   Types neededResType = team->GetNeededResourceType();
 
   // if the resource type i'm mining changed..
-  if( !attackTarget   ||   neededResType != attackTarget->UnitsData.Type )
+  if( !attackTarget   ||   neededResType != attackTarget->Stats.Type )
   {
     // may have changed, but only change mining type after
     // successful mining operation of this type
@@ -241,7 +241,7 @@ void APeasant::Mine( float t )
 
     // Reset mining time remaining
     if( attackTarget ) {
-      MiningTime = attackTarget->UnitsData.TimeLength; // polymorphic property
+      MiningTime = attackTarget->Stats.TimeLength; // polymorphic property
     }
   }
 }
@@ -255,7 +255,7 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
 
   // Get the building most in need of repair
   AGameObject* lowestHpUnit = 0;
-  float lowestHpPerc = 1.f; // 100% hp
+  float lowestHpPerc = 1.f; // 100% Hp
   
   // Could add some logic here to leave higher HP units alone
   for( int i = 0; i < team->units.size(); i++ )
@@ -294,6 +294,8 @@ void APeasant::ai( float t )
 
 void APeasant::Move( float t )
 {
+  Super::Move( t );
+
   // Moves the Peasant object 
   // Work on the current building.
   Build( t );

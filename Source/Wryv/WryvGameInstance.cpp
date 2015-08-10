@@ -42,7 +42,7 @@ AGameObject* UWryvGameInstance::Make( Types type, FVector v, int teamId )
   AGameObject* go = (AGameObject*)GetWorld()->SpawnActor<AGameObject>( uc, v, ro );
   if( go )
   {
-    go->UnitsData.Team = teamId;
+    go->Stats.Team = teamId;
   }
   else
   {
@@ -60,6 +60,8 @@ AWryvGameMode* UWryvGameInstance::GetGameMode()
 
 void UWryvGameInstance::Init()
 {
+  init = 1;  //flag for IsReady() to know if instance ready or not
+
   Super::Init();
 
   // Pull up the UnitTypeUClasses. The UnitTypeUClasses mapping just connects each
@@ -90,12 +92,12 @@ void UWryvGameInstance::Init()
     }
   }
 
-  init = 1;  //flag for IsReady() to know if instance ready or not
+
 }
 
 void UWryvGameInstance::LoadUClasses()
 {
-  // Connect Widgets & UnitsData with mappings from Types
+  // Connect Widgets & Stats with mappings from Types
   vector< Types > types;
   for( int i = 0; i < Types::MAX; i++ )  types.push_back( (Types)i );
   
@@ -121,10 +123,10 @@ void UWryvGameInstance::LoadUClasses()
     // including spawn costs, etc. We need this data here
     // because we need to check if we have enough money
     // to spawn a unit of a certain type before spawning it.
-    unit->UnitsData.uClass = uc;  // Not available in dropdowns from table selector.
-    Game->unitsData[ ut ] = unit->UnitsData;
+    unit->Stats.uClass = uc;  // Not available in dropdowns from table selector.
+    Game->unitsData[ ut ] = unit->Stats;
     
-    //LOG( "Loaded unit: %s", *unit->UnitsData.ToString() );
+    //LOG( "Loaded unit: %s", *unit->Stats.ToString() );
     unit->Destroy(); // destroy the unit 
   }
 

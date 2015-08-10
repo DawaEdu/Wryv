@@ -34,6 +34,7 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
 // Called when the game starts or when spawned
 void AFlyCam::BeginPlay()
 {
+  LOG( "FlyCam::BeginPlay()" );
 	Super::BeginPlay();
 
   // We find ourselves inside the level of choice here.
@@ -125,8 +126,12 @@ void AFlyCam::OnLevelLoaded()
 
 void AFlyCam::InitializePathfinding()
 {
+  LOG( "Initializing pathfinding" );
   FindFloor();
-  if( !floor ) return ; // means there's no floor! level cannot be played
+  if( !floor ) {
+    LOG( "InitializePathfinding(): No floor!" );
+    return ; // means there's no floor! level cannot be played
+  }
   // (or a floorplane can be constructed as a failsafe.
 
   // Initialize a bunch of bounding spheres
@@ -394,7 +399,7 @@ void AFlyCam::setGhost( Types ut )
   if( ghost )
   {
     // remove the old ghost and replace with a new one
-    vec = ghost->pos;
+    vec = ghost->Pos;
     ghost->Destroy();
     ghost = 0;
   }
@@ -442,6 +447,11 @@ FVector AFlyCam::getHitFloor(FVector eye, FVector look)
   FCollisionQueryParams fcqp( "dest trace", true );
   floor->ActorLineTraceSingle( hit, eye, eye + look*1e6f, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
   return hit.ImpactPoint;
+}
+
+FVector AFlyCam::getHitFloor( FVector eye )
+{
+  return getHitFloor( eye, FVector( 0, 0, -1 ) );
 }
 
 FVector AFlyCam::getHitFloor()
@@ -520,7 +530,7 @@ bool AFlyCam::intersectsAnyOfType( AActor* actor, vector<Types>& types )
     bool ok = 0;
     // Don't check actors in the except array.
     for( int j = 0; j < types.size() && !ok; j++ )
-      if( go->UnitsData.Type == types[j] )
+      if( go->Stats.Type == types[j] )
         ok = 1;
     if( !ok )  continue;
 
@@ -588,7 +598,7 @@ void AFlyCam::MouseDownLeft()
   // If no gameobject was clicked on
   if( !hit ) return;
   
-  //LOG( "Clicked on %s", *hit->UnitsData.Name );
+  //LOG( "Clicked on %s", *hit->Stats.Name );
   // The hit object won't be the floor, it'll be the
   // "ghost" object (object being placed)
   // 
@@ -624,7 +634,7 @@ void AFlyCam::MouseDownLeft()
             // Place the building in the position indicated
             // let the selected lastObject build the building
             //lo->NextBuilding = Game->hud->NextBuilding;
-            p->Build( Game->hud->NextBuilding, ghost->pos );
+            p->Build( Game->hud->NextBuilding, ghost->Pos );
 
             // Null last clicked widget so building can't be
             // placed again unless selected
@@ -642,7 +652,7 @@ void AFlyCam::MouseDownLeft()
   
   // When not placing a building OR casting a spell, we're picking something.
   // from the screen whose info should be displayed in the sidebar.
-  //LOG( "Clicked on %s", *hit->UnitsData.Name );
+  //LOG( "Clicked on %s", *hit->Stats.Name );
   
   // Here we check if we need to change the selected unit  
   // Change selected object, as long as a spell wasn't queued on LO
@@ -713,6 +723,7 @@ void AFlyCam::MouseMoved()
 
   if( !setupLevel )
   {
+    LOG( "Loading level" );
     OnLevelLoaded(); // This is here because it runs first for some reason (before ::Tick())
   }
 

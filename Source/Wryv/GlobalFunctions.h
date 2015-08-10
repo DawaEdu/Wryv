@@ -8,6 +8,8 @@
 
 using namespace std;
 
+#define FS(x,...) FString::Printf( TEXT(x), __VA_ARGS__ )
+
 // CALL: LOG( "Format string %d", intValue );
 #define LOG(x, ...) UE_LOG( LogTemp, Warning, TEXT( x ), __VA_ARGS__ )
 

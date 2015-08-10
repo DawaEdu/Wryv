@@ -32,21 +32,21 @@ public:
   // Time it takes to build this thing, or regenerate capability (GenTime, Timeout)
   //   * Spell: It's regeneration time
   //   * Building: Time to build it.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BuildTime;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float BuildTime;
   // Attack and defense properties
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 SpeedMax;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 HpMax;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Armor;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SpeedMax;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float HpMax;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float Armor;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SightRange;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 AttackDamage;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 AttackCooldown;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackDamage;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackCooldown;
   // Range it can attack from (spells have attack range also)
   //   * For a Weapon instance, its range of the sword or spear
   //   * For a Spell, its the range of the spell itself.
   //   * For a Peasant, this is the range from which he mines
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 AttackRange;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackRange;
   // The range this unit can pick things up from.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 PickupRange;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float PickupRange;
   // Team id it belongs to
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Team;
   // Food this structure supplies (Farms + townhall)
@@ -70,17 +70,17 @@ public:
   // The blueprint from which class instance came from
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UClass* uClass;
 
-  //FUnitsDataRow()
-  //{
-  //  Type = NOTHING;
-  //  GoldCost = LumberCost = StoneCost = BuildTime = SpeedMax = HpMax = Armor = SightRange = 
-  //    AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
-  //  Quantity = 1;
-  //  TimeLength = 0.f;
-  //  uClass = 0;
-  //  PickupRange = 100;
-  //  SpeedMax = 100;
-  //}
+  FUnitsDataRow()
+  {
+    Type = NOTHING;
+    GoldCost = LumberCost = StoneCost = BuildTime = SpeedMax = HpMax = Armor = SightRange = 
+      AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
+    Quantity = 1;
+    TimeLength = 0.f;
+    uClass = 0;
+    PickupRange = 100;
+    SpeedMax = 100;
+  }
 
   FUnitsDataRow operator+=( const FUnitsDataRow& row )
   {
@@ -106,13 +106,17 @@ public:
       TEXT( "%s [%s]: %s goldcost=%d lumbercost=%d stonecost=%d buildtime=%d " ), 
       *Name, *Description, *GetEnumName( Type ),
       GoldCost, LumberCost, StoneCost, BuildTime );
-    fs += FString::Printf( TEXT("speed=%d hp=%d armor=%d ")
+    fs += FString::Printf( TEXT("speed=%d Hp=%d armor=%d ")
       TEXT("sightrange=%d attackdamage=%d attackcooldown=%d ")
       TEXT("attackrange=%d"),
       SpeedMax, HpMax, Armor, SightRange, AttackDamage, AttackCooldown, AttackRange );
     return fs;
   }
 
+  //void Print()
+  //{
+  //  LOG( ToString() );
+  //}
 };
 
 struct PowerUpTimeOut

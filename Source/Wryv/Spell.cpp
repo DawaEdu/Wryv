@@ -39,16 +39,16 @@ void ASpell::ProxSpell_Implementation( AActor* OtherActor,
   bool bFromSweep, const FHitResult & SweepResult )
 {
   LOG( "SPELL: %s collided with %s",
-    *UnitsData.Name, *OtherActor->GetName() );
+    *Stats.Name, *OtherActor->GetName() );
   
   // deal damage to otheractor (which should be a GameObject
   AGameObject* go = Cast<AGameObject>( OtherActor );
   if( go   &&   go != caster )
   {
-    go->hp -= UnitsData.AttackDamage;
+    go->Hp -= Stats.AttackDamage;
     // spawn the OnContact spell
-    Game->Make( OnContact.GetValue(), pos, UnitsData.Team );
-    UGameplayStatics::SpawnEmitterAtLocation( GetWorld(), 0, pos );
+    Game->Make( OnContact.GetValue(), Pos, Stats.Team );
+    UGameplayStatics::SpawnEmitterAtLocation( GetWorld(), 0, Pos );
     Destroy();
   }
 }

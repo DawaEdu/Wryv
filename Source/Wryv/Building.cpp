@@ -9,13 +9,13 @@ ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 void ABuilding::Tick( float t )
 {
   buildProgress += t;
-  if( buildProgress < UnitsData.BuildTime )
+  if( buildProgress < Stats.BuildTime )
   {
     // Building not complete yet, so increase HP and
-    float perc = t / UnitsData.BuildTime;
+    float perc = t / Stats.BuildTime;
 
     // increase HP by that fraction
-    hp += perc * UnitsData.HpMax;
+    Hp += perc * Stats.HpMax;
     // The building cannot do anything else while building.
     //return;
   }

@@ -119,11 +119,17 @@ void ATheHUD::InitWidgets()
   gChrome->costWidget = new CostWidget( TooltipBackgroundTexture );
   gChrome->Add( gChrome->costWidget );
   gChrome->costWidget->Align = CenterCenter;
+  gChrome->costWidget->Hide();
 
   gChrome->tooltip = new Tooltip( TooltipBackgroundTexture, FString("tooltip") );
   gChrome->tooltip->Pad = FVector2D( 8, 8 );
   gChrome->Add( gChrome->tooltip );
   gChrome->tooltip->Hide();
+  gChrome->tooltip->OnMouseDownLeft = [gChrome](FVector2D mouse){
+    LOG( "Hiding the tooltip" );
+    gChrome->tooltip->Hide();
+    return Consumed;
+  };
 
   gChrome->buffs = new StackPanel( "Buffs", 0 );
   gChrome->buffs->Pad = FVector2D( 4, 4 );
@@ -132,6 +138,7 @@ void ATheHUD::InitWidgets()
   gChrome->buildQueue = new BuildQueue( "Building Queue", TooltipBackgroundTexture, FVector2D( 128, 128 ) );
   gChrome->buildQueue->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buildQueue );
+  gChrome->buildQueue->Hide();
 
   // Create the panel for containing items/inventory
   gChrome->itemBelt = new SlotPalette( SlotPaletteTexture, 1, 4, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
@@ -195,7 +202,7 @@ EventCode ATheHUD::Hover( FVector2D mouse ){
 // Mouse motion with mouse down.
 EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
   ui->selectBox->SetEnd( mouse );
-  ui->selectBox->Show();
+  //ui->selectBox->Show();
   return NotConsumed;
 }
 
@@ -235,10 +242,10 @@ void ATheHUD::SetAttackTargetSelector( AGameObject* target )
 {
   if( target )
   {
-    FVector v = SelectedObject->attackTarget->pos;
+    FVector v = SelectedObject->attackTarget->Pos;
     if( Game->flycam->floor )
     {
-      //LOG( "-- %s", *Game->flycam->floor->UnitsData.Name );
+      //LOG( "-- %s", *Game->flycam->floor->Stats.Name );
       FBox box = Game->flycam->floor->GetComponentsBoundingBox();
       v.Z = box.Min.Z;
     }
@@ -257,7 +264,7 @@ void ATheHUD::SetShopTargetSelector( AGameObject* target )
   {
     if( AItemShop *is = Cast<AItemShop>( SelectedObject ) )
     {
-      FVector v = is->patron->pos;
+      FVector v = is->patron->Pos;
       selectorShopPatron->SetActorLocation( v );
     }
   }
@@ -290,28 +297,18 @@ void ATheHUD::UpdateSelectedObjectStats()
   // the rightPanel object.
   if( SelectedObject )
   {
-    // 1. Portrait:
-    // render last-clicked object to texture
+    // Portrait: render last-clicked object to texture
     // zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->pos, SelectedObject->GetBoundingRadius(), camDir );
+    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->Pos, SelectedObject->GetBoundingRadius(), camDir );
     
-    // 2. Text stats:
-    // This is for the picture of the last clicked object. Generate a widget for the picture of the unit.
-    // Print unit's stats into the stats panel
-    ui->gameChrome->rightPanel->unitStats->Set( SelectedObject->PrintStats() );
-    ui->gameChrome->rightPanel->portrait->Tex = SelectedObject->UnitsData.Icon;
-
-    // 3. buffs. PER-FRAME: Clear & then re-draw the buffs
+    // buffs. PER-FRAME: Clear & then re-draw the buffs
     ui->gameChrome->buffs->Clear(); // Clear any existing/previous buffs.
-    if( AUnit* unit = Cast<AUnit>( SelectedObject ) )
+    // Go through the applied buffs
+    for( int i = 0; i < SelectedObject->BonusTraits.size(); i++ )
     {
-      // Go through the applied buffs
-      for( int i = 0; i < unit->BonusTraits.size(); i++ )
-      {
-        Types buff = unit->BonusTraits[i].traits.Type;
-        //ui->gameChrome->buffs->StackRight( new ImageWidget( Game->hud->widgets[ buff ].Tex ) );
-      }
+      Types buff = SelectedObject->BonusTraits[i].traits.Type;
+      ui->gameChrome->buffs->StackRight( new ImageWidget( Game->unitsData[ buff ].Icon ) );
     }
   }
 }
@@ -412,13 +409,13 @@ void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
   for( int i = 0; i < Game->gm->playersTeam->units.size(); i++ )
   {
     AGameObject *go = Game->gm->playersTeam->units[i];
-    FVector pos = go->pos;
+    FVector pos = go->Pos;
     // Render a fogBlot into the Canvas at projected position.
     // Rather than use a projection matrix we'll just
     // use the xy position & position on square ground plane.
 
     // radius on the texture is the sightrange, then unitize
-    float radiusU = go->UnitsData.SightRange / floorBoxSize.X;
+    float radiusU = go->Stats.SightRange / floorBoxSize.X;
     radiusU = 0.25f; //!! a lot of the SightRanges are setup as 0's temp .
     
     FVector2D percPos = FVector2D( pos.X - floorBox.Min.X, pos.Y - floorBox.Min.Y )
@@ -524,7 +521,7 @@ void ATheHUD::Tick( float t )
 {
   if( selector   &&   SelectedObject )
   {
-    FVector v = SelectedObject->pos;
+    FVector v = SelectedObject->Pos;
     FBox box = Game->flycam->floor->GetComponentsBoundingBox();
     v.Z = box.Min.Z;
     selector->SetActorLocation( v );

@@ -36,6 +36,6 @@ public:
   virtual void BeginDestroy();
   virtual void StartPlay();
   virtual void InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage ) override;
-  virtual void Tick(float t) override;
+  virtual void Tick(float DeltaSeconds) override;
   vector<AGameObject*> GetObjectsOfType( Types type );
 };

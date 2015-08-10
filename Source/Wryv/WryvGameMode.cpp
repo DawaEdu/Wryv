@@ -53,15 +53,16 @@ void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FS
   //UGameplayStatics::OpenLevel( GetWorld(), FName( "map5" ) );
 }
 
-void AWryvGameMode::Tick(float t)
+void AWryvGameMode::Tick(float DeltaSeconds)
 {
   // ::Tick() function progresses the game. Progress all Team AI.
   tick++;
   Time += T; // Increase total gametime elapsed.
-  Super::Tick( t );
+  Super::Tick( DeltaSeconds );
   
   if( !Game->IsReady() )
   {
+    LOG( "AWryvGameMode::Tick(): Game not ready" );
     return;
   }
 
@@ -70,7 +71,7 @@ void AWryvGameMode::Tick(float t)
   for( int i = 0; i < teams.size(); i++ )
   {
     // Update the team's AI by evaluating the map.
-    teams[i]->Move( t );
+    teams[i]->Move( T ); // USE FIXED TIMESTEP
   }
 }
 
@@ -84,7 +85,7 @@ vector<AGameObject*> AWryvGameMode::GetObjectsOfType( Types type )
   for( int i = 0; i < actors->Num(); i++ )
   {
     AGameObject* g = Cast<AGameObject>( (*actors)[i] );
-    if( g->UnitsData.Type == type )
+    if( g->Stats.Type == type )
       v.push_back( g );
   }
 

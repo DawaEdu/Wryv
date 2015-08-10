@@ -6,12 +6,12 @@
 AResource::AResource( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
   // Make sure that the object type is actually a resource type
-  if( UnitsData.Type != Types::RESGOLDMINE || UnitsData.Type != Types::RESTREE || UnitsData.Type != Types::RESSTONE )
+  if( Stats.Type != Types::RESGOLDMINE || Stats.Type != Types::RESTREE || Stats.Type != Types::RESSTONE )
   {
-    //LOG(  "Object %s was not a resource", *UnitsData.Name );
+    //LOG(  "Object %s was not a resource", *Stats.Name );
   }
 
-  UnitsData.Team = 0;
+  Stats.Team = 0;
 }
 
 void AResource::BeginPlay()
