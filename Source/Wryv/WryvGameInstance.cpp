@@ -25,8 +25,7 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
 
 bool UWryvGameInstance::IsReady()
 {
-  return !IsDestroyStarted && init && hud && pc && gm && gs && 
-    flycam && flycam->pathfinder;
+  return !IsDestroyStarted && init && hud && pc && gm && gs && flycam;
 }
 
 void UWryvGameInstance::BeginDestroy()

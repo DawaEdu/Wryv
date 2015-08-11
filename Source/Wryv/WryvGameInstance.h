@@ -17,7 +17,6 @@ class AWryvGameMode;
 class AWryvGameState;
 class AFlyCam;
 struct Team;
-struct FUnitTypeUClassPair;
 
 UCLASS()
 class WRYV_API UWryvGameInstance : public UGameInstance
@@ -46,6 +45,7 @@ public:
   bool IsReady();
   AGameObject* Make( Types type, FVector v, int teamId );
   AWryvGameMode* GetGameMode();
+  UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
   virtual void Init() override;
   void LoadUClasses();
   virtual ULocalPlayer*	CreateInitialPlayer(FString& OutError) override;

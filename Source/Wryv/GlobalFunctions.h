@@ -119,6 +119,19 @@ inline FVector Rand( FVector min, FVector max )
   return min + FMath::FRand()*( max - min );
 }
 
+inline FVector Invert( FVector v )
+{
+  if( v.X ) v.X = 1.f/v.X; else { LOG( "FVector::InvertX() Error: Divide by 0" ); }
+  if( v.Y ) v.Y = 1.f/v.Y; else { LOG( "FVector::InvertY() Error: Divide by 0" ); }
+  if( v.Z ) v.Z = 1.f/v.Z; else { LOG( "FVector::InvertZ() Error: Divide by 0" ); }
+  return v;
+}
+
+inline void Print( FString msg, FVector v )
+{
+  LOG( "%s %f %f %f", *msg, v.X, v.Y, v.Z );
+}
+
 // Exclusive rand()
 inline int randInt( int min, int max )
 {

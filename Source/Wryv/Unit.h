@@ -18,16 +18,9 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)  TArray< TEnumAsByte< Types > > StartingItems;
   // The items the unit is holding
   TArray< FUnitsDataRow > Items;
-
-  // list of points to visit to finally reach destination
-  vector<FVector> waypoints;
-
   //AUnit(const FObjectInitializer& PCIP);
-  
   virtual void BeginPlay() override;
-
+  void ConsumeItem( int i );
   // Function that runs whenever the unit is first clicked on or selected.
-  virtual void OnSelected() override;
-
   virtual void Move( float t ) override;
 };

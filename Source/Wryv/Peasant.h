@@ -16,14 +16,15 @@ class WRYV_API APeasant : public AUnit
 public:
   float MiningTime;  // Total time the peasant has been mining for
   ABuilding* building; // The building this unit is building
-  AGameObject* repair; // The building this unit is currently repairing
+  AGameObject* repair; // The building this unit is currently Repairing
   AResource* mining; // The Resource we are mining
 
   //APeasant(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
   AGameObject* Build( Types type, FVector location );
   bool PlaceBuilding( ABuilding* go, FVector location );
-  AGameObject* PlaceBuildingAtRandomLocation( Types type );
+  AGameObject* aiPlaceBuildingAtRandomLocation( Types type );
+
   void Build( float t );
   void Repair( float t );
   void Mine( float t );
@@ -31,6 +32,6 @@ public:
   virtual void SetTarget( AGameObject* go );
   virtual void Move( float t );
   virtual void ai( float t );
-  bool isBusy(){ return building!=NULL || attackTarget!=NULL; }
+  bool isBusy(){ return building!=NULL || AttackTarget!=NULL; }
   
 };

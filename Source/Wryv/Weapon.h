@@ -10,5 +10,5 @@ class WRYV_API AWeapon : public AGameObject
 	GENERATED_UCLASS_BODY()
 public:	
 	virtual void BeginPlay() override;
-	virtual void Tick( float t ) override;
+	
 };

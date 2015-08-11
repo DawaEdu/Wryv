@@ -42,6 +42,8 @@ struct Team
   void AddUnit( AGameObject *go );
   void RemoveUnit( AGameObject *go );
 
+  void OnMapLoaded();
+
   // Check if this team can afford to build a unit of UnitType
   bool Has( Types objectType );
   bool CanAfford( Types buildingType );

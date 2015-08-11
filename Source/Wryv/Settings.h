@@ -6,8 +6,9 @@
 UCLASS()
 class WRYV_API ASettings : public AWorldSettings
 {
-  GENERATED_BODY()
+  GENERATED_UCLASS_BODY()
 public:
-  ASettings( const FObjectInitializer& PCIP );
+  //ASettings( const FObjectInitializer& PCIP );
+  virtual void NotifyBeginPlay();
 
 };

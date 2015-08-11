@@ -7,6 +7,7 @@
 #include "Pathfinder.h"
 #include "AI.h"
 #include "Building.h"
+#include "TheHUD.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
@@ -59,7 +60,7 @@ bool APeasant::PlaceBuilding( ABuilding* b, FVector location )
   return true;
 }
 
-AGameObject* APeasant::PlaceBuildingAtRandomLocation( Types type )
+AGameObject* APeasant::aiPlaceBuildingAtRandomLocation( Types type )
 {
   // What we want to do here is if there is a building to build,
   // we start the unit out towards that building's placement location.
@@ -155,7 +156,7 @@ void APeasant::Repair( float t )
   if( repair )
   {
     // repairs Hp gradually to a building at a fraction of the building's original construction cost.
-    // cost the team resources for repairing this building.
+    // cost the team resources for Repairing this building.
     float hpRecovered = repair->Stats.RepairRate * t; // HP/s*time
     float goldCost   = repair->Stats.RepairHPFractionCost * hpRecovered * repair->Stats.GoldCost;
     float lumberCost = repair->Stats.RepairHPFractionCost * hpRecovered * repair->Stats.LumberCost;
@@ -186,7 +187,7 @@ void APeasant::Mine( float t )
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
-    if( outsideDistance( attackTarget )   <=   Stats.AttackRange )
+    if( outsideDistance( AttackTarget )   <=   Stats.AttackRange )
     {
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTime -= t;   // Progress mining.
@@ -215,7 +216,7 @@ void APeasant::Mine( float t )
         if( !mining->Amount )
         {
           mining->Destroy();
-          attackTarget = 0;
+          AttackTarget = 0;
         }
       }
     }
@@ -232,16 +233,16 @@ void APeasant::Mine( float t )
   Types neededResType = team->GetNeededResourceType();
 
   // if the resource type i'm mining changed..
-  if( !attackTarget   ||   neededResType != attackTarget->Stats.Type )
+  if( !AttackTarget   ||   neededResType != AttackTarget->Stats.Type )
   {
     // may have changed, but only change mining type after
     // successful mining operation of this type
     // Try and find an object of type resType in the level
-    attackTarget = GetClosestObjectOfType( neededResType );
+    AttackTarget = GetClosestObjectOfType( neededResType );
 
     // Reset mining time remaining
-    if( attackTarget ) {
-      MiningTime = attackTarget->Stats.TimeLength; // polymorphic property
+    if( AttackTarget ) {
+      MiningTime = AttackTarget->Stats.TimeLength; // polymorphic property
     }
   }
 }
@@ -308,7 +309,7 @@ void APeasant::Move( float t )
   
   if( !building && !repair )
   {
-    // Start mining, if we aren't repairing or building something
+    // Start mining, if we aren't Repairing or building something
     Mine( t );
   }
 }

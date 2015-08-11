@@ -12,9 +12,3 @@ void AWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-// Called every frame
-void AWeapon::Tick( float t )
-{
-	Super::Tick( t );
-}
-

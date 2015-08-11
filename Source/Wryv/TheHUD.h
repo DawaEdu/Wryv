@@ -25,6 +25,7 @@ class StackPanel;
 class UserInterface;
 class FAssetRegistryModule;
 class UMediaTexture;
+class AWidget3D;
 
 UCLASS()
 class WRYV_API ATheHUD : public AHUD
@@ -48,7 +49,9 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
-
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* BuildButtonTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NullTexture;
+  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
   // The blueprint for the fog of war instance to use.
   
@@ -82,9 +85,8 @@ public:
   Types NextSpell;  // The next spell to be cast by the UI, 0 if no spell is queued & ready
   Types NextBuilding;  // NULL if no building is trying to be placed.
 
-  // This is the ring shaped selector that gets
-  // attached to the currently selected unit
-  AActor *selector, *selectorAttackTarget, *selectorShopPatron;
+  // This is the ring shaped selector that gets attached to the currently selected unit
+  AWidget3D *selector, *selectorAttackTarget, *selectorShopPatron;
 
   // Make a texture for rendering the fog of war to
   UCanvasRenderTarget2D* RTFogOfWar; // : UTexture
@@ -112,11 +114,8 @@ public:
   void InitInGameWidgets();
 
   void Setup();
-  void SetAttackTargetSelector( AGameObject* target );
-  void SetShopTargetSelector( AGameObject* target );
   void BoxSelect( FBox2DU box );
   
-  void UpdateSelectedObjectStats();
   void UpdateDisplayedResources();
   void UpdateMouse();
 
@@ -129,6 +128,8 @@ public:
   UFUNCTION()
   void DrawFogOfWar(UCanvas* theCanvas, int32 Width, int32 Height);
   virtual void DrawHUD() override;
+
+  void Select( AGameObject* go );
 
   // Which widget was hit by the mouse
   HotSpot* MouseDownLeft( FVector2D mouse );

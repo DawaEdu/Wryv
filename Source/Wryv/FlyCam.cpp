@@ -34,8 +34,8 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
 // Called when the game starts or when spawned
 void AFlyCam::BeginPlay()
 {
-  LOG( "FlyCam::BeginPlay()" );
 	Super::BeginPlay();
+  LOG( "FlyCam::BeginPlay()" );
 
   // We find ourselves inside the level of choice here.
   // From here, we decide what UI set to load.
@@ -573,6 +573,15 @@ void AFlyCam::FindFloor()
   }
 }
 
+void AFlyCam::Select( AGameObject* go )
+{
+  // Run its OnSelected function, playing sounds etc.
+  go->OnSelected();
+
+  // Change UI to reflect selected object
+  Game->hud->Select( go );
+}
+
 void AFlyCam::MouseUpLeft()
 {
   //LOG( "MouseUpLeft");
@@ -587,25 +596,18 @@ void AFlyCam::MouseDownLeft()
   // we don't let the click pass through to the 3d surface below it.
   if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
   
-  // Next, we decide what to do with the click based on
-  // what the current GameState is. If a spell is queued, we cast the spell.
-  AGameObject* lo = Game->hud->SelectedObject;
-  
-  // Get the geometry that was hit.
   FHitResult hitResult = getHitGeometry();
   AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+  if( hitResult.GetActor() ) {
+    LOG( "Clicked object %s", *hitResult.GetActor()->GetName() );
+  }
 
-  // If no gameobject was clicked on
-  if( !hit ) return;
-  
-  //LOG( "Clicked on %s", *hit->Stats.Name );
-  // The hit object won't be the floor, it'll be the
-  // "ghost" object (object being placed)
-  // 
-  // If the click was on the floor, place a building only if the
-  // ghost doesn't intersect with any other object.
-  // Place a building if not blocked
-  //LOG( "Place building" );
+  if( !hit   &&   hitResult.GetActor() ) {
+    LOG( "Clicked object %s was not a GameObject class derivative", *hitResult.GetActor()->GetName() );
+  }
+  if( !hit )  return;
+
+  AGameObject* lo = Game->hud->SelectedObject;
   if( lo )
   {
     // If a spell is queued, cast it @ hit object.
@@ -665,8 +667,7 @@ void AFlyCam::MouseDownLeft()
     }
     else
     {
-      Game->hud->SelectedObject = hit;
-      hit->OnSelected();
+      Select( hit );
     }
   }
 
@@ -674,6 +675,11 @@ void AFlyCam::MouseDownLeft()
   // position on lastClicked object is basically where on the object
   // the building is to be placed.
   //LOG( "%f %f %f", hitPos.X, hitPos.Y, hitPos.Z );
+}
+
+void AFlyCam::MouseUpRight()
+{
+  LOG( "MouseUpRight");
 }
 
 void AFlyCam::MouseDownRight()
@@ -710,15 +716,9 @@ void AFlyCam::MouseDownRight()
   }
 }
 
-void AFlyCam::MouseUpRight()
-{
-  LOG( "MouseUpRight");
-  
-}
-
 void AFlyCam::MouseMoved()
 {
-  //LOG( "MouseMoved() frame %d", Game->tick );
+  //LOG( "AFlyCam::MouseMoved() frame %lld", Game->gm->tick );
   RetrievePointers();
 
   if( !setupLevel )

@@ -100,7 +100,9 @@
     <ClCompile Include="..\..\Source\Wryv\Widget.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Widget.h" />
     <None Include="..\..\Source\Wryv\Wryv.Build.cs" />
+    <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Wryv.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\Widget3D.h" />
     <ClInclude Include="..\..\Source\Wryv\Wryv.h" />
     <ClCompile Include="..\..\Source\Wryv\WryvGameInstance.cpp" />
     <ClInclude Include="..\..\Source\Wryv\WryvGameInstance.h" />

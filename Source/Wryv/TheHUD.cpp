@@ -14,6 +14,7 @@
 #include "Widget.h"
 #include "DrawDebugHelpers.h"
 #include "CombatUnit.h"
+#include "Widget3D.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
@@ -21,9 +22,7 @@
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
-  selector = 0;
-  selectorAttackTarget = 0;
-  selectorShopPatron = 0;
+  selector = selectorAttackTarget = selectorShopPatron = 0;
   SelectedObject = 0;
   WillSelectNextFrame = 0;
 
@@ -80,6 +79,9 @@ void ATheHUD::InitWidgets()
   SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
   StackPanel::StackPanelTexture = StackPanelTexture;
+  AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
+  ImageWidget::NullTexture = NullTexture;
+
   ui = new UserInterface(FVector2D(Canvas->SizeX, Canvas->SizeY));
   GameChrome *gChrome = ui->gameChrome;
 
@@ -131,17 +133,18 @@ void ATheHUD::InitWidgets()
     return Consumed;
   };
 
-  gChrome->buffs = new StackPanel( "Buffs", 0 );
+  gChrome->buffs = new Buffs( "Buffs", 0 );
   gChrome->buffs->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buffs );
 
+  // buildQueue appears
   gChrome->buildQueue = new BuildQueue( "Building Queue", TooltipBackgroundTexture, FVector2D( 128, 128 ) );
   gChrome->buildQueue->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buildQueue );
   gChrome->buildQueue->Hide();
 
   // Create the panel for containing items/inventory
-  gChrome->itemBelt = new SlotPalette( SlotPaletteTexture, 1, 4, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
+  gChrome->itemBelt = new ItemBelt( SlotPaletteTexture, 1, 4, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
   gChrome->Add( gChrome->itemBelt );
   gChrome->itemBelt->Align = BottomCenter;
 
@@ -179,7 +182,7 @@ void ATheHUD::InitWidgets()
   ui->Add( ui->missionObjectivesScreen );
 
   // Add the mouseCursor last so that it renders last.
-  ui->mouseCursor = new ImageWidget( MouseCursorHand.Texture );
+  ui->mouseCursor = new ImageWidget( "mouse cursor", MouseCursorHand.Texture );
   ui->Add( ui->mouseCursor );
 
   /// Set the screen's to correct one for the gamestate
@@ -231,86 +234,33 @@ void ATheHUD::Setup()
   LOG( "ATheHUD::Setup()");
   FVector v(0.f);
   FRotator r(0.f);
-  if( !selector )  selector = GetWorld()->SpawnActor<AActor>( uClassSelector, v, r );
-  if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AActor>( uClassSelectorA, v, r );
-  if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AActor>( uClassSelectorShop, v, r );
+  if( !selector )  selector = GetWorld()->SpawnActor<AWidget3D>( uClassSelector, v, r );
+  v.Z += 100.f;
+  if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AWidget3D>( uClassSelectorA, v, r );
+  v.Z += 100.f;
+  if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AWidget3D>( uClassSelectorShop, v, r );
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" ); //rs[0];
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" ); //rs[1];
 }
 
-void ATheHUD::SetAttackTargetSelector( AGameObject* target )
-{
-  if( target )
-  {
-    FVector v = SelectedObject->attackTarget->Pos;
-    if( Game->flycam->floor )
-    {
-      //LOG( "-- %s", *Game->flycam->floor->Stats.Name );
-      FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-      v.Z = box.Min.Z;
-    }
-    selectorAttackTarget->SetActorLocation( v );
-  }
-  else
-  {
-    // Put the ring out somewhere else
-    selectorAttackTarget->SetActorLocation( FVector(0.f) );
-  }
-}
-
-void ATheHUD::SetShopTargetSelector( AGameObject* target )
-{
-  if( target )
-  {
-    if( AItemShop *is = Cast<AItemShop>( SelectedObject ) )
-    {
-      FVector v = is->patron->Pos;
-      selectorShopPatron->SetActorLocation( v );
-    }
-  }
-  else
-  {
-    // Put the ring out somewhere else
-    selectorShopPatron->SetActorLocation( FVector(0.f) );
-  }
-}
-
 void ATheHUD::BoxSelect( FBox2DU box )
 {
-  TArray<AActor*> actors;
-  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
-    box.TL(), box.BR(), actors );
-  LOG( "Selected %d actors", actors.Num() );
-  for( int i = 0; i < actors.Num(); i++ )
+  TArray<AActor*> combatUnits;
+  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ), box.TL(), box.BR(), combatUnits );
+  LOG( "Selected %d CombatUnits", combatUnits.Num() );
+  vector< AGameObject* > selected;
+  for( int i = 0; i < combatUnits.Num(); i++ )
   {
-    LOG( "Selected %s", *actors[i]->GetName() );
-  }
-}
-
-void ATheHUD::UpdateSelectedObjectStats()
-{
-  // "Prints" the selected object's:
-  //   1. rendered portrait
-  //   2. text stats
-  //   3. buffs
-  //   4. buildQueue
-  // the rightPanel object.
-  if( SelectedObject )
-  {
-    // Portrait: render last-clicked object to texture
-    // zoom back by radius of bounding sphere of clicked object
-    FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->Pos, SelectedObject->GetBoundingRadius(), camDir );
-    
-    // buffs. PER-FRAME: Clear & then re-draw the buffs
-    ui->gameChrome->buffs->Clear(); // Clear any existing/previous buffs.
-    // Go through the applied buffs
-    for( int i = 0; i < SelectedObject->BonusTraits.size(); i++ )
+    LOG( "Selected %s", *combatUnits[i]->GetName() );
+    if( AGameObject* go = Cast<AGameObject>( combatUnits[i] ) )
     {
-      Types buff = SelectedObject->BonusTraits[i].traits.Type;
-      ui->gameChrome->buffs->StackRight( new ImageWidget( Game->unitsData[ buff ].Icon ) );
+      selected.push_back( go );
     }
   }
+
+  // Change rows/cols.
+  int cols = ceilf( sqrtf( selected.size() ) ) ;
+  ui->gameChrome->rightPanel->portraits->Set( selected, cols, cols );
 }
 
 void ATheHUD::UpdateDisplayedResources()
@@ -447,7 +397,12 @@ void ATheHUD::DrawHUD()
   }
 
   UpdateDisplayedResources();
-  UpdateSelectedObjectStats();
+  if( SelectedObject )
+  {
+    // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
+    FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
+    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->Pos, SelectedObject->GetBoundingRadius(), camDir );
+  }
   UpdateMouse();
   
   // Render the minimap, only if the floor is present
@@ -461,7 +416,7 @@ void ATheHUD::DrawHUD()
   ui->Size = FVector2D( Canvas->SizeX, Canvas->SizeY );
 
   // Tick in the render function, in case text needs re-rendering etc.
-  ui->Tick( Game->gm->T );
+  ui->Move( Game->gm->T );
 
   // Render the entire UI
   ui->render();
@@ -472,6 +427,20 @@ void ATheHUD::DrawHUD()
   // an Emissive channel)
   //DrawMaterial( MediaMaterial, 0, 0,
   //  Canvas->SizeX, Canvas->SizeY, 0, 0, 1, 1, 1.f );
+}
+
+void ATheHUD::Select( AGameObject* go )
+{
+  SelectedObject = go;
+  
+  // parent the selector to this object
+  selector->SetParent( go );
+
+  // Highlight the attack target of the currently selected object
+  selectorAttackTarget->SetParent( go->AttackTarget );
+
+  // Modify the UI to reflect selected gameobject
+  ui->gameChrome->Select( go );
 }
 
 // Detect clicks and mouse moves on the HUD
@@ -519,13 +488,7 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
 
 void ATheHUD::Tick( float t )
 {
-  if( selector   &&   SelectedObject )
-  {
-    FVector v = SelectedObject->Pos;
-    FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-    v.Z = box.Min.Z;
-    selector->SetActorLocation( v );
-  }
+  Super::Tick( t );
 }
 
 // Returns to you the distance that you should set
@@ -568,8 +531,7 @@ void ATheHUD::RenderScreen( USceneCaptureComponent2D* renderer,
   for( int i = 0; i < renderer->AttachChildren.Num(); i++ )
   {
     USceneComponent* c = renderer->AttachChildren[i];
-    LOG(  "Component [%d] = %s",
-      i, *renderer->AttachChildren[i]->GetName() );
+    LOG( "Component [%d] = %s", i, *renderer->AttachChildren[i]->GetName() );
   }
   
   

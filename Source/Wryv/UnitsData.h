@@ -11,10 +11,9 @@ struct WRYV_API FUnitsDataRow : public FTableRowBase
 public:
   // The UnitTYPE (strict set of types).
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte<Types> Type;
-  // The name of the unit.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Name;
-  // The icon that appears when this object type is selectable as a widget
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UTexture* Icon;
+  // The icon that appears when this object type is selectable as a widget 
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UTexture* Portrait;
   // The tooltip or extended description of this thing
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
   // How many of this thing is in this instance (used for items)
@@ -27,7 +26,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 ManaCost;
   // Repair costs a fraction of GoldCost, LumberCost, StoneCost per HP recovered.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float RepairHPFractionCost;
-  // How many seconds per HP recovered, when repairing
+  // How many seconds per HP recovered, when Repairing
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float RepairRate;
   // Time it takes to build this thing, or regenerate capability (GenTime, Timeout)
   //   * Spell: It's regeneration time

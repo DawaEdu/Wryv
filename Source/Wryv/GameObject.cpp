@@ -9,46 +9,49 @@
 #include "Pathfinder.h"
 #include "GlobalFunctions.h"
 #include "PlayerControl.h"
+#include "Widget3D.h"
 
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
+  LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
 
-  attackCooldown = 0;
-  repairing = 0;
+  AttackCooldown = 0;
+  Repairing = 0;
   Vel = FVector(0, 0, 0);
   LoadsFromTable = 0;
-  followTarget = 0;
-  attackTarget = 0;
+  FollowTarget = 0;
+  AttackTarget = 0;
   NextSpell = Types::NOTHING; // no spell is queued
-
+  OriginalScale = FVector(1,1,1);
   //bounds = PCIP.CreateDefaultSubobject<UCapsuleComponent>( this, "BoundingCapsule" );
   //RootComponent = bounds;
+
 }
 
-// Called when the game starts or when spawned
-void AGameObject::BeginPlay()
+void AGameObject::PostInitializeComponents()
 {
-  LOG( "%s->AGameObject::BeginPlay()", *GetName() );
-  Super::BeginPlay();
-
+  LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
+  Super::PostInitializeComponents();
+  if( RootComponent )
+  {
+    // Initialize position, but put object on the ground
+    Pos = RootComponent->GetComponentLocation();
+  }
   UpdateStats();
   Stats = BaseStats;
+  
   Hp = Stats.HpMax;
   Speed = Stats.SpeedMax;
-  LOG( "AGameObject::BeginPlay(): %s, speed=%f", *Stats.Name, Speed );
+  OriginalScale = GetActorScale3D();
   float r=0.f, h=0.f;
   GetComponentsBoundingCylinder( r, h );
   //bounds->SetCapsuleSize( r, h );
+  LOG( "%s [%s] AGameObject::OnMapLoaded(), speed=%f", *GetName(), *Stats.Name, Speed );
 
-  if( isBuilding() )
-    repairing = 0; // Buildings need an attending peasant to repair
-  else
-    repairing = 1; // Live units automatically regen
-  
-  team = Game->gm->teams[ Stats.Team ];
-  team->units.push_back( this );
+  if( isBuilding() )  Repairing = 0; // Buildings need an attending peasant to repair
+  else  Repairing = 1; // Live units automatically regen
 
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
@@ -58,21 +61,22 @@ void AGameObject::BeginPlay()
   }
 
   //Pos = SetOnGround( Pos );
-  Dest = Pos;
+  Dest = Pos;  // set the position to where the thing is.
 }
 
-void AGameObject::PostInitializeComponents()
+// Called when the game starts or when spawned
+void AGameObject::BeginPlay()
 {
-  LOG( "%s->AGameObject::PostInitializeComponents()", *GetName() );
-  Super::PostInitializeComponents();
+  Super::BeginPlay();
+  LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
   
-  if( RootComponent )
-  {
-    // Initialize position, but put object on the ground
-    Pos = RootComponent->GetComponentLocation();
-  }
+  // Put the GameObject on the correct team
+  Game->gm->teams[ BaseStats.Team ] -> AddUnit( this );
+}
 
-  Dest = Pos;  // set the position to where the thing is.
+void AGameObject::OnMapLoaded()
+{
+
 }
 
 float AGameObject::centroidDistance( AGameObject *go )
@@ -100,7 +104,7 @@ float AGameObject::outsideDistance( AGameObject *go )
 
 bool AGameObject::isAttackTargetWithinRange()
 {
-  if( attackTarget )
+  if( AttackTarget )
   {
     return distanceToAttackTarget() < Stats.AttackRange;
   }
@@ -110,8 +114,8 @@ bool AGameObject::isAttackTargetWithinRange()
 
 float AGameObject::distanceToAttackTarget()
 {
-  if( !attackTarget )  return FLT_MAX;
-  return centroidDistance( attackTarget );
+  if( !AttackTarget )  return FLT_MAX;
+  return centroidDistance( AttackTarget );
 }
 
 float AGameObject::hpPercent()
@@ -125,16 +129,60 @@ float AGameObject::speedPercent()
   return Speed / Stats.SpeedMax;
 }
 
-bool AGameObject::ally( AGameObject* go )
+AGameObject* AGameObject::SetParent( AGameObject* newParent )
 {
-  return go->team->alliance != Alliance::Neutral   &&
-         team == go->team;
+  USceneComponent *pc = 0;
+  if( newParent )  pc = newParent->GetRootComponent();
+  SetOwner( newParent );
+  // Set the world position to being that of parent, then keep world position on attachment
+  GetRootComponent()->SetWorldScale3D( FVector(1,1,1) ); // reset the scale off
+  GetRootComponent()->SetRelativeScale3D( FVector(1,1,1) ); 
+  GetRootComponent()->SnapTo( pc );
+  return this;
+  
+  // It will actually scale the child (this) by the accumulated scaling of
+  // all parents.  Because I don't want that,  I'll reverse scale the widgets
+  //FVector scale = Invert( newParent->OriginalScale );
+  //SetActorScale3D( scale );
+  //SetActorRelativeScale3D( scale );
+  //rc->SetWorldLocation( prc->GetComponentLocation() );
+  //rc->SetRelativeLocation( prc->RelativeLocation );
+  //rc->SetWorldLocation( prc->GetComponentLocation() );
+
+  //AttachRootComponentToActor( newParent, NAME_None, EAttachLocation::KeepRelativeOffset, 0 );
+  //AttachRootComponentToActor( newParent, NAME_None, EAttachLocation::KeepWorldPosition, 0 );
+  //rc->AttachTo( prc, NAME_None, EAttachLocation::SnapToTarget );
+  //rc->SetRelativeLocation( FVector(0,0,0) );
+  //rc->SetWorldLocation( FVector(0,0,0) );
+  //AttachRootComponentTo( newParent->GetRootComponent() );
+  return this;
 }
 
-bool AGameObject::enemy( AGameObject* go )
+AGameObject* AGameObject::AddChild( AGameObject* newChild )
 {
-  return go->team->alliance != Alliance::Neutral   &&
-         team != go->team;
+  // To add another child to this actor, we need to attach the childs root component to this actor?
+  newChild->SetParent( this );
+  return this;
+}
+
+bool AGameObject::isParentOf( AGameObject* child )
+{
+  return child->GetOwner() == this;
+}
+
+bool AGameObject::isChildOf( AGameObject* parent )
+{
+  return IsAttachedTo( parent );
+}
+
+bool AGameObject::isAlly( AGameObject* go )
+{
+  return team == go->team   &&   go->team->alliance != Alliance::Neutral ;
+}
+
+bool AGameObject::isEnemy( AGameObject* go )
+{
+  return team != go->team   &&   go->team->alliance != Alliance::Neutral;
 }
 
 void AGameObject::removeAsTarget()
@@ -142,37 +190,22 @@ void AGameObject::removeAsTarget()
   if( !Game->IsReady() )
     return;
   
-  if( Game->hud->SelectedObject )
+  // Unset the HUD's selector if its set
+  if( isParentOf( Game->hud->selectorAttackTarget ) )
   {
-    if( Game->hud->SelectedObject == this )
-    {
-      // this was the last clicked object, so remove the selector
-      Game->hud->selector->SetActorLocation( FVector(0.f) );
-    }
-    else if( Game->hud->SelectedObject->attackTarget == this )
-    {
-      Game->hud->selectorAttackTarget->SetActorLocation( FVector(0.f) );
-    }
+    Game->hud->selectorAttackTarget->SetParent( 0 ); // unparent
   }
 
   // check if the object is set as a target for any other gameobject
-  for( int i = 0; i < Game->gm->teams.size(); i++ )
+  for( pair<const int32,Team*> p : Game->gm->teams )
   {
-    Team* team = Game->gm->teams[i];
-    for( int j = 0; j < team->units.size(); j++ )
+    Team* team = p.second;
+    for( AGameObject *go : team->units )
     {
-      // Check all game objects, and make sure none
-      AGameObject* go = team->units[j];
-      //LOG( "Other unit %s", *go->Stats.Name );
-      if( this == go->attackTarget )
-      {
-        LOG( "Attack target was %s", *Stats.Name );
-        go->attackTarget = 0;
-        // If the last clicked object was the gameObject,
-        // then unselect it in the hud
-        if( this == Game->hud->SelectedObject )
-          Game->hud->selectorAttackTarget->SetActorLocation( FVector(0.f) );
-      }
+      // If the other gameobject has this as an attack target,
+      // then null out its attack target.
+      //if( go->AttackTarget == this )
+      //  go->AttackTarget = 0;
     }
   }
 }
@@ -205,7 +238,7 @@ void AGameObject::CastSpell( Types type, AGameObject *target )
 {
   // The NextSpell to be cast is (whatever spell was requested)
   NextSpell = type;
-  attackTarget = target;
+  AttackTarget = target;
 }
 
 void AGameObject::ApplyEffect( FUnitsDataRow item )
@@ -268,15 +301,15 @@ bool AGameObject::Reached( FVector& v, float dist )
 void AGameObject::UpdateDestination()
 {
   // How much of the way are we towards our next destination point
-  // Check waypoints. If reached dest, then pop next waypoint.
+  // Check Waypoints. If reached dest, then pop next waypoint.
   if( Reached( Dest, 250.f ) )
   {
     // Pop the next waypoint.
-    if( !waypoints.size() )
+    if( !Waypoints.size() )
       return;
 
-    Dest = waypoints.front();
-    pop_front( waypoints );
+    Dest = Waypoints.front();
+    pop_front( Waypoints );
   }
 
   // Try a bezier curve selection of the destination point...
@@ -321,7 +354,7 @@ void AGameObject::MoveTowards( float t )
       Pos = start + disp;
     }
 
-    LOG( "%s @ (%f %f %f)", *GetName(), Pos.X, Pos.Y, Pos.Z );
+    //LOG( "%s @ (%f %f %f)", *GetName(), Pos.X, Pos.Y, Pos.Z );
     // Push UP from the ground plane, using the bounds on the actor.
 
     FRotator ro = Dir.Rotation();
@@ -335,20 +368,20 @@ void AGameObject::MoveTowards( float t )
 
 void AGameObject::SetTarget( AGameObject* go )
 {
-  attackTarget = go;
+  AttackTarget = go;
   SetDestination( go->Pos );
 }
 
 void AGameObject::StopMoving()
 {
-  waypoints.clear(); // clear the waypoints
+  Waypoints.clear(); // clear the Waypoints
   Dest = Pos; // You are at your destination
 }
 
 void AGameObject::Stop()
 {
   StopMoving();
-  attackTarget = 0;
+  AttackTarget = 0;
 }
 
 FVector AGameObject::SetOnGround( FVector v )
@@ -368,21 +401,21 @@ void AGameObject::Move( float t )
   UpdateStats();
 
   // Recover HP at stock recovery rate
-  if( repairing ) {
+  if( Repairing ) {
     Hp += Stats.RepairHPFractionCost*t;
   }
 
   // Call the ai for this object type
   ai( t );
   
-  // dest is modified by the attackTarget.
+  // dest is modified by the AttackTarget.
   // Move towards the destination as long as we're not in attackRange
-  if( attackTarget )
+  if( AttackTarget )
   {
-    // If there is an attackTarget, then the destination
-    // position is set at (AttackRange) units back from the attackTarget.
+    // If there is an AttackTarget, then the destination
+    // position is set at (AttackRange) units back from the AttackTarget.
     // only need to move towards attack target if out of range.
-    FVector p = Pos, q = attackTarget->Pos;
+    FVector p = Pos, q = AttackTarget->Pos;
     FVector fromTarget = p - q; 
     float len = fromTarget.Size();
 
@@ -399,11 +432,11 @@ void AGameObject::Move( float t )
       if( len ) // Don't normalize when zero length.
         fromTarget /= len; // normalize.
       
-      if( !waypoints.size() )
+      if( !Waypoints.size() )
       {
         FVector d = q + fromTarget*Stats.AttackRange;
         // move the unit only far enough so that it is within the attack range
-        waypoints = Game->flycam->pathfinder->findPath( p, d );
+        Waypoints = Game->flycam->pathfinder->findPath( p, d );
       }
     }
   }
@@ -416,23 +449,23 @@ void AGameObject::Move( float t )
 
   // Try and cast spell queued, if any
   // A spell is being cast. Where does it go?
-  // `attackTarget` must be specified, for the spell to be released.
+  // `AttackTarget` must be specified, for the spell to be released.
   // Only launch the spell if within range.
-  if( NextSpell   &&   attackTarget )
+  if( NextSpell   &&   AttackTarget )
   {
-    // Create the Spell object and send it towards the attackTarget.
+    // Create the Spell object and send it towards the AttackTarget.
     ASpell* spell = (ASpell*)Game->Make( NextSpell, Pos, Stats.Team );
     
-    // If there is no attackTarget, then there needs to be a dest.
+    // If there is no AttackTarget, then there needs to be a dest.
     spell->caster = this;
-    spell->attackTarget = attackTarget;
+    spell->AttackTarget = AttackTarget;
 
     // construct the spell object & launch it @ target.
     // A spell is being cast. Where does it go?
-    // `attackTarget` must be specified, for the spell to be released.
+    // `AttackTarget` must be specified, for the spell to be released.
     // Only launch the spell if within range.
-    // Create the Spell object and send it towards the attackTarget.
-    // If there is no attackTarget, then there needs to be a dest.
+    // Create the Spell object and send it towards the AttackTarget.
+    // If there is no AttackTarget, then there needs to be a dest.
     NextSpell = NOTHING;
   }
 }
@@ -444,20 +477,20 @@ void AGameObject::ai( float t )
 
 void AGameObject::fight( float t )
 {
-  // If we have an attackTarget and we are close enough to it,
+  // If we have an AttackTarget and we are close enough to it,
   // and the cooldown is over, we attack it
-  if( attackTarget   &&   attackCooldown <= 0.f   &&
-      outsideDistance( attackTarget ) < Stats.AttackRange )
+  if( AttackTarget   &&   AttackCooldown <= 0.f   &&
+      outsideDistance( AttackTarget ) < Stats.AttackRange )
   {
     // calculate the damage done to the target by the attack
-    float damage = Stats.AttackDamage - attackTarget->Stats.Armor;
+    float damage = Stats.AttackDamage - AttackTarget->Stats.Armor;
 
-    // reset the attackCooldown to being full amount
-    attackCooldown = Stats.AttackCooldown;
+    // reset the AttackCooldown to being full amount
+    AttackCooldown = Stats.AttackCooldown;
   }
 
   // cooldown a little bit
-  attackCooldown -= t;
+  AttackCooldown -= t;
 }
 
 AGameObject* AGameObject::GetClosestEnemyUnit()
@@ -535,19 +568,19 @@ void AGameObject::SetDestination( FVector d )
   //Visualize( p, Game->flycam->Yellow );
   //Visualize( d, Game->flycam->Yellow );
   
-  // find the path, then submit list of waypoints
-  waypoints = Game->flycam->pathfinder->findPath( p, d );
+  // find the path, then submit list of Waypoints
+  Waypoints = Game->flycam->pathfinder->findPath( p, d );
   
-  // Fix waypoints z value so they sit on ground plane
-  for( int i = 0; i < waypoints.size(); i++ )
-    waypoints[i] = SetOnGround( waypoints[i] );
+  // Fix Waypoints z value so they sit on ground plane
+  for( int i = 0; i < Waypoints.size(); i++ )
+    Waypoints[i] = SetOnGround( Waypoints[i] );
 
-  if( waypoints.size() >= 3 )
+  if( Waypoints.size() >= 3 )
   {
     // Check the back 2 points, if the 2nd last has a 
-    FVector b1 = waypoints[ waypoints.size() - 1 ];
-    FVector b2 = waypoints[ waypoints.size() - 2 ];
-    FVector b3 = waypoints[ waypoints.size() - 3 ];
+    FVector b1 = Waypoints[ Waypoints.size() - 1 ];
+    FVector b2 = Waypoints[ Waypoints.size() - 2 ];
+    FVector b3 = Waypoints[ Waypoints.size() - 3 ];
 
     // The two vectors between (b3, b2) and (b2, b1) must not have a large angle between them.
     FVector dir1 = b2 - b3;
@@ -559,11 +592,11 @@ void AGameObject::SetDestination( FVector d )
     if( dot < a )
     {
       // Pop the middle one
-      waypoints.erase( waypoints.begin() + ( waypoints.size() - 2 ) );
+      Waypoints.erase( Waypoints.begin() + ( Waypoints.size() - 2 ) );
     }
   }
 
-  Game->flycam->Visualize( waypoints );
+  Game->flycam->Visualize( Waypoints );
 
   // check for case:
   //
@@ -586,25 +619,21 @@ void AGameObject::SetDestination( FVector d )
   //  p.X, p.Y, p.Z, d.X, d.Y, d.Z );
 
   // spawn spheres at each visited waypoint
-  // find the pathway for this object using waypoints set in the level.
-  Dest = waypoints.front();
-  pop_front( waypoints );
-  followTarget = 0;
-  attackTarget = 0; // Unset the attack target
+  // find the pathway for this object using Waypoints set in the level.
+  Dest = Waypoints.front();
+  pop_front( Waypoints );
+  FollowTarget = 0;
+  AttackTarget = 0; // Unset the attack target
 
   //LOG( "%s travelling", *GetName() );
-  // use waypoints set in the level to find a pathway
+  // use Waypoints set in the level to find a pathway
   // to walk along, if an impassible is encountered along
   // the path.
 }
 
 void AGameObject::OnSelected()
 {
-  // Set this unit as selected in the game chrome.
-  Game->hud->ui->gameChrome->Select( this );
-
-  // Highlight the attack target of the currently selected object
-  Game->hud->SetAttackTargetSelector( attackTarget );
+  
 }
 
 FString AGameObject::PrintStats()
@@ -631,8 +660,6 @@ void AGameObject::BeginDestroy()
   // If the world object exists, then we can get the GameMode. The
   // world object doesn't exist on exit of the editor sometimes.
   
-  //LOG( "AWryvGameMode::RemoveUnit(%s) teamIndex=%d",
-  //  *go->Stats.Name, go->Stats.Team );
   if( team )
   {
     removeElement( team->units, this );

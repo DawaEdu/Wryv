@@ -19,7 +19,7 @@ void ACombatUnit::ai( float t )
   // unranged units, seek a ranged unit instead.
 
   // Try to find an enemy unit to attack.
-  attackTarget = GetClosestEnemyUnit();
+  AttackTarget = GetClosestEnemyUnit();
   
 }
 

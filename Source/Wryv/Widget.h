@@ -116,13 +116,13 @@ public:
   function< EventCode (FVector2D mouse) > OnMouseDragLeft;
   function< void (float t) > OnTick; // a function to run at each tick.
 
-  void defaults();
+  virtual void HotSpotDefaults();
   HotSpot( FString name ) {
-    defaults();
+    HotSpotDefaults();
     SetName( name );
   }
-  HotSpot( FString name, FVector2D size ) {
-    defaults();
+  HotSpot( FString name, FVector2D size ) {//: HotSpot( name ){
+    HotSpotDefaults();
     Size = size;
     SetName( name );
   }
@@ -141,7 +141,7 @@ protected:
       children[i]->render( offset + Pos() );
   }
 public:
-  virtual void Tick( float t ) {
+  virtual void Move( float t ) {
     displayTime -= t;
 
     // Hide if display time drops below 0, or delete it if it is not 'eternal'
@@ -156,7 +156,7 @@ public:
 
     // tick the children
     for( int i = 0; i < children.size(); i++ )
-      children[i]->Tick( t );
+      children[i]->Move( t );
 
     Clean();
   }
@@ -437,52 +437,66 @@ protected:
 class ImageWidget : public HotSpot
 {
 public:
+  static UTexture* NullTexture;
   UTexture* Tex;
   FVector2D uv; // The maximum coordinates of the UV texturing
   FVector2D hotpoint; // Usually top left corner (0,0), meaning will render from topleft corner.
   // if its half size, then it will render from the center (such as when an imageWidget is being
   // click-dragged
-  FLinearColor Color;
   float Rotation;
   FVector2D PivotPoint; // the pivot about which the rotation is based
-
-  ImageWidget( UTexture* pic ) : 
-    HotSpot( "ImageWidget" ),
-    Tex( pic ), uv( 1, 1 ), hotpoint(0,0),
-    Color(FLinearColor::White), Rotation( 0.f )
+  virtual void ImageWidgetDefaults(){
+    Tex = 0;
+    hotpoint = FVector2D(0,0);
+    uv = FVector2D(1,1);
+    Rotation = 0.f;
+  }
+  ImageWidget( FString name ) : HotSpot( name ) { 
+    ImageWidgetDefaults();
+  }
+  ImageWidget( FString name, UTexture* pic ) : HotSpot( name )
   {
+    ImageWidgetDefaults();
+    Tex = pic;
     if( Tex ) {
       SetName( Tex->GetName() );
       Size.X = Tex->GetSurfaceWidth();
       Size.Y = Tex->GetSurfaceHeight();
     }
   }
-  ImageWidget( FString name, UTexture* pic ) : 
-    HotSpot( name ),
-    Tex( pic ), uv( 1, 1 ), hotpoint(0,0),
-    Color(FLinearColor::White), Rotation( 0.f )
+  ImageWidget( FString name, UTexture* pic, FLinearColor color ) : HotSpot( name )
   {
-    if( Tex ){
+    ImageWidgetDefaults();
+    Tex = pic;
+    Color = color;
+    if( Tex ){ // assign size from tex
       Size.X = Tex->GetSurfaceWidth();
       Size.Y = Tex->GetSurfaceHeight();
     }
   }
-  ImageWidget( UTexture* pic, FVector2D size ) :
-    HotSpot( "ImageWidget", size ), 
-    Tex( pic ), uv( 1, 1 ), hotpoint(0,0), 
-    Color(FLinearColor::White), Rotation( 0.f )
-  {
-    if( pic ) SetName( Tex->GetName() );
-  }
-  ImageWidget( FString name, UTexture* pic, FVector2D size ) :
-    HotSpot( name, size ), 
-    Tex( pic ), uv( 1, 1 ), hotpoint(0,0), 
-    Color(FLinearColor::White), Rotation( 0.f )
-  {
-  }
 
+  // Size specified:
+  ImageWidget( UTexture* pic, FVector2D size ) : HotSpot( "ImageWidget", size )
+  {
+    ImageWidgetDefaults();
+    Tex = pic;
+    if( Tex ) SetName( Tex->GetName() );
+    // Don't assign size from tex
+  }
+  ImageWidget( FString name, UTexture* pic, FVector2D size ) : HotSpot( name, size )
+  {
+    ImageWidgetDefaults();
+    Tex = pic;
+  }
+  ImageWidget( FString name, UTexture* pic, FVector2D size, FLinearColor color ) : HotSpot( name, size )
+  {
+    ImageWidgetDefaults(); 
+    Tex = pic;
+    Color = color;
+    // Don't assign size from tex
+  }
+  
   virtual ~ImageWidget(){}
-
 protected:
   virtual void render( FVector2D offset ) override ;
 };
@@ -494,11 +508,10 @@ class ITextWidget : public ImageWidget
   // it can wrap/house the text in the textwidget inside
 public:
   FString GetText(){ return Text->Text; }
-  ITextWidget( UTexture* pic, FString ftext, int textAlignment, 
+  ITextWidget( FString name, UTexture* pic, FString ftext, int textAlignment, 
     UFont* font=0, float scale=1.f ) :
-    ImageWidget( pic )
+    ImageWidget( name, pic )
   {
-    Name = ftext;
     if( pic ) Name += pic->GetName();
     SetName( Name );
     Text = new TextWidget( ftext, font, scale );
@@ -509,11 +522,11 @@ public:
     FixedSize = 0;// when size not supplied, assumed to wrap the textwidget inside
   }
 
-  ITextWidget( UTexture* pic, FVector2D size, FString ftext, int textAlignment, 
+  ITextWidget( FString name, UTexture* pic, FVector2D size, FString ftext, int textAlignment, 
     UFont* font=0, float scale=1.f ) :
     ImageWidget( pic, size )
   {
-    Name = ftext;
+    Name = name;
     if( pic ) Name += pic->GetName();
     SetName( Name );
     Text = new TextWidget( ftext, font, scale );
@@ -548,15 +561,18 @@ public:
   }
 };
 
-class Cooldown : public ITextWidget
+class Clock : public ITextWidget
 {
 public:
   CooldownCounter counter; // The actual counter
+  FLinearColor clockColor;
   UMaterialInstanceDynamic *clockMaterial; //anim param
   
-  Cooldown( FString name, FVector2D size, CooldownCounter o, FLinearColor pieColor );
-  void CreateClockMaterial( FLinearColor pieColor );
-  virtual void Tick( float t ) override;
+  static UMaterialInstanceDynamic *CreateClockMaterial(FLinearColor color);
+  Clock( FString name, FVector2D size, CooldownCounter o, FLinearColor pieColor );
+  ~Clock();
+
+  virtual void Move( float t ) override;
   virtual void render( FVector2D offset ) override;
 };
 
@@ -564,15 +580,13 @@ class SolidWidget : public ImageWidget
 {
 public:
   static UTexture* SolidWhiteTexture;
-  SolidWidget( FLinearColor color ) :
-    ImageWidget( SolidWhiteTexture )
+  SolidWidget( FString name, FLinearColor color ) :
+    ImageWidget( name, SolidWhiteTexture, color )
   {
-    Color = color;
   }
-  SolidWidget( FLinearColor color, FVector2D size ) : 
-    ImageWidget( SolidWhiteTexture, size )
+  SolidWidget( FString name, FVector2D size, FLinearColor color ) : 
+    ImageWidget( name, SolidWhiteTexture, size, color )
   {
-    Color = color;
   }
   virtual ~SolidWidget(){}
 };
@@ -583,8 +597,16 @@ class StackPanel : public ImageWidget
 public:
   static UTexture* StackPanelTexture;
   
+  StackPanel( FString name ) :
+    ImageWidget( name )
+  {
+  }
   StackPanel( FString name, UTexture* bkg ) :
     ImageWidget( name, bkg )
+  {
+  }
+  StackPanel( FString name, UTexture* bkg, FLinearColor color ) :
+    ImageWidget( name, bkg, color )
   {
   }
   virtual ~StackPanel(){}
@@ -593,7 +615,10 @@ public:
   // texture not provided
   virtual void render( FVector2D offset ) override
   {
+    // Doesn't render the texture if it isn't set,
+    // so that clear background is allowed
     if( Tex )  ImageWidget::render( offset );
+
     // render children
     HotSpot::render( offset );
   }
@@ -665,13 +690,13 @@ public:
   {
     Thickness = thickness;
 
-    left = new SolidWidget( color );
+    left = new SolidWidget( "left", color );
     Add( left );
-    top = new SolidWidget( color );
+    top = new SolidWidget( "top", color );
     Add( top );
-    bottom = new SolidWidget( color );
+    bottom = new SolidWidget( "bot", color );
     Add( bottom );
-    right = new SolidWidget( color );
+    right = new SolidWidget( "right", color );
     Add( right );
 
     Set( box );
@@ -816,7 +841,7 @@ class Tooltip : public ITextWidget
 {
 public:
   Tooltip( UTexture* bkg, FString txt ) 
-    : ITextWidget( bkg, txt, CenterCenter )
+    : ITextWidget( "Tooltip", bkg, txt, CenterCenter )
   {
   }
   virtual ~Tooltip(){}
@@ -842,8 +867,8 @@ public:
 
   // Drag & Drop for items from slots
   // The item we are dragging (subhotspot)
-  SlotPalette( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
-    ImageWidget( bkg ), Rows(rows), Cols(cols), EntrySize(entrySize)
+  SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
+    ImageWidget( name, bkg ), Rows(rows), Cols(cols), EntrySize(entrySize)
   {
     Pad = pad;
     // Init w/ # slots used in this palette
@@ -867,14 +892,14 @@ public:
   // External users of class cannot add a textwidget for example to the slotpanel.
   // (make sure you don't add children to slotpanel that are not imageWidgets)
   // the children of an imagewidget CAN be textnodes etc.
-  Cooldown* GetSlot( int i )
+  Clock* GetSlot( int i )
   {
     if( i < 0 || i >= children.size() )
     {
       LOG(  "SlotPalette::GetSlot(%d) oob", i );
       return 0;
     }
-    return (Cooldown*)children[i];
+    return (Clock*)children[i];
   }
 
   // Gets you the adjusted size dimensions of a size
@@ -936,10 +961,11 @@ public:
   // Widget's by themselves are just hotspots
   vector<ITextWidget*> SetNumSlots( int rows, int cols )
   {
+    Clear();    // Remove the old SlotEntries
     vector<ITextWidget*> slots;
     Rows = rows;
     Cols = cols;
-
+    
     // If there are NO slots, then return here
     if( !rows && !cols ) {
       Hide(); // hides the SlotPalette when empty, this is the usual side effect of emptying all slots
@@ -951,14 +977,13 @@ public:
     int numSlots = rows*cols;
     // Measure the UV coordinates used since the texture is 6x6
     uv = FVector2D( cols/6., rows/6. ); // The texture is 6x6 blocks
-    Clear();    // Remove the old SlotEntries
     
     // The size of this widget set here.
     for( int i = 0; i < numSlots; i++ )
     {
       // initialize a bunch of cooldown counters
-      FString name = FString::Printf( TEXT("SP `%s`'s Cooldown %d"), *Name, i+1 );
-      Cooldown *cooldown = new Cooldown( name, EntrySize, 
+      FString name = FString::Printf( TEXT("SP `%s`'s Clock %d"), *Name, i+1 );
+      Clock *cooldown = new Clock( name, EntrySize, 
         CooldownCounter(), FLinearColor( 0.15, 0.15, 0.15, 0.15 ) );
       Add( cooldown );
       AdjustPosition( i );
@@ -971,24 +996,94 @@ public:
   }
 };
 
+class FlowPanel : public ImageWidget
+{
+public:
+  int Rows, Cols;
+  FlowPanel( FString name, UTexture* tex, int rows, int cols, FVector2D size ) :
+    ImageWidget( name, tex, size ), Rows( rows ), Cols( cols )
+  {
+  }
+  void reflow(){ reflow( Size ); }
+  void reflow( FVector2D size )
+  {
+    Size = size;
+    FVector2D ColsRows( Cols, Rows );
+    FVector2D tileDims = ( size - (Pad*ColsRows) ) / ColsRows;
+    // +---+---+---+
+    // |   |   |   |
+    // +---+---+---+
+    // |   |   |   |
+    // +---+---+---+
+    //   0   1   2
+    // Set new bounds for container
+    for( int i = 0; i < children.size(); i++ )
+    {
+      int row = i / Cols;
+      int col = i % Cols;
+      FVector2D pos = Pad/2 + ( Pad + tileDims ) * FVector2D( col, row );
+      children[i]->Margin = pos;
+      children[i]->Size = tileDims;
+    }
+  }
+
+  virtual void Move( float t )
+  {
+    reflow( Size );
+  }
+
+  void Set( AGameObject* go );
+  void Set( vector<AGameObject*> objects, int rows, int cols );
+};
+
+class StatsPanel : public StackPanel
+{
+public:
+  StatsPanel( FString name, UTexture* tex, FLinearColor color ) :
+    StackPanel( name, tex, color ) { }
+  void Set( AGameObject* go );
+};
+
+class Actions;
+
 // An abilities panel is a slotpalette but with the ability to populate
 // from a game object's capabiltiies
 class AbilitiesPanel : public SlotPalette
 {
+  Actions* actions;
 public:
-  AbilitiesPanel( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
-    SlotPalette( bkg, rows, cols, entrySize, pad ) { }
-  
+  // The Build button appears for Peasant-class units that build buildings.
+  static UTexture* BuildButtonTexture;
+  ITextWidget* buildButton;
+
+  // parent container is the actions panel
+  AbilitiesPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
 };
 
 class BuildPanel : public SlotPalette
 {
+  Actions *actions;
 public:
-  BuildPanel( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
-    SlotPalette( bkg, rows, cols, entrySize, pad ) { }
-  
+  BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
+};
+
+// set of slots for items.
+class ItemBelt : public SlotPalette
+{
+public:
+  ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
+  void Set( AUnit* go );
+};
+
+class Buffs : public StackPanel
+{
+public:
+  AGameObject* selected;
+  Buffs( FString name, UTexture* bkg ) : StackPanel( name, bkg ), selected( 0 ) { }
+  void Set( AGameObject* go );
+  virtual void Move( float t );
 };
 
 class Minimap : public ImageWidget
@@ -996,7 +1091,7 @@ class Minimap : public ImageWidget
   Border* borders;
 public:
   Minimap( UTexture* icon, float borderSize, FLinearColor borderColor ) : 
-    ImageWidget( icon )
+    ImageWidget( "minimap", icon )
   {
     FBox2DU box( FVector2D(0,0), Size );
     borders = new Border( "Minimap border", box, borderSize, borderColor );
@@ -1009,23 +1104,23 @@ class Actions : public HotSpot
 {
 public:
   AbilitiesPanel* abilities; // the group of abilities this unit is capable of
-  BuildPanel* buildings; // the group of buildings this unit can build
+  BuildPanel* buildPanel; // the group of buildPanel this unit can build
   Actions( FString name, FVector2D entrySize ) : HotSpot( name )
   {
-    abilities = new AbilitiesPanel( SlotPalette::SlotPaletteTexture, 2, 3,
+    abilities = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
       entrySize, FVector2D(8,8) );
     Add( abilities );
 
-    buildings = new BuildPanel( SlotPalette::SlotPaletteTexture, 2, 3,
+    buildPanel = new BuildPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
       entrySize, FVector2D(8,8) );
-    buildings->Hide();
-    Add( buildings );
+    buildPanel->Hide();
+    Add( buildPanel );
 
     recomputeSizeToContainChildren();
   }
 
-  void ShowAbilities(){ abilities->Show(); buildings->Hide(); }
-  void ShowBuildings(){ abilities->Hide(); buildings->Show(); }
+  void ShowAbilitiesPanel(){ abilities->Show(); buildPanel->Hide(); }
+  void ShowBuildingsPanel(){ abilities->Hide(); buildPanel->Show(); }
 };
 
 // The right-side panel
@@ -1041,24 +1136,24 @@ public:
   // +-----------+
   // | minimap   |
   // +-----------+
-  ImageWidget* portrait;  // pictoral representation of selected unit
-  TextWidget* unitStats;  // The stats of the last selected unit
+  FlowPanel* portraits;    // pictoral representation of selected unit
+  StatsPanel* stats;  // The stats of the last selected unit
   Actions* actions; // contains both the abilities & buildings pages
   Minimap* minimap;       // the minimap widget for displaying the world map
 
   // For the group of selected units.
   SidePanel( UTexture* texPanelBkg, UTexture* PortraitTexture, UTexture* MinimapTexture,
     FVector2D size, FVector2D spacing ) :
-    StackPanel( "Sidepanel", texPanelBkg )
+    StackPanel( "Sidepanel", texPanelBkg, FLinearColor::White )
   {
     Pad = spacing;
 
-    portrait = new ImageWidget( PortraitTexture );
-    portrait->Align = TopCenter;
-    StackBottom( portrait );
+    portraits = new FlowPanel( "FlowPanel", PortraitTexture, 1, 1, FVector2D( size.X, size.Y / 4 ) );
+    portraits->Align = TopCenter;
+    StackBottom( portraits );
 
-    unitStats = new TextWidget( "Stats:" );
-    StackBottom( unitStats );
+    stats = new StatsPanel( "Stats", SolidWidget::SolidWhiteTexture, FLinearColor(0.15,0.15,0.15,0.2) );
+    StackBottom( stats );
     
     actions = new Actions( "Actions", FVector2D(size.X/3,size.X/3) );
     StackBottom( actions );
@@ -1068,8 +1163,8 @@ public:
     
     // Add the leftBorder in as last child, because it takes up full height,
     // and stackpanel will stack it in below the border
-    SolidWidget *leftBorder = new SolidWidget( FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ),
-      FVector2D( 4, size.Y ) );
+    SolidWidget *leftBorder = new SolidWidget( "panel leftborder",
+      FVector2D( 4, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
     leftBorder->Margin = - Pad + FVector2D( -4, 0 );
     Add( leftBorder );
 
@@ -1082,10 +1177,9 @@ class StatusBar : public SolidWidget
 {
 public:
   TextWidget* Text;
-  StatusBar( FLinearColor bkgColor ) : SolidWidget( bkgColor )
+  StatusBar( FLinearColor bkgColor ) : SolidWidget( "status bar", bkgColor )
   {
     Align = Bottom | HFull;
-
     Text = new TextWidget( "status text" );
     Add( Text );
   }
@@ -1103,7 +1197,7 @@ public:
 
   Controls( UTexture* texPause ) : StackPanel( "Controls", 0 )
   {
-    Pause = new ImageWidget( texPause );
+    Pause = new ImageWidget( "pause", texPause );
     StackRight( Pause );
   }
 };
@@ -1153,7 +1247,7 @@ public:
     Selected( 0 ), Font( font )
   {
     // Throw in the title
-    Logo = new ImageWidget( logoTex );
+    Logo = new ImageWidget( "Logo", logoTex );
     Logo->Align = TopLeft;
     Logo->Margin = FVector2D( 75, 50 );
     Add( Logo );
@@ -1165,12 +1259,12 @@ public:
     MapFiles->Pad = FVector2D( 8,8 );
     Add( MapFiles );
 
-    Thumbnail = new ImageWidget( thumbnailTex );
+    Thumbnail = new ImageWidget( "Thumbnail", thumbnailTex );
     Thumbnail->Align = CenterRight;
     Thumbnail->Margin = FVector2D( 80, 0 );
     Add( Thumbnail );
 
-    OKButton = new ITextWidget( mapSlotEntryBkg, entrySize, "OK", CenterCenter );
+    OKButton = new ITextWidget( "Okbutton", mapSlotEntryBkg, entrySize, "OK", CenterCenter );
     OKButton->Align = BottomRight;
     OKButton->Margin = FVector2D( 20, 10 );
     
@@ -1180,7 +1274,7 @@ public:
   // Adds a slot
   ITextWidget* AddText( FString ftext, int textAlignment )
   {
-    ITextWidget* text = new ITextWidget(
+    ITextWidget* text = new ITextWidget( FS("mss text %s",*ftext),
       MapSlotEntryBkg, MapFileEntrySize, ftext, textAlignment );
     text->OnMouseDownLeft = [this,text](FVector2D mouse){
       Select( text );
@@ -1218,7 +1312,7 @@ public:
   // Add a series of mission objectives here
   ITextWidget* AddText( FString text, int align )
   {
-    ITextWidget *tw = new ITextWidget( SlotBkg, FVector2D( 100, 40 ), text, CenterCenter );
+    ITextWidget *tw = new ITextWidget( FS("MBText `%s`",*text), SlotBkg, FVector2D( 100, 40 ), text, CenterCenter );
     tw->Margin = FVector2D( 10, 0 );
     tw->Align = CenterLeft;
     return Add( tw );
@@ -1227,15 +1321,15 @@ public:
 #pragma endregion
 
 // The in-game chrome object, consisting of many subpanels etc
-// +-----------------------------+
-// | resourcesW     | rightPanel  |
-// |                |  Portrait   |
-// |                |  unitStats  |
-// |                |  abilities  |
-// |                | +---------+ |
-// |  +----------+  | | minimap | |
-// |  | itemBelt |  | +---------+ |
-// +--buffs-----------------------+
+// +---------------------------------+
+// | resourcesW        | rightPanel  |
+// |                   |  Portrait   |
+// |                   |  unitStats  |
+// |                   |  abilities  |
+// |                   | +---------+ |
+// |  +-------------+  | | minimap | |
+// |  | itemBelt/bq |  | +---------+ |
+// +--buffs--------------------------+
 class GameChrome : public Screen
 {
 public:
@@ -1244,8 +1338,8 @@ public:
   CostWidget* costWidget;     // a flyover cost of the hovered item from 
   Tooltip* tooltip;
 
-  SlotPalette* itemBelt;  // things this unit is carrying, at the bottom of the screen
-  StackPanel* buffs;      // list of buffs applied to this unit
+  ItemBelt* itemBelt;  // things this unit is carrying, at the bottom of the screen
+  Buffs* buffs;      // list of buffs applied to this unit
   BuildQueue* buildQueue; // Queue of things we are building (in order)
   Controls* controls;     // 
   
@@ -1258,8 +1352,9 @@ public:
     buffs = 0, buildQueue = 0, controls = 0;
   }
 
+  // When an object is selected
   void Select( AGameObject *go );
-  void Select( TArray<AGameObject*> objects );
+  void Select( vector<AGameObject*> objects, int rows, int cols );
 };
 
 class Title : public Screen
@@ -1268,7 +1363,7 @@ public:
   ImageWidget *graphic;
   Title( UTexture* titleTex ) : Screen( "Title screen" )
   {
-    graphic = new ImageWidget( titleTex );
+    graphic = new ImageWidget( "title graphic", titleTex );
     graphic->Align = Full;
     Add( graphic );
   }

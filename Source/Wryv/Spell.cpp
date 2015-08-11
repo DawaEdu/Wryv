@@ -6,7 +6,7 @@
 ASpell::ASpell(const FObjectInitializer& PCIP) : AGameObject(PCIP)
 {
   PrimaryActorTick.bCanEverTick = true;
-  attackTarget = 0;
+  AttackTarget = 0;
   init = 0;
   caster = 0;
 }
@@ -50,19 +50,6 @@ void ASpell::ProxSpell_Implementation( AActor* OtherActor,
     Game->Make( OnContact.GetValue(), Pos, Stats.Team );
     UGameplayStatics::SpawnEmitterAtLocation( GetWorld(), 0, Pos );
     Destroy();
-  }
-}
-
-void ASpell::Tick( float t )
-{
-  Super::Tick( t );
-
-  // The init function runs after object construction,
-  // For some reason, there's a bug in UE 4.7 that causes 
-  // the blueprint to not get loaded.
-  if( !init )
-  {
-    Init();
   }
 }
 

@@ -26,13 +26,14 @@ public:
   // The current direction the game object is facing.
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
+  FVector OriginalScale; // The original scale set by the actor in 3D space
   // Scalar speed for the unit at the present time. Velocity comes from speed
   // and refreshed each frame.
   // Current speed. modified from Stats.Speed (depending on buffs applied).
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
-  float attackCooldown; // Cooldown on this unit since last attack
-  bool repairing;       // If the building/unit is repairing
+  float AttackCooldown; // Cooldown on this unit since last attack
+  bool Repairing;       // If the building/unit is Repairing
   
   // The full set of units data.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
@@ -42,31 +43,24 @@ public:
   //   0.025 => FUnitsDataRow(),  0.150 => FUnitsDataRow(),  0.257 => FUnitsDataRow()
   vector< PowerUpTimeOut > BonusTraits;
   
-  
   //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* bounds;
   // Instances of units abilities and their cooldown (if any)
   vector<Ability> Abilities;
   
   // Do we use the datatable to fill this unit with data.
   bool LoadsFromTable;
-  vector<FVector> waypoints;
+  vector<FVector> Waypoints;
   FVector Dest; // The movement destination
   
   // The unit that this unit is currently attacking
   // When casting a spell, if there is an attack target,
   // the spell goes at the attack target.
   // If the unit is casting a spell and the spell targets ground,
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *followTarget;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *FollowTarget;
   // Readable in blueprints for animation
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *attackTarget;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *AttackTarget;
 
-  // When the attacktarget is the ground, we set attackTargetOffset to
-  // nonzero value to make the spell go towards that direction.
-  FVector attackTargetOffset;
-
-  // Next spell to be cast by this target,
-  // This variable is here because the unit may not be in range
-  // @ time spell is queued.
+  FVector AttackTargetOffset;
   Types NextSpell;
   Team *team;   // Contains the team logic.
 
@@ -75,10 +69,18 @@ public:
   template <typename T> vector<T*> GetComponentsByType() {
     return ::GetComponentsByType<T>( this );
   }
-  virtual void BeginPlay() override;
   virtual void PostInitializeComponents();
-  bool ally( AGameObject* go );
-  bool enemy( AGameObject* go );
+  virtual void BeginPlay() override;
+  virtual void OnMapLoaded();
+
+  // Functions to change parenting of the object, in Actor class
+  AGameObject* SetParent( AGameObject* newParent );
+  AGameObject* AddChild( AGameObject* newChild );
+  bool isParentOf( AGameObject* go );
+  bool isChildOf( AGameObject* parent );
+
+  bool isAlly( AGameObject* go );
+  bool isEnemy( AGameObject* go );
   void removeAsTarget();
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
@@ -86,8 +88,8 @@ public:
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float distanceToAttackTarget();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float hpPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float speedPercent();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return attackTarget != 0; }
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return followTarget != 0; }
+  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
+  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
 
   FRotator GetRot();
   void SetRot( FRotator & ro );
@@ -122,7 +124,7 @@ public:
   // Set the color of the actor
   void SetDestination( FVector d );
   void RefreshBuildingQueue();
-  virtual void OnSelected();
+  void OnSelected();
   FString PrintStats();
   float GetBoundingRadius();
 

@@ -67,7 +67,7 @@ void Team::Construct( Types buildingType )
     if( CanAfford( buildingType ) )
     {
       // Create the building and set it as a target for the peasant
-      p->PlaceBuildingAtRandomLocation( buildingType );
+      p->aiPlaceBuildingAtRandomLocation( buildingType );
     }
   }
 }
@@ -75,11 +75,20 @@ void Team::Construct( Types buildingType )
 void Team::AddUnit( AGameObject *go )
 {
   units.push_back( go );
+  go->team = this;
 }
 
 void Team::RemoveUnit( AGameObject *go )
 {
   removeElement( units, go );
+  go->team = 0;
+}
+
+void Team::OnMapLoaded()
+{
+  // Call OnMapLoaded() for all gameobjects
+  for( int i = 0; i < units.size(); i++ )
+    units[i]->OnMapLoaded();
 }
 
 bool Team::Has( Types objectType )
@@ -195,8 +204,8 @@ void Team::runAI( float t )
       AGameObject* g = oTeam->units[j];
 
       // If the attack target of the opponent piece is for a unit on this team, count it.
-      if( g->attackTarget && g->attackTarget->team == this )
-        numAttackers[ g->attackTarget ]++;
+      if( g->AttackTarget && g->AttackTarget->team == this )
+        numAttackers[ g->AttackTarget ]++;
     }
   }
 
@@ -215,7 +224,7 @@ void Team::runAI( float t )
 
   // Send the units after most attacked unit on your team
   for( int i = 0; i < units.size(); i++ )
-    if( !units[i]->attackTarget )
+    if( !units[i]->AttackTarget )
       units[i]->SetDestination( target->Pos );
 
   // Scout militia if they aren't engaged
@@ -225,7 +234,7 @@ void Team::runAI( float t )
     int groupSize = randInt( 2, 3 );
     vector<AGameObject*> group;
     for( int i = 0; i < units.size() && group.size() < groupSize; i++ )
-      if( !units[i]->attackTarget )
+      if( !units[i]->AttackTarget )
         group.push_back( units[i] );
     // Find a random location on the map, and send the group off towards it
     FBox box = Game->flycam->floor->GetComponentsBoundingBox();
