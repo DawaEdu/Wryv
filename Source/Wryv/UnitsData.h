@@ -18,12 +18,14 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
   // How many of this thing is in this instance (used for items)
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Quantity;
-  // Build cost
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 GoldCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 LumberCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 StoneCost;
-  // Casting cost
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 ManaCost;
+  // If a spell or attack is AOE, it can be cast on the floor
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AOE;
+  // Radius of the attack
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AOERadius;
   // Repair costs a fraction of GoldCost, LumberCost, StoneCost per HP recovered.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float RepairHPFractionCost;
   // How many seconds per HP recovered, when Repairing
@@ -46,8 +48,8 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackRange;
   // The range this unit can pick things up from.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float PickupRange;
-  // Team id it belongs to
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Team;
+  // TeamId id it belongs to
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 TeamId;
   // Food this structure supplies (Farms + townhall)
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 FoodProvided;
   /// How much the unit or building uses
@@ -72,13 +74,28 @@ public:
   FUnitsDataRow()
   {
     Type = NOTHING;
-    GoldCost = LumberCost = StoneCost = BuildTime = SpeedMax = HpMax = Armor = SightRange = 
-      AttackDamage = AttackCooldown = AttackRange = Team = FoodProvided = FoodUsed = 0;
+    Portrait = 0;
+    Description = "Description";
     Quantity = 1;
-    TimeLength = 0.f;
+    GoldCost = LumberCost = StoneCost = ManaCost = 0;
+    AOE = 0;
+    AOERadius = 0.f;
+    RepairHPFractionCost = 0.f;
+    RepairRate = 0.f;
+    BuildTime = 0.f;
+    SpeedMax = 10000.f;
+    HpMax = 100.f;
+    Armor = 1.f;
+    SightRange = 10000.f;
+    AttackDamage = 10.f;
+    AttackCooldown = 2.f;
+    AttackRange = 100.f;
+    PickupRange = 100.f;
+    TeamId = 0;
+    FoodProvided = 0;
+    FoodUsed = 1;
+    TimeLength = 10.f;
     uClass = 0;
-    PickupRange = 100;
-    SpeedMax = 100;
   }
 
   FUnitsDataRow operator+=( const FUnitsDataRow& row )
@@ -98,24 +115,6 @@ public:
     return r;
   }
 
-  FString ToString()
-  {
-    FString fs;
-    fs = FString::Printf(
-      TEXT( "%s [%s]: %s goldcost=%d lumbercost=%d stonecost=%d buildtime=%d " ), 
-      *Name, *Description, *GetEnumName( Type ),
-      GoldCost, LumberCost, StoneCost, BuildTime );
-    fs += FString::Printf( TEXT("speed=%d Hp=%d armor=%d ")
-      TEXT("sightrange=%d attackdamage=%d attackcooldown=%d ")
-      TEXT("attackrange=%d"),
-      SpeedMax, HpMax, Armor, SightRange, AttackDamage, AttackCooldown, AttackRange );
-    return fs;
-  }
-
-  //void Print()
-  //{
-  //  LOG( ToString() );
-  //}
 };
 
 struct PowerUpTimeOut

@@ -56,7 +56,7 @@ void Team::Construct( Types buildingType )
   APeasant *p = GetNextAvailablePeasant();
   if( !p )
   {
-    LOG( "Cannot construct %s, no available peasants!", *GetEnumName(buildingType) );
+    LOG( "Cannot construct %s, no available peasants!", *GetTypesName(buildingType) );
     return;
   }
   else
@@ -117,12 +117,12 @@ bool Team::CanBuild( Types buildingType )
 
 bool Team::Spend( Types type )
 {
-  FUnitsDataRow row = Game->unitsData[ type ];
+  FUnitsDataRow ud = Game->unitsData[ type ];
   if( CanAfford( type ) )
   {
-    Gold   -= row.GoldCost;
-    Lumber -= row.LumberCost;
-    Stone  -= row.StoneCost;
+    Gold   -= ud.GoldCost;
+    Lumber -= ud.LumberCost;
+    Stone  -= ud.StoneCost;
     return 1;
   }
   return 0;

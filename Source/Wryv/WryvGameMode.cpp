@@ -6,11 +6,18 @@
 
 AWryvGameMode::AWryvGameMode(const FObjectInitializer& PCIP) : Super( PCIP )
 {
-  PrimaryActorTick.bCanEverTick = true;
   LOG("AWryvGameMode::AWryvGameMode()");
+  PrimaryActorTick.bCanEverTick = true;
   T = 1.f / 60.f;
   GameSpeed = 1.f;
   tick = 0;
+}
+
+Team* AWryvGameMode::GetTeam( int32 teamId )
+{
+  Team* team = teams[ teamId ];
+  check( team && "Team not existing" );
+  return team;
 }
 
 void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage )

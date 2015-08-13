@@ -54,7 +54,7 @@ void AItemShop::ProxEnd_Implementation( AActor* OtherActor, UPrimitiveComponent*
     for( int i = 0; i < actors.Num(); i++ )
     {
       AActor *a = actors[i];
-      if( AUnit*u = Cast<AUnit>( a ) )
+      if( AUnit *u = Cast<AUnit>( a ) )
       {
         patron = u;
         LOG(  "%s exited prox, Unit %s proxed itemshop",

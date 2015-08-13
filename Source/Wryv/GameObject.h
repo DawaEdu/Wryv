@@ -9,6 +9,7 @@ using namespace std;
 #include "Types.h"
 #include "UnitsData.h"
 #include "Ability.h"
+#include "SoundEffect.h"
 #include "GameFramework/Actor.h"
 #include "GameObject.generated.h"
 
@@ -20,65 +21,58 @@ UCLASS()
 class WRYV_API AGameObject : public AActor
 {
   GENERATED_UCLASS_BODY()
+  const static float WaypointAngleTolerance; // 
+  const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
 public:
-  // The position of the gameobject. This is actually a mirror of RootComponent->GetActorLocation()
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Pos;
-  // The current direction the game object is facing.
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
-  FVector OriginalScale; // The original scale set by the actor in 3D space
-  // Scalar speed for the unit at the present time. Velocity comes from speed
-  // and refreshed each frame.
-  // Current speed. modified from Stats.Speed (depending on buffs applied).
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* bounds;
+  
+  // 
+  // Stats.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
+  vector< PowerUpTimeOut > BonusTraits;
+  vector< Ability > Abilities;
+  Team *team;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float AttackCooldown; // Cooldown on this unit since last attack
   bool Repairing;       // If the building/unit is Repairing
-  
-  // The full set of units data.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
-  // The current frame's traits
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
-  // List set of traits that gets applied due to powerups
-  //   0.025 => FUnitsDataRow(),  0.150 => FUnitsDataRow(),  0.257 => FUnitsDataRow()
-  vector< PowerUpTimeOut > BonusTraits;
-  
-  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* bounds;
-  // Instances of units abilities and their cooldown (if any)
-  vector<Ability> Abilities;
-  
-  // Do we use the datatable to fill this unit with data.
-  bool LoadsFromTable;
+  vector<CooldownCounter> BuildQueueCounters;  // The queue of objects being spawned
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Attacks;
+
+  // 
+  // Movement & Attack.
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Pos;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
+  FVector Dest;
   vector<FVector> Waypoints;
-  FVector Dest; // The movement destination
-  
-  // The unit that this unit is currently attacking
-  // When casting a spell, if there is an attack target,
-  // the spell goes at the attack target.
-  // If the unit is casting a spell and the spell targets ground,
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *FollowTarget;
-  // Readable in blueprints for animation
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject *AttackTarget;
-
-  FVector AttackTargetOffset;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
+  FVector AttackTargetOffset;  // Ground position of spell attacks
   Types NextSpell;
-  Team *team;   // Contains the team logic.
 
-  // The queue of objects being spawned. Each has a time before it is spawned.
-  vector<CooldownCounter> buildQueue;
+  // 
+  // UE4 & Utility
   template <typename T> vector<T*> GetComponentsByType() {
     return ::GetComponentsByType<T>( this );
   }
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
-
-  // Functions to change parenting of the object, in Actor class
+  
+  // 
+  // Scenegraph management.
   AGameObject* SetParent( AGameObject* newParent );
   AGameObject* AddChild( AGameObject* newChild );
   bool isParentOf( AGameObject* go );
   bool isChildOf( AGameObject* parent );
+  AGameObject* MakeChild( UClass* uclass );
 
+  // 
+  // Gameplay.
   bool isAlly( AGameObject* go );
   bool isEnemy( AGameObject* go );
   void removeAsTarget();
@@ -90,44 +84,44 @@ public:
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float speedPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
-
-  FRotator GetRot();
-  void SetRot( FRotator & ro );
-
+  void CastSpell();
   void CastSpell( Types type, AGameObject *target );
+  void CastSpell( Types type, FVector where );
   void ApplyEffect( FUnitsDataRow item );
-  // Use an ability. Abilities with a target
-  // will switch the game's UI mode into a "select target" mode.
   void UseAbility( Ability& ability );
-  // Invokation of an ability with a target.
   void UseAbility( Ability& ability, AGameObject *target );
   void UpdateStats();
   bool Build( Types type );
-
+  
+  // 
+  // Movement functions.
+  void SetRot( FRotator & ro );
   bool Reached( FVector& v, float dist );
-  void UpdateDestination();
-  void MoveTowards( float t );
+  void CheckWaypoint();
+  void Walk( float t );
   virtual void SetTarget( AGameObject* go );
   void StopMoving();
   void Stop();
   FVector SetOnGround( FVector v );
-  // Game's Move function. This is separate from UE4's ::Tick() function,
-  // to create deterministic call order.
+  void SetDestination( FVector d );
   virtual void Move( float t );
   virtual void ai( float t );
   void fight( float t );
+
+  // 
+  // ai
   AGameObject* GetClosestEnemyUnit();
 	map<float, AGameObject*> FindEnemyUnitsInSightRange();
 	AGameObject* GetClosestObjectOfType( Types type );
 
+  // 
+  // Utility
   bool LOS( FVector p );
-  // Set the color of the actor
-  void SetDestination( FVector d );
-  void RefreshBuildingQueue();
   void OnSelected();
-  FString PrintStats();
   float GetBoundingRadius();
-
+  void SetTeam( int32 teamId );
+  void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }
+  
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]

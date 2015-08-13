@@ -77,9 +77,9 @@ bool APlayerControl::TraceMulti(const FVector2D ScreenPosition, vector<FHitResul
 			FVector origin, direction, endPt;
       SceneView->DeprojectFVector2D(ScreenPosition, origin, direction);
       endPt = origin + direction * 100000.f;
-      LOG( "sp: (%f, %f)\n", ScreenPosition.X, ScreenPosition.Y );
-      LOG( "origin: (%f, %f, %f)\n", origin.X, origin.Y, origin.Z );
-      LOG( "direction: (%f, %f, %f)\n", endPt.X, endPt.X, endPt.Z );
+      info( FS( "sp: (%f, %f)\n", ScreenPosition.X, ScreenPosition.Y ) );
+      info( FS( "origin: (%f, %f, %f)\n", origin.X, origin.Y, origin.Z ) );
+      info( FS( "direction: (%f, %f, %f)\n", endPt.X, endPt.X, endPt.Z ) );
       
       FCollisionQueryParams fqp("ClickableTrace", true);
       TArray<FHitResult> res;
@@ -142,28 +142,23 @@ bool APlayerControl::Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& 
 	return false;
 }
 
-vector<FVector> APlayerControl::GetFrustumCorners()
+bool APlayerControl::IsKeyDown( FKey key )
 {
-  vector<FVector> v;
-  return v;
+  //return GetInputKeyTimeDown( key ) != 0.f;
+  return IsInputKeyDown( key );
 }
 
-vector<FVector> APlayerControl::GetFrustumIntersectionWith( AActor* actor )
+bool APlayerControl::IsAnyKeyDown( vector<FKey> keys )
 {
-  vector<FVector> v;
-  return v;
-}
-
-bool APlayerControl::IsDown( FKey key )
-{
-  return GetInputKeyTimeDown( key ) != 0.f;
+  bool d = 0;
+  for( int i = 0; i < keys.size(); i++ )
+    d |= IsInputKeyDown( keys[i] );
+  return d;
 }
 
 void APlayerControl::Tick( float t )
 {
   Super::Tick( t );
-
-  //CurrentInputStack.Add( 
 
   // Tick Player Input as if unpaused, regardless
   TickPlayerInput( t, 0 );

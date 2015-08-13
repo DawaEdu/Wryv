@@ -30,6 +30,7 @@ public:
   Team *neutralTeam, *playersTeam, *enemyTeam;
   
   AWryvGameMode(const FObjectInitializer& PCIP);
+  Team* GetTeam( int32 teamId );
   virtual void InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage ) override;
   virtual void StartPlay();
   virtual void StartMatch();

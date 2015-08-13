@@ -60,7 +60,7 @@ enum Types
 UENUM()
 enum GameStates
 {
-  TitleScreen = 0   UMETA(DisplayName = "TitleScreen"),
+  Title = 0         UMETA(DisplayName = "Title"),
   MapSelect         UMETA(DisplayName = "MapSelect"),
   Running           UMETA(DisplayName = "Running"),
 };
@@ -84,9 +84,16 @@ inline bool IsSpell( Types b ) {
   return Between( b, SPELLFIRE, SPELLLIGHTNINGSPLASH );
 }
 
-inline FString GetEnumName( Types enumValue )
+inline FString GetEnumName( TCHAR* enumType, int enumValue )
 {
-  const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT("Types"), true);
+  TCHAR* t = L"Types";
+  const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, enumType, true);
+  return EnumPtr->GetDisplayNameText(enumValue).ToString();
+}
+
+inline FString GetTypesName( Types enumValue )
+{
+  const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT( "Types" ), true);
   return EnumPtr->GetDisplayNameText(enumValue).ToString();
 }
 

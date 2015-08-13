@@ -18,7 +18,7 @@ class APlayerControl;
 class AFlyCam;
 class AGameObject;
 class SlotPalette;
-class Tooltip;
+class ITextWidget;
 class CostWidget;
 class ImageWidget;
 class StackPanel;
@@ -59,7 +59,7 @@ public:
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
 
   // Because canvas has to be valid for box selection to work it seems
-  bool WillSelectNextFrame;
+  bool WillSelectNextFrame, SelectAdds;
 
   // The buttons currently showing on the user interface.
   UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
@@ -81,12 +81,12 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
-  AGameObject* SelectedObject;  // The texture etc to use for last clicked object
   Types NextSpell;  // The next spell to be cast by the UI, 0 if no spell is queued & ready
   Types NextBuilding;  // NULL if no building is trying to be placed.
 
-  // This is the ring shaped selector that gets attached to the currently selected unit
-  AWidget3D *selector, *selectorAttackTarget, *selectorShopPatron;
+  // This is the ring shaped selector that gets attached to the currently selected unit(s)
+  vector<AWidget3D*> selectors, selAttackTargets;
+  AWidget3D *selectorShopPatron;
 
   // Make a texture for rendering the fog of war to
   UCanvasRenderTarget2D* RTFogOfWar; // : UTexture
@@ -100,21 +100,22 @@ public:
   
   ATheHUD(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
+  TArray<FAssetData> ScanFolder( FName folder );
   
   EventCode BeginBoxSelect( FVector2D mouse );
   EventCode Hover( FVector2D mouse );
   EventCode DragBoxSelect( FVector2D mouse );
   EventCode EndBoxSelect( FVector2D mouse );
+  vector<AGameObject*> Pick( FBox2DU box );
+
+  vector<AGameObject*> Select( vector<AGameObject*> objects );
+  
+  void Unselect( AGameObject* object );
+  void UnselectAsTarget( AGameObject* object );
   EventCode TogglePause();
 
-  TArray<FAssetData> ScanFolder( FName folder );
   void InitWidgets();
-  void InitTitleScreenWidgets();
-  void InitMenuWidgets();
-  void InitInGameWidgets();
-
   void Setup();
-  void BoxSelect( FBox2DU box );
   
   void UpdateDisplayedResources();
   void UpdateMouse();
@@ -127,9 +128,8 @@ public:
 
   UFUNCTION()
   void DrawFogOfWar(UCanvas* theCanvas, int32 Width, int32 Height);
+  void DrawPortrait();
   virtual void DrawHUD() override;
-
-  void Select( AGameObject* go );
 
   // Which widget was hit by the mouse
   HotSpot* MouseDownLeft( FVector2D mouse );

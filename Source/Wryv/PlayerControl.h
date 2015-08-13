@@ -21,11 +21,8 @@ public:
   bool TraceMulti(const FVector2D ScreenPosition, vector<FHitResult>& HitResult);
 	bool Trace(FVector2D ScreenPosition, AActor* actor, FHitResult& hit);
 
-  // Gets you the view frustum's far corners
-  vector<FVector> GetFrustumCorners();
-  vector<FVector> GetFrustumIntersectionWith( AActor* actor );
-
-  bool IsDown( FKey key );
+  bool IsKeyDown( FKey key );
+  bool IsAnyKeyDown( vector<FKey> key );
   virtual void Tick( float t ) override;
 
 };

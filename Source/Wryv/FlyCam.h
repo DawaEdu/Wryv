@@ -6,6 +6,8 @@ using namespace std;
 #include "Types.h"
 #include "GameFramework/Pawn.h"
 #include "FogOfWar.h"
+#include "UISounds.h"
+#include "SoundEffect.h"
 #include "FlyCam.generated.h"
 
 class ATheHUD;
@@ -26,14 +28,14 @@ public:
   Pathfinder *pathfinder;
   UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
   AFogOfWar* fogOfWar;  // The fog of war instance plane, constructed from the uclass listed above
-  
+  vector<AGameObject*> Selected;  // The texture etc to use for last clicked object
+
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
   
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* bkgMusic;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundBase* buildingPlaced;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  USoundAttenuation* soundAttenuationSettings;
+  // Use a TARRAY to keep sfx organized, includes music & effects
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
 
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* White;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* Red;
@@ -93,7 +95,7 @@ public:
   bool intersectsAnyOfType( AActor* actor, vector<Types>& types );
   
   void FindFloor();
-  void Select( AGameObject* go );
+  void Select( vector<AGameObject*> objects );
   void MouseUpLeft();
   void MouseDownLeft();
   void MouseUpRight();
@@ -108,7 +110,10 @@ public:
   void MoveBack( float amount );
   void MoveLeft( float amount );
   void MoveRight( float amount );
-  
+  void PlaySound( UISounds sound ){
+    UGameplayStatics::PlaySoundAttached( SFX[ sound ].Sound, RootComponent );
+  }
+
 	virtual void Tick( float t ) override;
 	
 };

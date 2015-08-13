@@ -11,6 +11,7 @@
 #include "Pathfinder.h"
 #include "Peasant.h"
 #include "Types.h"
+#include "UISounds.h"
 #include "GameFramework/PlayerInput.h"
 
 // Sets default values
@@ -573,13 +574,15 @@ void AFlyCam::FindFloor()
   }
 }
 
-void AFlyCam::Select( AGameObject* go )
+void AFlyCam::Select( vector<AGameObject*> objects )
 {
-  // Run its OnSelected function, playing sounds etc.
-  go->OnSelected();
-
   // Change UI to reflect selected object
-  Game->hud->Select( go );
+  Game->hud->Select( objects );
+
+  // Run its OnSelected function, playing sounds etc.
+  for( int i = 0; i < objects.size(); i++ )
+    objects[i]->OnSelected();
+  
 }
 
 void AFlyCam::MouseUpLeft()
@@ -595,86 +598,77 @@ void AFlyCam::MouseDownLeft()
   // If the mouse click intersected a HUD element,
   // we don't let the click pass through to the 3d surface below it.
   if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
+  FUnitsDataRow NextSpell = Game->GetData( Game->hud->NextSpell );
   
-  FHitResult hitResult = getHitGeometry();
-  AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
-  if( hitResult.GetActor() ) {
-    LOG( "Clicked object %s", *hitResult.GetActor()->GetName() );
-  }
-
-  if( !hit   &&   hitResult.GetActor() ) {
-    LOG( "Clicked object %s was not a GameObject class derivative", *hitResult.GetActor()->GetName() );
-  }
-  if( !hit )  return;
-
-  AGameObject* lo = Game->hud->SelectedObject;
-  if( lo )
+  // If a spell queued to be cast, a left click casts it
+  if( NextSpell.Type != NOTHING )
   {
-    // If a spell is queued, cast it @ hit object.
-    if( Game->hud->NextSpell )
-    {
-      lo->CastSpell( Game->hud->NextSpell, hit );
-      Game->hud->NextSpell = NOTHING;
+    if( !Selected.size() ) return;  // can't cast the spell with no caster.
+
+    // Cast the spell.
+    // if the spell requires a target, check that we got one
+    FHitResult hitResult = getHitGeometry();
+    AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+    if( hit ) { // Spell target
+      // These cast on next turn, they can't cast from UI click directly
+      // since engine needs to record cast event 
+      for( AGameObject *se : Selected )
+        se->CastSpell( NextSpell.Type, hit );
     }
-    else if( Game->hud->NextBuilding ) // A building is attempted to being placed by selected peasant
+    else if( NextSpell.AOE )
     {
-      // If ghost doesn't intersect any existing buildings then place it.
-      vector<AActor*> except;
-      except.push_back( ghost );
-      except.push_back( floor );
-      if( !intersectsAny( ghost, except ) )
+      // Cast the spell on the ground 
+      for( AGameObject *se : Selected )
+        se->CastSpell( NextSpell.Type, getHitFloor() );
+    }
+    else
+    {
+      // Its not an AOE spell, and no target was hit by the click then error
+      LOG( "Target was not selected" );
+    }
+  }
+  else if( Game->hud->NextBuilding )
+  {
+    FUnitsDataRow NextBuilding = Game->GetData( Game->hud->NextBuilding );
+
+    // Build the building. If ghost doesn't intersect any existing buildings then place it.
+    vector<AActor*> except;
+    except.push_back( ghost );
+    except.push_back( floor );
+    if( !intersectsAny( ghost, except ) )
+    {
+      // Otherwise, the building can be placed here spawn a copy
+      // of the building, if the person has enough gold, lumber, stone to build it
+      if( Game->gm->playersTeam->CanAfford( NextBuilding.Type ) )
       {
-        // Otherwise, the building can be placed here spawn a copy
-        // of the building, if the person has enough gold, lumber, stone to build it
-        if( Game->gm->playersTeam->CanAfford( Game->hud->NextBuilding ) )
+        Game->gm->playersTeam->Spend( Game->hud->NextBuilding );
+        PlaySound( UISounds::BuildingPlaced );
+
+        // It goes down as a little turf thing
+        AGameObject* building = Game->Make( NextBuilding.Type, ghost->Pos, ghost->team->teamId );
+        
+        // Selected objects will go build it
+        for( AGameObject* se : Selected )
         {
-          if( APeasant *p = Cast<APeasant>( Game->hud->SelectedObject ) )
+          // let the selected lastObject build the building
+          if( APeasant* peasant = Cast<APeasant>( se ) )
           {
-            UGameplayStatics::PlaySoundAttached( buildingPlaced, RootComponent );
-            Game->gm->playersTeam->Spend( Game->hud->NextBuilding );
-            
-            // Place the building in the position indicated
-            // let the selected lastObject build the building
-            //lo->NextBuilding = Game->hud->NextBuilding;
-            p->Build( Game->hud->NextBuilding, ghost->Pos );
-
-            // Null last clicked widget so building can't be
-            // placed again unless selected
-            Game->hud->NextBuilding = NOTHING;
-
-            // leave the ghost where it was
-            // delete the ghost
-            ghost->Destroy();
-            ghost = 0;
+            // Send the peasant to build the building
+            peasant->Build( Game->hud->NextBuilding, ghost->Pos );
           }
         }
+
+        // Null last clicked widget so building can't be placed again unless selected
+        Game->hud->NextBuilding = NOTHING;
+
+        // leave the ghost where it was delete the ghost
+        ghost->Destroy();
+        ghost = 0;
       }
     }
   }
   
-  // When not placing a building OR casting a spell, we're picking something.
-  // from the screen whose info should be displayed in the sidebar.
-  //LOG( "Clicked on %s", *hit->Stats.Name );
   
-  // Here we check if we need to change the selected unit  
-  // Change selected object, as long as a spell wasn't queued on LO
-  if( hit != floor )
-  {
-    // if there is a lastObject WITH a spell queued, then don't change the selected object.
-    if( lo   &&   lo->NextSpell )
-    {
-      // Setting spell target to the object that was hit
-    }
-    else
-    {
-      Select( hit );
-    }
-  }
-
-  ///////////////////////////
-  // position on lastClicked object is basically where on the object
-  // the building is to be placed.
-  //LOG( "%f %f %f", hitPos.X, hitPos.Y, hitPos.Z );
 }
 
 void AFlyCam::MouseUpRight()
@@ -685,33 +679,21 @@ void AFlyCam::MouseUpRight()
 void AFlyCam::MouseDownRight()
 {
   LOG( "MouseDownRight" );
-  AGameObject *lo = Game->hud->SelectedObject;
   FHitResult hit = getHitGeometry();
-  if( hit.Actor != floor )
+  AGameObject* target = Cast<AGameObject>( hit.GetActor() );
+  // There's a GameObject target
+  if( target && target != floor )
   {
     // An actor was hit by the click
-    if( lo )
-    {
-      AGameObject *go = Cast<AGameObject>( hit.Actor.Get() );
-      if( go )
-      {
-        lo->SetTarget( Cast<AGameObject>( hit.Actor.Get() ) );
-      }
-      else
-      {
-        LOG( "Cannot target non-gameobject %s", *hit.Actor.Get()->GetName() ) ;
-      }
-    }
+    for( int i = 0; i < Selected.size(); i++ )
+      Selected[i]->SetTarget( target );
   }
   else
   {
-    // Send unit to a specific location on the floor.
     FVector loc = getHitFloor();
-    LOG( "Right click occurred @ (%f, %f, %f)",
-      loc.X, loc.Y, loc.Z );
-    if( lo )
-    {
-      lo->SetDestination( loc );
+    for( int i = 0; i < Selected.size(); i++ ) {
+      LOG( "%s to %f %f %f", *Selected[i]->GetName(), loc.X, loc.Y, loc.Z  );
+      Selected[i]->SetDestination( loc );
     }
   }
 }
@@ -731,7 +713,7 @@ void AFlyCam::MouseMoved()
   Game->hud->MouseMoved( mouse );
 
   // if the mouse button is down, then its a drag event, elsee its a hover event
-  if( Game->pc->IsDown( EKeys::LeftMouseButton ) )
+  if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
   {
     // 3D drag event, would be used for multiple object placement, or brushes.
   }
@@ -829,6 +811,11 @@ void AFlyCam::MoveRight( float amount )
 void AFlyCam::Tick( float t )
 {
 	Super::Tick( t );
+  if( !floor )
+  {
+    /// All levels must have a floor
+    LOG( "ERROR: FLOOR NOT VALID" );
+  }
 }
 
 

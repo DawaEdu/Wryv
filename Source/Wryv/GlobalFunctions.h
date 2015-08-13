@@ -1,17 +1,41 @@
 #pragma once
 
+// Inlined functions
 #include "Engine.h"
 
 #include <vector>
 #include <set>
 #include <map>
+#include <stdarg.h>
 
 using namespace std;
+
+DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 
 #define FS(x,...) FString::Printf( TEXT(x), __VA_ARGS__ )
 
 // CALL: LOG( "Format string %d", intValue );
 #define LOG(x, ...) UE_LOG( LogTemp, Warning, TEXT( x ), __VA_ARGS__ )
+
+__forceinline void fatal( FString message )
+{
+  UE_LOG( K, Fatal, TEXT("%s"), *message );
+}
+
+__forceinline void error( FString message )
+{
+  UE_LOG( K, Error, TEXT("%s"), *message );
+}
+
+__forceinline void warning( FString message )
+{
+  UE_LOG( K, Warning, TEXT("%s"), *message );
+}
+
+__forceinline void info( FString message )
+{
+  UE_LOG( K, Display, TEXT("%s"), *message );
+}
 
 template <typename T> T* removeElement( vector<T*>& v, T* elt )
 {
@@ -109,6 +133,14 @@ template <typename T> bool pop_back( vector<T>& v, int eltNumber )
   return 0;
 }
 
+// AActor* derivative required
+template <typename T> void DestroyAll( vector<T*> &v )
+{
+  for( int i = 0; i < v.size(); i++ )
+    v[i]->Destroy();
+  v.clear();
+}
+
 inline FVector Rand()
 {
   return FVector( FMath::FRand(), FMath::FRand(), FMath::FRand() );
@@ -130,6 +162,18 @@ inline FVector Invert( FVector v )
 inline void Print( FString msg, FVector v )
 {
   LOG( "%s %f %f %f", *msg, v.X, v.Y, v.Z );
+}
+
+inline FVector& ZERO( FVector & v ) {
+  v.X=v.Y=v.Z=0.f; return v;
+}
+
+inline int randInt( int max )
+{
+  if( max )
+    return FMath::Rand()%max;
+  else
+    return max;
 }
 
 // Exclusive rand()

@@ -24,13 +24,8 @@ class WRYV_API UWryvGameInstance : public UGameInstance
 	GENERATED_BODY()
 public:
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
 
-  // This contains the stock mapping from Types:: enum to
-  // the UClass used for that Type of object in-game.
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData ) 
-  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
-
-  // Raw C++ Data of a units stats & data.
   map<Types,FUnitsDataRow> unitsData;
   bool init;
   ATheHUD *hud;
@@ -41,16 +36,33 @@ public:
   bool IsDestroyStarted;
   
   UWryvGameInstance(const FObjectInitializer& PCIP);
-  virtual void BeginDestroy() override;
-  bool IsReady();
-  AGameObject* Make( Types type, FVector v, int teamId );
-  AWryvGameMode* GetGameMode();
-  UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
+  bool IsReady() { return !IsDestroyStarted && init && hud && pc && gm && gs && flycam; }
   virtual void Init() override;
   void LoadUClasses();
   virtual ULocalPlayer*	CreateInitialPlayer(FString& OutError) override;
   virtual void StartGameInstance() override;
 	virtual bool Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Out = *GLog) override;
+  
+  inline UClass* GetUClass( Types type ) {
+    UClass* uclass = unitsData[type].uClass;
+    check( uclass && "Make: uclass was null" );
+    return uclass;
+  }
+  template <typename T> T* Make( Types type ) {
+    return GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
+  }
+  template <typename T> T* Make( Types type, FVector v ) {
+    return GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+  }
+  template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
+    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    obj->SetTeam( teamId ); // must be AGameObject derivative
+    return obj;
+  }
+  AGameObject* Make( Types type, FVector v, int teamId );
+  FUnitsDataRow GetData( Types type ) { return unitsData[ type ]; }
+  UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
+  virtual void BeginDestroy() override;
 };
 
 // This is the superglobal game instance

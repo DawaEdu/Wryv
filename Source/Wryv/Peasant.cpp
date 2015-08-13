@@ -79,7 +79,7 @@ AGameObject* APeasant::aiPlaceBuildingAtRandomLocation( Types type )
   FBox newBldgExtents = building->GetComponentsBoundingBox();
 
   // Search for building location
-  team = Game->gm->teams[ Stats.Team ];
+  team = Game->gm->teams[ Stats.TeamId ];
   AGameObject* townhall = team->GetFirstOfType( Types::BLDGTOWNHALL );
   FVector loc;
   

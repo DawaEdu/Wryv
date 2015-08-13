@@ -22,10 +22,9 @@
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
-  selector = selectorAttackTarget = selectorShopPatron = 0;
-  SelectedObject = 0;
+  selectorShopPatron = 0;
+  NextSpell = NextBuilding = NOTHING;
   WillSelectNextFrame = 0;
-
   Init = 0; // Have the slots & widgets been initialied yet? can only happen
   // in first call to draw.
 }
@@ -34,13 +33,11 @@ void ATheHUD::BeginPlay()
 {
   Super::BeginPlay();
   LOG( "ATheHUD::BeginPlay()");
-
   // Create a CanvasTarget.
   RTFogOfWar = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(
     GetWorld(), UCanvasRenderTarget2D::StaticClass(), 2048, 2048 );
   RTFogOfWar->OnCanvasRenderTargetUpdate.AddDynamic( this, &ATheHUD::DrawFogOfWar );
   RTFogOfWar->ClearColor = FLinearColor::Black;
-  
 }
 
 TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
@@ -56,7 +53,6 @@ TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
   AssetRegistry.Get().GetSubPaths( folder.ToString(), pathList, 1 );
   TArray<FAssetData> assets;
   AssetRegistry.Get().GetAssetsByPath( folder, assets );
-
   for( int i = 0; i < assets.Num(); i++ )
   {
     LOG( "%s", *assets[i].AssetName.ToString() );
@@ -64,11 +60,119 @@ TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
   return assets;
 }
 
+EventCode ATheHUD::BeginBoxSelect( FVector2D mouse ){
+  // Set the opening of the select box
+  ui->selectBox->SetStart( mouse );
+  ui->selectBox->Show();
+  return NotConsumed;
+}
+
+EventCode ATheHUD::Hover( FVector2D mouse ){
+  // Regular hover event
+  return NotConsumed;
+}
+
+// Mouse motion with mouse down.
+EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
+  ui->selectBox->SetEnd( mouse );
+  return NotConsumed;
+}
+
+// Mouse up event, after having Dragged 
+EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
+  // Cannot select here, must in render call.
+  WillSelectNextFrame = 1;
+  SelectAdds = Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } );
+  ui->selectBox->Hide();
+  return NotConsumed;
+}
+
+vector<AGameObject*> ATheHUD::Select( vector<AGameObject*> objects )
+{
+  NextSpell = NOTHING; // Unset next spell & building
+  NextBuilding = NOTHING;
+
+  // Destroy the old selectors
+  DestroyAll( selectors );
+  DestroyAll( selAttackTargets );
+
+  // create & parent the selectors to all selected objects
+  for( int i = 0; i < objects.size(); i++ )
+  {
+    AGameObject* go = objects[i];
+    AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( uClassSelector ) );
+    if( !sel )  error( "Couldn't create selector object" );
+    selectors.push_back( sel );
+
+    // make an attack target if there is an attack target for the gameobject
+    if( go->AttackTarget )
+    {
+      AWidget3D* att = Cast<AWidget3D>( go->MakeChild( uClassSelectorA ) );
+      selAttackTargets.push_back( att );
+    }
+  }
+  
+  // Modify the UI to reflect selected gameobjects
+  ui->gameChrome->Select( objects );
+  return objects;
+}
+
+vector<AGameObject*> ATheHUD::Pick( FBox2DU box )
+{
+  TArray<AActor*> combatUnits;
+  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ), box.TL(), box.BR(), combatUnits );
+  info( FS( "Selected %d CombatUnits", combatUnits.Num() ) );
+  vector<AGameObject*> selected;
+  for( int i = 0; i < combatUnits.Num(); i++ )
+  {
+    info( FS( "Selected %s", *combatUnits[i]->GetName() ) );
+    if( AGameObject* go = Cast<AGameObject>( combatUnits[i] ) )
+      selected.push_back( go );
+  }
+
+  return Select( selected );
+}
+
+void ATheHUD::Unselect( AGameObject* go )
+{
+  // check if parent of any selector
+  for( int i = selectors.size()-1; i >= 0; i-- )
+  {
+    if( go->isParentOf( selectors[i] ) )
+    {
+      selectors[i]->Destroy();
+      removeIndex( selectors, i );
+    }
+  }
+}
+
+void ATheHUD::UnselectAsTarget( AGameObject* go )
+{
+  for( int i = selAttackTargets.size()-1; i >= 0; i-- )
+  {
+    if( go->isParentOf( selAttackTargets[i] ) )
+    {
+      selAttackTargets[i]->Destroy();
+      removeIndex( selAttackTargets, i );
+    }
+  }
+}
+
+EventCode ATheHUD::TogglePause()
+{
+  // pauses or unpauses the game
+  Game->pc->SetPause( !Game->pc->IsPaused() );
+  if( Game->pc->IsPaused() )
+    ui->gameChrome->controls->Pause->Tex = ResumeButtonTexture;
+  else
+    ui->gameChrome->controls->Pause->Tex = PauseButtonTexture;
+  return Consumed;
+}
+
 void ATheHUD::InitWidgets()
 {
   if( Init ) return;
   Init = 1;
-
   LOG( "InitWidgets()" );
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
@@ -123,7 +227,7 @@ void ATheHUD::InitWidgets()
   gChrome->costWidget->Align = CenterCenter;
   gChrome->costWidget->Hide();
 
-  gChrome->tooltip = new Tooltip( TooltipBackgroundTexture, FString("tooltip") );
+  gChrome->tooltip = new ITextWidget( "tooltip", TooltipBackgroundTexture, "tip", Alignment::CenterCenter );
   gChrome->tooltip->Pad = FVector2D( 8, 8 );
   gChrome->Add( gChrome->tooltip );
   gChrome->tooltip->Hide();
@@ -155,7 +259,7 @@ void ATheHUD::InitWidgets()
       FVector2D( 120, 24 ), largeFont );
 
   // Construct the other screens
-  ui->titleScreen = new Title( TitleScreenTexture );
+  ui->titleScreen = new TitleScreen( TitleScreenTexture );
   
   ui->mapSelectionScreen->Align = CenterCenter;
   ui->Add( ui->mapSelectionScreen );
@@ -190,77 +294,11 @@ void ATheHUD::InitWidgets()
 
 }
 
-EventCode ATheHUD::BeginBoxSelect( FVector2D mouse ){
-  // Set the opening of the select box
-  ui->selectBox->SetStart( mouse );
-  ui->selectBox->Show();
-  return NotConsumed;
-}
-
-EventCode ATheHUD::Hover( FVector2D mouse ){
-  // Regular hover event
-  return NotConsumed;
-}
-
-// Mouse motion with mouse down.
-EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
-  ui->selectBox->SetEnd( mouse );
-  //ui->selectBox->Show();
-  return NotConsumed;
-}
-
-// Mouse up event, after having Dragged 
-EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
-  // form selection of elements contained in box & hide box select
-  //BoxSelect( ui->selectBox->Box ); // Call this in the next draw call
-  WillSelectNextFrame = 1;
-  ui->selectBox->Hide();
-  return NotConsumed;
-}
-
-EventCode ATheHUD::TogglePause()
-{
-  // pauses or unpauses the game
-  Game->pc->SetPause( !Game->pc->IsPaused() );
-  if( Game->pc->IsPaused() )
-    ui->gameChrome->controls->Pause->Tex = ResumeButtonTexture;
-  else
-    ui->gameChrome->controls->Pause->Tex = PauseButtonTexture;
-  return Consumed;
-}
-
 void ATheHUD::Setup()
 {
   LOG( "ATheHUD::Setup()");
-  FVector v(0.f);
-  FRotator r(0.f);
-  if( !selector )  selector = GetWorld()->SpawnActor<AWidget3D>( uClassSelector, v, r );
-  v.Z += 100.f;
-  if( !selectorAttackTarget )  selectorAttackTarget = GetWorld()->SpawnActor<AWidget3D>( uClassSelectorA, v, r );
-  v.Z += 100.f;
-  if( !selectorShopPatron )  selectorShopPatron = GetWorld()->SpawnActor<AWidget3D>( uClassSelectorShop, v, r );
-  rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" ); //rs[0];
-  rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" ); //rs[1];
-}
-
-void ATheHUD::BoxSelect( FBox2DU box )
-{
-  TArray<AActor*> combatUnits;
-  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ), box.TL(), box.BR(), combatUnits );
-  LOG( "Selected %d CombatUnits", combatUnits.Num() );
-  vector< AGameObject* > selected;
-  for( int i = 0; i < combatUnits.Num(); i++ )
-  {
-    LOG( "Selected %s", *combatUnits[i]->GetName() );
-    if( AGameObject* go = Cast<AGameObject>( combatUnits[i] ) )
-    {
-      selected.push_back( go );
-    }
-  }
-
-  // Change rows/cols.
-  int cols = ceilf( sqrtf( selected.size() ) ) ;
-  ui->gameChrome->rightPanel->portraits->Set( selected, cols, cols );
+  rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" );
+  rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" );
 }
 
 void ATheHUD::UpdateDisplayedResources()
@@ -379,7 +417,19 @@ void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
     // of the objects. you can Mark ALL objects as HIDDEN
     // https://forums.unrealengine.com/showthread.php?2964-Hiding-certain-objects-from-being-drawn-on-a-camera-or-SceneCapture2D-object
   }
+}
 
+void ATheHUD::DrawPortrait()
+{
+  // Draws the portrait of the first selected object
+  if( Game->flycam->Selected.size() )
+  {
+    AGameObject* selected = Game->flycam->Selected[0];
+    // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
+    FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
+    RenderScreen( rendererIcon, PortraitTexture, 
+      selected->Pos, selected->GetBoundingRadius(), camDir );
+  }
 }
 
 void ATheHUD::DrawHUD()
@@ -392,17 +442,12 @@ void ATheHUD::DrawHUD()
 
   if( WillSelectNextFrame )
   {
-    BoxSelect( ui->selectBox->Box );
+    Game->flycam->Selected = Pick( ui->selectBox->Box );
     WillSelectNextFrame = 0;
   }
 
   UpdateDisplayedResources();
-  if( SelectedObject )
-  {
-    // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
-    FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, PortraitTexture, SelectedObject->Pos, SelectedObject->GetBoundingRadius(), camDir );
-  }
+  DrawPortrait();
   UpdateMouse();
   
   // Render the minimap, only if the floor is present
@@ -429,21 +474,6 @@ void ATheHUD::DrawHUD()
   //  Canvas->SizeX, Canvas->SizeY, 0, 0, 1, 1, 1.f );
 }
 
-void ATheHUD::Select( AGameObject* go )
-{
-  SelectedObject = go;
-  
-  // parent the selector to this object
-  selector->SetParent( go );
-
-  // Highlight the attack target of the currently selected object
-  selectorAttackTarget->SetParent( go->AttackTarget );
-
-  // Modify the UI to reflect selected gameobject
-  ui->gameChrome->Select( go );
-}
-
-// Detect clicks and mouse moves on the HUD
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
 {
   LOG( "ATheHUD::MouseDownLeft()");
@@ -473,7 +503,7 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
   if( !Init )  return 0;
 
   // Drag events are when the left mouse button is down.
-  if( Game->pc->IsDown( EKeys::LeftMouseButton ) )
+  if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
   {
     return ui->MouseDraggedLeft( mouse );
   }

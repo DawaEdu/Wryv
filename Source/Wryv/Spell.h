@@ -13,8 +13,7 @@ public:
   bool init;
 
   // Which object type is spawned on contact (usually a Spell)
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)
-	TEnumAsByte<Types> OnContact;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)  TEnumAsByte<Types> OnContact;
 
   void Init();
 
