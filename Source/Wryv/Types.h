@@ -52,7 +52,9 @@ enum Types
 
   // Some kind of widget or selector
   DOODAD            UMETA(DisplayName = "Doodad"),
-  UI_ICON           UMETA(DisplayName = "UI ICON"),
+  UISELECTOR        UMETA(DisplayName = "UI Selector"),
+  UIATTACKSELECTOR      UMETA(DisplayName = "UI Attack Selector"),
+  UISHOPPATRONSELECTOR  UMETA(DisplayName = "UI Shop Patron Selector"),
 
   MAX               UMETA(DisplayName = "Max"),
 };

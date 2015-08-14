@@ -10,9 +10,9 @@
 
 using namespace std;
 
-DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
+WRYV_API DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 
-#define FS(x,...) FString::Printf( TEXT(x), __VA_ARGS__ )
+#define FS(x,...) FString::Printf( TEXT( x ), __VA_ARGS__ )
 
 // CALL: LOG( "Format string %d", intValue );
 #define LOG(x, ...) UE_LOG( LogTemp, Warning, TEXT( x ), __VA_ARGS__ )
@@ -139,6 +139,20 @@ template <typename T> void DestroyAll( vector<T*> &v )
   for( int i = 0; i < v.size(); i++ )
     v[i]->Destroy();
   v.clear();
+}
+
+template <typename T> vector<T*>& operator+=( vector<T*>& A, const vector<T*>& B )
+{
+  for( int i = 0; i < B.size(); i++ )
+    A.push_back( B[i] ) ;
+  return A;
+}
+
+template <typename T> vector<T*>& operator-=( vector<T*>& A, const vector<T*>& B )
+{
+  for( int i = 0; i < A.size(); i++ )
+    removeElement( A, B[i] ) ;
+  return A;
 }
 
 inline FVector Rand()

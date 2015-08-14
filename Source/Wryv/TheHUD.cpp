@@ -82,7 +82,12 @@ EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
 EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
   // Cannot select here, must in render call.
   WillSelectNextFrame = 1;
-  SelectAdds = Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } );
+  if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
+    selectionParity = Adds;
+  else if( Game->pc->IsAnyKeyDown( { EKeys::LeftControl, EKeys::RightControl } ) )
+    selectionParity = Subtracts;
+  else
+    selectionParity = New;
   ui->selectBox->Hide();
   return NotConsumed;
 }
@@ -91,27 +96,22 @@ vector<AGameObject*> ATheHUD::Select( vector<AGameObject*> objects )
 {
   NextSpell = NOTHING; // Unset next spell & building
   NextBuilding = NOTHING;
-
-  // Destroy the old selectors
-  DestroyAll( selectors );
+  DestroyAll( selectors );  // Destroy the old selectors
   DestroyAll( selAttackTargets );
-
   // create & parent the selectors to all selected objects
   for( int i = 0; i < objects.size(); i++ )
   {
     AGameObject* go = objects[i];
-    AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( uClassSelector ) );
+    AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( Types::UISELECTOR ) );
     if( !sel )  error( "Couldn't create selector object" );
     selectors.push_back( sel );
-
     // make an attack target if there is an attack target for the gameobject
     if( go->AttackTarget )
     {
-      AWidget3D* att = Cast<AWidget3D>( go->MakeChild( uClassSelectorA ) );
+      AWidget3D* att = Cast<AWidget3D>( go->MakeChild( Types::UIATTACKSELECTOR ) );
       selAttackTargets.push_back( att );
     }
   }
-  
   // Modify the UI to reflect selected gameobjects
   ui->gameChrome->Select( objects );
   return objects;
@@ -120,7 +120,9 @@ vector<AGameObject*> ATheHUD::Select( vector<AGameObject*> objects )
 vector<AGameObject*> ATheHUD::Pick( FBox2DU box )
 {
   TArray<AActor*> combatUnits;
-  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ), box.TL(), box.BR(), combatUnits );
+  GetActorsInSelectionRectangle( //TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
+    TSubclassOf<AGameObject>( AGameObject::StaticClass() ),
+    box.TL(), box.BR(), combatUnits );
   info( FS( "Selected %d CombatUnits", combatUnits.Num() ) );
   vector<AGameObject*> selected;
   for( int i = 0; i < combatUnits.Num(); i++ )
@@ -129,8 +131,7 @@ vector<AGameObject*> ATheHUD::Pick( FBox2DU box )
     if( AGameObject* go = Cast<AGameObject>( combatUnits[i] ) )
       selected.push_back( go );
   }
-
-  return Select( selected );
+  return selected;
 }
 
 void ATheHUD::Unselect( AGameObject* go )
@@ -442,7 +443,11 @@ void ATheHUD::DrawHUD()
 
   if( WillSelectNextFrame )
   {
-    Game->flycam->Selected = Pick( ui->selectBox->Box );
+    vector<AGameObject*> selected = Pick( ui->selectBox->Box );
+    if( selectionParity == New )  Selected = selected;
+    else if( selectionParity == Adds )  Selected += selected;
+    else if( selectionParity == Subtracts )  Selected -= selected;
+    Select( Selected );
     WillSelectNextFrame = 0;
   }
 

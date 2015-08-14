@@ -23,6 +23,11 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   IsDestroyStarted = 0;
 }
 
+bool UWryvGameInstance::IsReady()
+{
+  return !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder;
+}
+
 void UWryvGameInstance::Init()
 {
   init = 1;  //flag for IsReady() to know if instance ready or not

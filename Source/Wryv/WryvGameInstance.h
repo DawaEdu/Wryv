@@ -36,7 +36,7 @@ public:
   bool IsDestroyStarted;
   
   UWryvGameInstance(const FObjectInitializer& PCIP);
-  bool IsReady() { return !IsDestroyStarted && init && hud && pc && gm && gs && flycam; }
+  bool IsReady();
   virtual void Init() override;
   void LoadUClasses();
   virtual ULocalPlayer*	CreateInitialPlayer(FString& OutError) override;
@@ -49,13 +49,18 @@ public:
     return uclass;
   }
   template <typename T> T* Make( Types type ) {
-    return GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
+    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
+    check( obj );
+    return obj;
   }
   template <typename T> T* Make( Types type, FVector v ) {
-    return GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    check( obj );
+    return obj;
   }
   template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    check( obj );
     obj->SetTeam( teamId ); // must be AGameObject derivative
     return obj;
   }

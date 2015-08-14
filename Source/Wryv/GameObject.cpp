@@ -17,48 +17,40 @@ const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distan
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
-  LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
+  //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
-
   AttackCooldown = 0;
   Repairing = 0;
-  Vel = FVector(0, 0, 0);
+
+  Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   NextSpell = Types::NOTHING; // no spell is queued
-  bounds = PCIP.CreateDefaultSubobject<UCapsuleComponent>( this, "BoundingCapsule" );
-  //RootComponent = bounds;
+  UE_LOG( K, Warning, TEXT( "OK" ) );
 }
 
 void AGameObject::PostInitializeComponents()
 {
-  LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
+  //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
   Super::PostInitializeComponents();
   if( RootComponent )
   {
     // Initialize position, but put object on the ground
     Pos = RootComponent->GetComponentLocation();
   }
+
   UpdateStats();
   Stats = BaseStats;
-  
   Hp = Stats.HpMax;
   Speed = Stats.SpeedMax;
-  float r=0.f, h=0.f;
-  GetComponentsBoundingCylinder( r, h );
-  //bounds->SetCapsuleSize( r, h );
-  LOG( "%s [%s] AGameObject::OnMapLoaded(), speed=%f", *GetName(), *Stats.Name, Speed );
 
   if( isBuilding() )  Repairing = 0; // Buildings need an attending peasant to repair
   else  Repairing = 1; // Live units automatically regen
 
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
-  {
-    // Look up the ability's cooldown time
     Abilities.push_back( Ability( Stats.Abilities[i] ) );
-  }
-
-  //Pos = SetOnGround( Pos );
+  
+  Pos = SetOnGround( Pos );
   Dest = Pos;  // set the position to where the thing is.
 }
 
@@ -66,10 +58,8 @@ void AGameObject::PostInitializeComponents()
 void AGameObject::BeginPlay()
 {
   Super::BeginPlay();
-  LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
-  
-  // Put the GameObject on the correct team
-  Game->gm->teams[ BaseStats.TeamId ] -> AddUnit( this );
+  //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
+  SetTeam( Stats.TeamId );
 }
 
 void AGameObject::OnMapLoaded()
@@ -156,18 +146,10 @@ bool AGameObject::isChildOf( AGameObject* parent )
   return IsAttachedTo( parent );
 }
 
-AGameObject* AGameObject::MakeChild( UClass* uclass )
+AGameObject* AGameObject::MakeChild( Types type )
 {
-  if( !uclass )
-  {
-    LOG( "Couldn't create child of NULL class" );
-    return 0;
-  }
-  AGameObject* child = GetWorld()->SpawnActor<AGameObject>( uclass );
-  if( !child ) {
-    LOG( "Failed to create child from uclass %s", *uclass->GetName() );
-  }
-  else  AddChild( child );
+  AWidget3D* child = Game->Make<AWidget3D>( type );
+  AddChild( child );
   return child;
 }
 
@@ -195,7 +177,7 @@ void AGameObject::removeAsTarget()
   }
 }
 
-void AGameObject::SetRot( FRotator & ro )
+void AGameObject::SetRot( const FRotator & ro )
 {
   if( RootComponent ) RootComponent->SetWorldRotation( ro );
   else error( "No root component" );
@@ -249,7 +231,7 @@ void AGameObject::UseAbility( Ability& ability )
   if( ability.Done() ) // ability is ready.
   {
     // You can use the ability now
-     Game->unitsData[ ability.Type ];
+    Game->unitsData[ ability.Type ];
 
     // Reset refresh time.
     ability.Reset(); // ability not ready now
@@ -289,12 +271,11 @@ void AGameObject::CheckWaypoint()
 {
   // How much of the way are we towards our next destination point
   // Check Waypoints. If reached dest, then pop next waypoint.
-  if( Reached( Dest, 250.f ) )
+  if( Reached( Dest, WaypointReachedToleranceDistance ) )
   {
     // Pop the next waypoint.
     if( !Waypoints.size() )
       return;
-
     Dest = Waypoints.front();
     pop_front( Waypoints );
   }
@@ -327,8 +308,7 @@ void AGameObject::Walk( float t )
     }
 
     // Push UP from the ground plane, using the bounds on the actor.
-    FRotator ro = Dir.Rotation();
-    SetRot( ro );
+    SetRot( Dir.Rotation() );
   }
 
   SetOnGround( Pos );
@@ -371,9 +351,9 @@ void AGameObject::SetDestination( FVector d )
     FVector dir1 = b2 - b3;
     FVector dir2 = b1 - b2;
     dir1.Normalize(), dir2.Normalize();
-    const float a = cosf( 30.f );
+    const float a = cosf( WaypointAngleTolerance );
     float dot = FVector::DotProduct( dir1, dir2 );
-    LOG( "DotProduct=%f", dot );
+    error( FS( "DotProduct=%f", dot ) );
     if( dot < a )
     {
       // Pop the middle one
@@ -581,8 +561,11 @@ void AGameObject::SetTeam( int32 teamId )
 void AGameObject::BeginDestroy()
 {
 	// Remove it from the global collections.
-  team->RemoveUnit( this );
-  removeAsTarget();
+  if( Game->IsReady() )
+  {
+    if( team )  team->RemoveUnit( this );
+    removeAsTarget();
+  }
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }
 

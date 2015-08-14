@@ -24,8 +24,6 @@ class WRYV_API AGameObject : public AActor
   const static float WaypointAngleTolerance; // 
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
 public:
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* bounds;
-  
   // 
   // Stats.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
@@ -69,7 +67,7 @@ public:
   AGameObject* AddChild( AGameObject* newChild );
   bool isParentOf( AGameObject* go );
   bool isChildOf( AGameObject* parent );
-  AGameObject* MakeChild( UClass* uclass );
+  AGameObject* MakeChild( Types type );
 
   // 
   // Gameplay.
@@ -95,7 +93,7 @@ public:
   
   // 
   // Movement functions.
-  void SetRot( FRotator & ro );
+  void SetRot( const FRotator & ro );
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
   void Walk( float t );
@@ -109,7 +107,7 @@ public:
   void fight( float t );
 
   // 
-  // ai
+  // AI
   AGameObject* GetClosestEnemyUnit();
 	map<float, AGameObject*> FindEnemyUnitsInSightRange();
 	AGameObject* GetClosestObjectOfType( Types type );

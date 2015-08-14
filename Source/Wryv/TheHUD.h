@@ -59,7 +59,12 @@ public:
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
 
   // Because canvas has to be valid for box selection to work it seems
-  bool WillSelectNextFrame, SelectAdds;
+  bool WillSelectNextFrame;
+  enum SelectionParity
+  {
+    New, Adds, Subtracts
+  } selectionParity ;
+  vector<AGameObject*> Selected;
 
   // The buttons currently showing on the user interface.
   UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
@@ -68,9 +73,6 @@ public:
   FBox2D selectBox;
 
   // The uClass of the selected object highlight
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UClass* uClassSelector;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UClass* uClassSelectorA;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UClass* uClassSelectorShop;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* PortraitTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* MinimapTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
@@ -107,7 +109,6 @@ public:
   EventCode DragBoxSelect( FVector2D mouse );
   EventCode EndBoxSelect( FVector2D mouse );
   vector<AGameObject*> Pick( FBox2DU box );
-
   vector<AGameObject*> Select( vector<AGameObject*> objects );
   
   void Unselect( AGameObject* object );
