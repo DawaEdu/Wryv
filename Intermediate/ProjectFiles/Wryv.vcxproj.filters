@@ -62,6 +62,9 @@
     <Filter Include="Source\Wryv\UI\Screens">
       <UniqueIdentifier>{ad84d91d-7cbd-4f43-a272-1a0734bb6d9b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\Net">
+      <UniqueIdentifier>{1dcd10c0-0574-40f3-8220-e6145fe83239}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\AI.h">
@@ -353,6 +356,27 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp">
       <Filter>Source\Wryv\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameChrome.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ItemBelt.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Buffs.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\BuildQueue.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\SidePanel.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\UserInterface.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\StatsPanel.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

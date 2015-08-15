@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 using namespace std;
 
 #include "Types.h"
@@ -16,6 +17,7 @@ class AGameObject;
 struct GraphNode;
 struct Edge;
 class Pathfinder;
+class ALandscape;
 
 UCLASS()
 class WRYV_API AFlyCam : public APawn
@@ -23,13 +25,13 @@ class WRYV_API AFlyCam : public APawn
 	GENERATED_BODY()
 public:
   AActor *floor; // Every level must have a Landscape object called the floor.
+  ALandscape *landscape;
   FBox floorBox; // we only find the floor's box once (at level start).
   AGameObject *ghost; // ghost of the building being set for placement
   Pathfinder *pathfinder;
   UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
   AFogOfWar* fogOfWar;  // The fog of war instance plane, constructed from the uclass listed above
-  vector<AGameObject*> Selected;  // The texture etc to use for last clicked object
-
+  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
@@ -95,7 +97,7 @@ public:
   bool intersectsAnyOfType( AActor* actor, vector<Types>& types );
   
   void FindFloor();
-  void Select( vector<AGameObject*> objects );
+  void Select( set<AGameObject*> objects );
   void MouseUpLeft();
   void MouseDownLeft();
   void MouseUpRight();

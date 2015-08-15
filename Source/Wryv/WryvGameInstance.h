@@ -9,6 +9,7 @@ using namespace std;
 #include "AI.h"
 #include "Team.h"
 #include "UnitTypeUClassPair.h"
+#include "GlobalFunctions.h"
 #include "WryvGameInstance.generated.h"
 
 class ATheHUD;
@@ -43,24 +44,25 @@ public:
   virtual void StartGameInstance() override;
 	virtual bool Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Out = *GLog) override;
   
+  // Uses the UI-populated unit-types-UClasses array.
   inline UClass* GetUClass( Types type ) {
-    UClass* uclass = unitsData[type].uClass;
-    check( uclass && "Make: uclass was null" );
+    UClass* uclass = UnitTypeUClasses[ type ].uClass;
+    if( !uclass )  error( "Make: uclass was null" );
     return uclass;
   }
   template <typename T> T* Make( Types type ) {
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
-    check( obj );
+    if( !obj )  error( "Making gameobject" );
     return obj;
   }
   template <typename T> T* Make( Types type, FVector v ) {
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
-    check( obj );
+    if( !obj )  error( "Making gameobject" );
     return obj;
   }
   template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
-    check( obj );
+    if( !obj )  error( "Making gameobject" );
     obj->SetTeam( teamId ); // must be AGameObject derivative
     return obj;
   }

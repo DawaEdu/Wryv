@@ -29,6 +29,14 @@ void Actions::ShowBuildingsPanel()
   abilities->Hide();
 }
 
+void Actions::Set( AGameObject* go )
+{
+  abilities->Set( go );
+  buildPanel->Set( go );
+}
+
+
+
 AbilitiesPanel::AbilitiesPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
@@ -47,6 +55,10 @@ AbilitiesPanel::AbilitiesPanel( Actions* iActions, UTexture* bkg, int rows, int 
 
 void AbilitiesPanel::Set( AGameObject *go )
 {
+  // start by hiding all abilities
+  HideChildren();
+  if( !go ) return;
+
   // Set abilities. Abilities panel always has [2 rows, 3 cols]
   // We line up each ability with the slot number.
   for( int i = 0; i < go->Abilities.size() && i < GetNumSlots()-1; i++ )
@@ -77,18 +89,8 @@ void AbilitiesPanel::Set( AGameObject *go )
     GetSlot(i)->Hide();
   }
   
-  // Last slot will contain the build button.
-  int lastSlot = GetNumSlots()-1;
-  if( lastSlot >= 0 )
-  {
-    Clock* buildSlot = GetSlot( lastSlot );
-    buildSlot->Show();
-  }
-
-  if( go->Stats.Type == Types::UNITPEASANT )
-  {
-    buildButton->Show();
-  }
+  if( go->Stats.Type == Types::UNITPEASANT ) buildButton->Show();
+  else buildButton->Hide();
 }
 
 BuildPanel::BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
@@ -99,13 +101,16 @@ BuildPanel::BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FV
 
 void BuildPanel::Set( AGameObject *go )
 {
+  HideChildren(); // Hide all buttons
+  if( ! go )  return;
+
   for( int i = 0; i < go->Stats.Spawns.Num(); i++ )
   {
-    Types spawn = go->Stats.Spawns[i];
-
+    Types buildable = go->Stats.Spawns[i];
     // Construct buttons that run abilities of the object.
-    SetSlotTexture( i, Game->GetPortrait( spawn ) );
-    ITextWidget* button = GetSlot( i );
+    SetSlotTexture( i, Game->GetPortrait( buildable ) );
+    Clock* button = GetSlot( i );
+    button->Show();
     button->OnMouseDownLeft = [go,i]( FVector2D mouse ){
       // try spawn the object type listed
       go->Build( go->Stats.Spawns[i] );

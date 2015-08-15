@@ -46,17 +46,16 @@ enum Types
   ABILITYDOUBLEDAMAGE  UMETA(DisplayName = "Ability 2x damage" ),
 
   // Items.
-  ITEMSPEEDUP       UMETA(DisplayName = "Item Speedup"),
-  ITEMATTACKSTR     UMETA(DisplayName = "Item Attack Strength"),
-  ITEMDEFENSEUP     UMETA(DisplayName = "Item Defense"),
+  ITEMSPEEDUP          UMETA(DisplayName = "Item Speedup"),
+  ITEMATTACKSTR        UMETA(DisplayName = "Item Attack Strength"),
+  ITEMDEFENSEUP        UMETA(DisplayName = "Item Defense"),
 
   // Some kind of widget or selector
-  DOODAD            UMETA(DisplayName = "Doodad"),
-  UISELECTOR        UMETA(DisplayName = "UI Selector"),
+  UISELECTOR            UMETA(DisplayName = "UI Selector"),
   UIATTACKSELECTOR      UMETA(DisplayName = "UI Attack Selector"),
   UISHOPPATRONSELECTOR  UMETA(DisplayName = "UI Shop Patron Selector"),
 
-  MAX               UMETA(DisplayName = "Max"),
+  MAX                   UMETA(DisplayName = "Max"),
 };
 
 UENUM()

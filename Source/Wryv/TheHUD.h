@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <map>
 using namespace std;
 
@@ -64,7 +65,7 @@ public:
   {
     New, Adds, Subtracts
   } selectionParity ;
-  vector<AGameObject*> Selected;
+  set<AGameObject*> Selected;
 
   // The buttons currently showing on the user interface.
   UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
@@ -108,8 +109,8 @@ public:
   EventCode Hover( FVector2D mouse );
   EventCode DragBoxSelect( FVector2D mouse );
   EventCode EndBoxSelect( FVector2D mouse );
-  vector<AGameObject*> Pick( FBox2DU box );
-  vector<AGameObject*> Select( vector<AGameObject*> objects );
+  set<AGameObject*> Pick( FBox2DU box );
+  set<AGameObject*> Select( set<AGameObject*> objects );
   
   void Unselect( AGameObject* object );
   void UnselectAsTarget( AGameObject* object );

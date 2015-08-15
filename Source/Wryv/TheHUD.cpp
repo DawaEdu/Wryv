@@ -92,16 +92,15 @@ EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
   return NotConsumed;
 }
 
-vector<AGameObject*> ATheHUD::Select( vector<AGameObject*> objects )
+set<AGameObject*> ATheHUD::Select( set<AGameObject*> objects )
 {
   NextSpell = NOTHING; // Unset next spell & building
   NextBuilding = NOTHING;
   DestroyAll( selectors );  // Destroy the old selectors
   DestroyAll( selAttackTargets );
   // create & parent the selectors to all selected objects
-  for( int i = 0; i < objects.size(); i++ )
+  for( AGameObject * go : objects )
   {
-    AGameObject* go = objects[i];
     AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( Types::UISELECTOR ) );
     if( !sel )  error( "Couldn't create selector object" );
     selectors.push_back( sel );
@@ -112,25 +111,34 @@ vector<AGameObject*> ATheHUD::Select( vector<AGameObject*> objects )
       selAttackTargets.push_back( att );
     }
   }
+
   // Modify the UI to reflect selected gameobjects
   ui->gameChrome->Select( objects );
   return objects;
 }
 
-vector<AGameObject*> ATheHUD::Pick( FBox2DU box )
+set<AGameObject*> ATheHUD::Pick( FBox2DU box )
 {
-  TArray<AActor*> combatUnits;
-  GetActorsInSelectionRectangle( //TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
-    TSubclassOf<AGameObject>( AGameObject::StaticClass() ),
-    box.TL(), box.BR(), combatUnits );
-  info( FS( "Selected %d CombatUnits", combatUnits.Num() ) );
-  vector<AGameObject*> selected;
-  for( int i = 0; i < combatUnits.Num(); i++ )
+  // Give CombatUnits priority.
+  TArray<AActor*> selectedActors;
+  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
+    box.TL(), box.BR(), selectedActors );
+  info( FS( "Selected %d CombatUnits", selectedActors.Num() ) );
+
+  // If you've selected buildings & combat units, you select only the combat units.
+  // Else, if there are no combatunits selected, you've selected buildings.
+  if( !selectedActors.Num() )
   {
-    info( FS( "Selected %s", *combatUnits[i]->GetName() ) );
-    if( AGameObject* go = Cast<AGameObject>( combatUnits[i] ) )
-      selected.push_back( go );
+    // Try & select buildings
+    GetActorsInSelectionRectangle( TSubclassOf< ABuilding >( ABuilding::StaticClass() ),
+      box.TL(), box.BR(), selectedActors );
   }
+
+  // Make a new set of selected units (don't use previously selected units)
+  set<AGameObject*> selected;
+  for( int i = 0; i < selectedActors.Num(); i++ )
+    if( AGameObject* go = Cast<AGameObject>( selectedActors[i] ) )
+      selected.insert( go );
   return selected;
 }
 
@@ -190,7 +198,7 @@ void ATheHUD::InitWidgets()
   ui = new UserInterface(FVector2D(Canvas->SizeX, Canvas->SizeY));
   GameChrome *gChrome = ui->gameChrome;
 
-  // When you down the mouse on the HUD, you begin box selection
+  // Main UI functions, which connect to HUD code.
   ui->OnMouseDownLeft = [this]( FVector2D mouse ){ return BeginBoxSelect( mouse ); };
   ui->OnHover = [this]( FVector2D mouse ) { return Hover( mouse ); };
   ui->OnMouseDragLeft = [this]( FVector2D mouse ) { return DragBoxSelect( mouse ); };
@@ -204,8 +212,6 @@ void ATheHUD::InitWidgets()
   Controls *controls = gChrome->controls = new Controls( PauseButtonTexture );
   gChrome->rightPanel->Add( controls );
   controls->Align = Top | ToLeftOfParent;
-  
-  // flush top with 0 top of parent
   controls->Margin = FVector2D( 4, - gChrome->rightPanel->Pad.Y );
   controls->Pause->OnMouseDownLeft = [this](FVector2D mouse){
     return TogglePause();
@@ -228,30 +234,28 @@ void ATheHUD::InitWidgets()
   gChrome->costWidget->Align = CenterCenter;
   gChrome->costWidget->Hide();
 
-  gChrome->tooltip = new ITextWidget( "tooltip", TooltipBackgroundTexture, "tip", Alignment::CenterCenter );
-  gChrome->tooltip->Pad = FVector2D( 8, 8 );
+  ITextWidget* tooltip = gChrome->tooltip = new ITextWidget( "tooltip", 
+    TooltipBackgroundTexture, "tip", Alignment::CenterCenter );
+  tooltip->Pad = FVector2D( 8, 8 );
   gChrome->Add( gChrome->tooltip );
-  gChrome->tooltip->Hide();
-  gChrome->tooltip->OnMouseDownLeft = [gChrome](FVector2D mouse){
+  tooltip->Hide();
+  tooltip->OnMouseDownLeft = [tooltip](FVector2D mouse){
     LOG( "Hiding the tooltip" );
-    gChrome->tooltip->Hide();
+    tooltip->Hide();
     return Consumed;
   };
 
   gChrome->buffs = new Buffs( "Buffs", 0 );
-  gChrome->buffs->Pad = FVector2D( 4, 4 );
   gChrome->Add( gChrome->buffs );
 
   // buildQueue appears
-  gChrome->buildQueue = new BuildQueue( "Building Queue", TooltipBackgroundTexture, FVector2D( 128, 128 ) );
-  gChrome->buildQueue->Pad = FVector2D( 4, 4 );
+  gChrome->buildQueue = new BuildQueue( "Building Queue", FVector2D( 128, 128 ) );
   gChrome->Add( gChrome->buildQueue );
-  gChrome->buildQueue->Hide();
+  //gChrome->buildQueue->Hide();
 
   // Create the panel for containing items/inventory
   gChrome->itemBelt = new ItemBelt( SlotPaletteTexture, 1, 4, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
   gChrome->Add( gChrome->itemBelt );
-  gChrome->itemBelt->Align = BottomCenter;
 
   // Map selection screen
   MapSelectionScreen *mss = ui->mapSelectionScreen = 
@@ -423,9 +427,9 @@ void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
 void ATheHUD::DrawPortrait()
 {
   // Draws the portrait of the first selected object
-  if( Game->flycam->Selected.size() )
+  if( Selected.size() )
   {
-    AGameObject* selected = Game->flycam->Selected[0];
+    AGameObject* selected = *Selected.begin();
     // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
     RenderScreen( rendererIcon, PortraitTexture, 
@@ -443,7 +447,7 @@ void ATheHUD::DrawHUD()
 
   if( WillSelectNextFrame )
   {
-    vector<AGameObject*> selected = Pick( ui->selectBox->Box );
+    set<AGameObject*> selected = Pick( ui->selectBox->Box );
     if( selectionParity == New )  Selected = selected;
     else if( selectionParity == Adds )  Selected += selected;
     else if( selectionParity == Subtracts )  Selected -= selected;
@@ -456,27 +460,16 @@ void ATheHUD::DrawHUD()
   UpdateMouse();
   
   // Render the minimap, only if the floor is present
-  if( Game->flycam->floor ) {
-    FBox box = Game->flycam->floor->GetComponentsBoundingBox();
-    FVector p = box.GetCenter();
-    RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
-  }
-
-  // refresh the size of the ui the layout
+  FBox box = Game->flycam->floorBox;
+  FVector p = box.GetCenter();
+  RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
+  
   ui->Size = FVector2D( Canvas->SizeX, Canvas->SizeY );
-
-  // Tick in the render function, in case text needs re-rendering etc.
-  ui->Move( Game->gm->T );
-
-  // Render the entire UI
+  ui->Move( Game->gm->T ); // Ticked here, in case reflow is needed
   ui->render();
 
   // Draw the fog of war
   //((AHUD*)DrawTexture)( RTFogOfWar, 0, 0, 200, 200, 0, 0, 1, 1 );
-  // Render the cinematic from the material (must be setup to use
-  // an Emissive channel)
-  //DrawMaterial( MediaMaterial, 0, 0,
-  //  Canvas->SizeX, Canvas->SizeY, 0, 0, 1, 1, 1.f );
 }
 
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
@@ -509,14 +502,9 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
 
   // Drag events are when the left mouse button is down.
   if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
-  {
     return ui->MouseDraggedLeft( mouse );
-  }
   else
-  {
-    // Check against all ui widgets that require hover.
-    return ui->Hover( mouse );
-  }
+    return ui->Hover( mouse );  // Check against all ui widgets that require hover.
 
   return 0;
 }
@@ -568,13 +556,11 @@ void ATheHUD::RenderScreen( USceneCaptureComponent2D* renderer,
     USceneComponent* c = renderer->AttachChildren[i];
     LOG( "Component [%d] = %s", i, *renderer->AttachChildren[i]->GetName() );
   }
-  
-  
 }
 
 void ATheHUD::BeginDestroy()
 {
-  //LOG(  "ATheHUD::BeginDestroy()");
+  LOG( "ATheHUD::BeginDestroy()");
   if( ui ) {
     delete ui;
     ui = 0;

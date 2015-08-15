@@ -2,6 +2,7 @@
 
 #include "Wryv.h"
 #include <vector>
+#include <set>
 #include <functional>
 #include <string>
 using namespace std;
@@ -59,7 +60,7 @@ public:
   FLinearColor Color;
   // Associations with AGameObject's contained in this hotspot. Empty if no objects
   // are associated with the spot (used for item slots)
-  vector<AGameObject*> Objects;
+  //vector<AGameObject*> Objects;
 
 protected:
   HotSpot* Parent;

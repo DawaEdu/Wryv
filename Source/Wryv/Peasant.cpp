@@ -89,7 +89,7 @@ AGameObject* APeasant::aiPlaceBuildingAtRandomLocation( Types type )
 
   // Jitter the location. Get the map size.
   FVector floorpos, floorext, placementPos, ext;
-  FBox extents = Game->flycam->floor->GetComponentsBoundingBox();
+  FBox extents = Game->flycam->floorBox;
   extents.GetCenterAndExtents( floorpos, floorext );
   extents = townhall->GetComponentsBoundingBox();
   extents.GetCenterAndExtents( placementPos, ext );
@@ -135,7 +135,7 @@ void APeasant::Build( float t )
     // if multiple peasants are building the same building, then
     // the building progresses faster
     building->buildProgress += t;
-    if( building->buildProgress > building->Stats.BuildTime )
+    if( building->buildProgress > building->Stats.TimeLength )
     {
       // building is complete.
       building = 0;

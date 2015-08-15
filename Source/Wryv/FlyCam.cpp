@@ -13,6 +13,7 @@
 #include "Types.h"
 #include "UISounds.h"
 #include "GameFramework/PlayerInput.h"
+#include "Runtime/Landscape/Classes/Landscape.h"
 
 // Sets default values
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
@@ -162,9 +163,9 @@ void AFlyCam::InitializePathfinding()
       ext.Z = 0.f;
       FVector ll = floorBox.Min;// + ext; // the center of the box is actually the lower left
       FVector p = perc*ll + (FVector(1.f, 1.f, 0.f) - perc)*floorBox.Max;
-      p.Z = floorBox.Max.Z + radius;
+      p.Z = floorBox.Max.Z + radius*2.f; // move sphere above floor
 
-      p = getHitFloor( p, FVector(0,0,-1) );
+      p = getHitFloor( p );
 
       int idx = coord.index();
       pathfinder->nodes[ idx ]->index = idx;
@@ -302,9 +303,8 @@ void AFlyCam::SetColor( AActor* a, UMaterial* mat )
 
 void AFlyCam::Visualize( FVector& v, UMaterial* color )
 {
-  AActor *a = GetWorld()->SpawnActor(
-    Game->unitsData[ Types::UNITSPHERE ].uClass, &v );
-  a->GetRootComponent()->SetWorldScale3D( FVector( 100.f ) );
+  AActor *a = GetWorld()->SpawnActor( Game->unitsData[ Types::UNITSPHERE ].uClass, &v );
+  a->GetRootComponent()->SetWorldScale3D( FVector( 10.f ) );
   viz.push_back( a );
 }
 
@@ -446,8 +446,14 @@ FVector AFlyCam::getHitFloor(FVector eye, FVector look)
 {
   FHitResult hit;
   FCollisionQueryParams fcqp( "dest trace", true );
-  floor->ActorLineTraceSingle( hit, eye, eye + look*1e6f, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
-  return hit.ImpactPoint;
+  bool intersects = floor->ActorLineTraceSingle( hit, eye, eye + look*1e6f, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
+  if( ! intersects )
+  {
+    warning( "Ray didn't hit ground plane" );
+    return eye;
+  }
+  else
+    return hit.ImpactPoint;
 }
 
 FVector AFlyCam::getHitFloor( FVector eye )
@@ -546,42 +552,42 @@ bool AFlyCam::intersectsAnyOfType( AActor* actor, vector<Types>& types )
 
 void AFlyCam::FindFloor()
 {
+  floor = 0;
   ULevel* level = GetWorld()->GetLevel(0);
   TTransArray<AActor*> *actors = &level->Actors;
+
+  // First try and find a Landscape object representing the floor.
   for( int i = 0; i < actors->Num() && !floor; i++ )
   {
     AActor* a = (*actors)[i];
-    if( a == nullptr ) // This happens a lot
-    {
-      LOG( "Null object found in Actors array");
-      continue;
-    }
-    
-    //LOG( "Actor: %s", *a->GetName() );
-    // This is the actor we're checking for intersections with:
-    if( a->GetName() == "floor" )
-    {
-      LOG( "Found the floor `%s`", *a->GetName() );
-      floor = a;
-      floorBox = floor->GetComponentsBoundingBox();
-    }
+    if( !a )  continue;
+    ALandscape* landscape = Cast< ALandscape >( a );
+    if( landscape )  floor = a;
   }
   
+  // Here, the floor wasn't found above, so search by name.
   if( !floor )
   {
-    LOG( "floor object not found");
-    return;
+    for( int i = 0; i < actors->Num() && !floor; i++ )
+    {
+      AActor* a = (*actors)[i];
+      if( !a )  continue;
+      if( a->GetName() == "floor" )  floor = a;
+    }
   }
+
+  if( !floor )  fatal( "Floor not found" ); // must crash because need floor for game to work
+  floorBox = floor->GetComponentsBoundingBox();
 }
 
-void AFlyCam::Select( vector<AGameObject*> objects )
+void AFlyCam::Select( set<AGameObject*> objects )
 {
   // Change UI to reflect selected object
   Game->hud->Select( objects );
 
   // Run its OnSelected function, playing sounds etc.
-  for( int i = 0; i < objects.size(); i++ )
-    objects[i]->OnSelected();
+  for( AGameObject* go : objects )
+    go->OnSelected();
   
 }
 
@@ -603,7 +609,7 @@ void AFlyCam::MouseDownLeft()
   // If a spell queued to be cast, a left click casts it
   if( NextSpell.Type != NOTHING )
   {
-    if( !Selected.size() ) return;  // can't cast the spell with no caster.
+    if( !Game->hud->Selected.size() ) return;  // can't cast the spell with no caster.
 
     // Cast the spell.
     // if the spell requires a target, check that we got one
@@ -612,13 +618,13 @@ void AFlyCam::MouseDownLeft()
     if( hit ) { // Spell target
       // These cast on next turn, they can't cast from UI click directly
       // since engine needs to record cast event 
-      for( AGameObject *se : Selected )
+      for( AGameObject *se : Game->hud->Selected )
         se->CastSpell( NextSpell.Type, hit );
     }
     else if( NextSpell.AOE )
     {
       // Cast the spell on the ground 
-      for( AGameObject *se : Selected )
+      for( AGameObject *se : Game->hud->Selected )
         se->CastSpell( NextSpell.Type, getHitFloor() );
     }
     else
@@ -648,7 +654,7 @@ void AFlyCam::MouseDownLeft()
         AGameObject* building = Game->Make( NextBuilding.Type, ghost->Pos, ghost->team->teamId );
         
         // Selected objects will go build it
-        for( AGameObject* se : Selected )
+        for( AGameObject* se : Game->hud->Selected )
         {
           // let the selected lastObject build the building
           if( APeasant* peasant = Cast<APeasant>( se ) )
@@ -685,15 +691,15 @@ void AFlyCam::MouseDownRight()
   if( target && target != floor )
   {
     // An actor was hit by the click
-    for( int i = 0; i < Selected.size(); i++ )
-      Selected[i]->SetTarget( target );
+    for( AGameObject * go : Game->hud->Selected )
+      go->SetTarget( target );
   }
   else
   {
     FVector loc = getHitFloor();
-    for( int i = 0; i < Selected.size(); i++ ) {
-      LOG( "%s to %f %f %f", *Selected[i]->GetName(), loc.X, loc.Y, loc.Z  );
-      Selected[i]->SetDestination( loc );
+    for( AGameObject * go : Game->hud->Selected ) {
+      LOG( "%s to %f %f %f", *go->GetName(), loc.X, loc.Y, loc.Z  );
+      go->SetDestination( loc );
     }
   }
 }
@@ -744,7 +750,6 @@ void AFlyCam::MouseMovedY( float amount )
 
 void AFlyCam::MoveCameraZUp( float amount )
 {
-  //LOG( "MoveCameraZUp(%f)", amount );
   if( Controller && amount )
   {
     FVector up( 0, 0, 1 );
@@ -754,7 +759,6 @@ void AFlyCam::MoveCameraZUp( float amount )
 
 void AFlyCam::MoveCameraZDown( float amount )
 {
-  //LOG( "MoveCameraZDown(%f)", amount );
   if( Controller && amount )
   {
     FVector down( 0, 0, -1 );
@@ -764,45 +768,49 @@ void AFlyCam::MoveCameraZDown( float amount )
 
 void AFlyCam::MoveForward( float amount )
 {
-  // Gets called EACH FRAME. Only apply movement input when
-  // both Controller init && amount has a value.
-  // Don't enter the body of this function if Controller is
-  // not set up yet, or if the amount to move is equal to 0 
+  // Gets called EACH FRAME (even if there's no input)
   if( Controller && amount )
   {
-    FVector fwd( 1, 0, 0 );
+    FVector fwd = MainCamera->GetForwardVector();
+    fwd.Z = 0.f;
+    if( !fwd.SizeSquared() )  fwd.Y = -1.f;
+    fwd.Normalize();
     AddMovementInput( fwd, CameraMovementSpeed*amount );
-    LOG( "MoveForward %f", amount );
   }
 }
 
 void AFlyCam::MoveBack( float amount )
 {
-  //LOG( "MoveBack %f", amount );
-
   if( Controller && amount )
   {
-    FVector back( -1, 0, 0 );
+    FVector back = -MainCamera->GetForwardVector();
+    back.Z = 0.f;
+    if( !back.SizeSquared() )  back.Y = 1.f;
+    back.Normalize();
     AddMovementInput( back, CameraMovementSpeed*amount );
   }
 }
 
 void AFlyCam::MoveLeft( float amount )
 {
-  //LOG( "MoveLeft %f", amount );
   if( Controller && amount )
   {
-    FVector left( 0, -1, 0 );
+    FVector left = -MainCamera->GetRightVector();
+    left.Z = 0.f;
+    if( !left.SizeSquared() )  left.X = -1.f;
+    left.Normalize();
     AddMovementInput( left, CameraMovementSpeed*amount );
   }
 }
 
 void AFlyCam::MoveRight( float amount )
 {
-  //LOG( "MoveRight %f", amount );
   if( Controller && amount )
   {
-    FVector right( 0, 1, 0 );
+    FVector right = MainCamera->GetRightVector();
+    right.Z = 0.f;
+    if( !right.SizeSquared() )  right.X = -1.f;
+    right.Normalize();
     AddMovementInput( right, CameraMovementSpeed*amount );
   }
 }
@@ -814,7 +822,7 @@ void AFlyCam::Tick( float t )
   if( !floor )
   {
     /// All levels must have a floor
-    LOG( "ERROR: FLOOR NOT VALID" );
+    fatal( "ERROR: FLOOR NOT VALID" );
   }
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <map>
 using namespace std;
 
@@ -11,6 +12,8 @@ using namespace std;
 
 // We'll use the GameMode object to store all information about
 // the currently loaded game instance.
+
+class ALandscape;
 
 UCLASS()
 class WRYV_API AWryvGameMode : public AGameMode
@@ -37,5 +40,21 @@ public:
   virtual void SetMatchState(FName NewState);
   virtual void Tick(float DeltaSeconds) override;
   vector<AGameObject*> GetObjectsOfType( Types type );
+  // Finds all objects of type listed
+  template<typename T> vector<T*> Find()
+  {
+    vector<T*> results;
+    ULevel* level = GetWorld()->GetLevel(0);
+    TTransArray<AActor*> *actors = &level->Actors;
+    for( int i = 0; i < actors->Num() && !floor; i++ )
+    {
+      AActor* a = (*actors)[i];
+      if( a == nullptr )  continue;
+      if( T* t = Cast< T >( a ) )  results.push_back( t );
+    }
+    return results;
+  }
+  // Find by name.
+  AActor* Find( FString name );
   virtual void BeginDestroy();
 };

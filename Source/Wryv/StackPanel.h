@@ -8,16 +8,13 @@ class StackPanel : public ImageWidget
 public:
   static UTexture* StackPanelTexture;
   
-  StackPanel( FString name ) :
-    ImageWidget( name )
+  StackPanel( FString name ) : ImageWidget( name )
   {
   }
-  StackPanel( FString name, UTexture* bkg ) :
-    ImageWidget( name, bkg )
+  StackPanel( FString name, UTexture* bkg ) : ImageWidget( name, bkg )
   {
   }
-  StackPanel( FString name, UTexture* bkg, FLinearColor color ) :
-    ImageWidget( name, bkg, color )
+  StackPanel( FString name, UTexture* bkg, FLinearColor color ) : ImageWidget( name, bkg, color )
   {
   }
   virtual ~StackPanel(){}
@@ -29,7 +26,6 @@ public:
     // Doesn't render the texture if it isn't set,
     // so that clear background is allowed
     if( Tex )  ImageWidget::render( offset );
-
     // render children
     HotSpot::render( offset );
   }

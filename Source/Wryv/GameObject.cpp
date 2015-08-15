@@ -21,7 +21,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   PrimaryActorTick.bCanEverTick = true;
   AttackCooldown = 0;
   Repairing = 0;
-
+  team = 0;
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   NextSpell = Types::NOTHING; // no spell is queued
@@ -32,6 +32,7 @@ void AGameObject::PostInitializeComponents()
 {
   //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
   Super::PostInitializeComponents();
+  
   if( RootComponent )
   {
     // Initialize position, but put object on the ground
@@ -39,7 +40,6 @@ void AGameObject::PostInitializeComponents()
   }
 
   UpdateStats();
-  Stats = BaseStats;
   Hp = Stats.HpMax;
   Speed = Stats.SpeedMax;
 
@@ -48,9 +48,10 @@ void AGameObject::PostInitializeComponents()
 
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
-    Abilities.push_back( Ability( Stats.Abilities[i] ) );
-  
-  Pos = SetOnGround( Pos );
+  {
+    Types ability = Stats.Abilities[i];
+    Abilities.push_back( Ability( ability ) );
+  }
   Dest = Pos;  // set the position to where the thing is.
 }
 
@@ -316,20 +317,25 @@ void AGameObject::Walk( float t )
 
 void AGameObject::SetDestination( FVector d )
 {
+  LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name,
+    Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
     LOG( "Warning: Set unit's destination on unit with SpeedMax=0" );
   }
 
   // Visualize the start position itself
-  //Visualize( p, Game->flycam->Yellow );
-  //Visualize( d, Game->flycam->Yellow );
+  Game->flycam->Visualize( Pos, Game->flycam->Yellow );
+  Game->flycam->Visualize( d, Game->flycam->Yellow );
   
   // find the path, then submit list of Waypoints
   Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
   
   // Fix Waypoints z value so they sit on ground plane
   for( int i = 0; i < Waypoints.size(); i++ )
-    Waypoints[i] = SetOnGround( Waypoints[i] );
+  {
+    Waypoints[i].Z = Game->flycam->floorBox.Max.Z + 100.f; // position ABOVE the ground plane.
+    Waypoints[i] = SetOnGround( Waypoints[i] ); // Then set on ground.
+  }
 
   // Check that the 2nd point isn't more than 90
   // degrees away from the 1st point.
@@ -390,6 +396,8 @@ void AGameObject::Stop()
 FVector AGameObject::SetOnGround( FVector v )
 {
   FVector floorPos = Game->flycam->getHitFloor( v );
+  LOG( "%s Pos (%f %f %f) -> (%f %f %f)", *Stats.Name, v.X, v.Y, v.Z,
+    floorPos.X, floorPos.Y, floorPos.Z );
   // account for bounds half-height
   //Pos.Z = bounds->GetScaledCapsuleHalfHeight() + floorPos.Z;//with bounds
   v.Z = floorPos.Z;

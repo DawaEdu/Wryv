@@ -102,6 +102,19 @@ vector<AGameObject*> AWryvGameMode::GetObjectsOfType( Types type )
   return v;
 }
 
+AActor* AWryvGameMode::Find( FString name )
+{
+  ULevel* level = GetWorld()->GetLevel(0);
+  TTransArray<AActor*> *actors = &level->Actors;
+  for( int i = 0; i < actors->Num(); i++ )
+  {
+    AActor* a = (*actors)[i];
+    if( a == nullptr )  continue;
+    if( a->GetName() == name )  return a;
+  }
+  return 0; // not found
+}
+
 void AWryvGameMode::BeginDestroy()
 {
   for( pair< int, Team* > p : teams )  delete p.second;

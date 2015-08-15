@@ -4,6 +4,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/EngineTypes.h"
 #include <vector>
+#include <set>
 using namespace std;
 #include "PlayerControl.generated.h"
 

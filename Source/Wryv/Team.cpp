@@ -237,7 +237,7 @@ void Team::runAI( float t )
       if( !units[i]->AttackTarget )
         group.push_back( units[i] );
     // Find a random location on the map, and send the group off towards it
-    FBox box = Game->flycam->floor->GetComponentsBoundingBox();
+    FBox box = Game->flycam->floorBox;
     FVector randomLocation = Rand( box.Min, box.Max );
     randomLocation.Z = box.Max.Z;
 

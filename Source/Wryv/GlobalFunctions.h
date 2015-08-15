@@ -37,18 +37,35 @@ __forceinline void info( FString message )
   UE_LOG( K, Display, TEXT("%s"), *message );
 }
 
-template <typename T> T* removeElement( vector<T*>& v, T* elt )
+template <typename T> void removeElement( vector<T*>& v, T* elt )
 {
   for( int i = v.size()-1 ; i >= 0; i-- )
-  {
     if( v[i] == elt )
-    {
       v.erase( v.begin() + i );
-      return elt;
-    }
+}
+
+template <typename T> bool removeElement( vector<T>& v, T& elt )
+{
+  for( int i = v.size()-1 ; i >= 0; i-- )
+    if( v[i] == elt )
+      v.erase( v.begin() + i );
+}
+
+template <typename T> void removeElement( set<T*>& v, T* elt )
+{
+  for( set<T*>::iterator it = v.begin(); it != v.end(); )
+  {
+    if( *it == elt )
+      it = v.erase( it );
+    else ++it;
   }
-  
-  return 0;  // The element wasn't found in the list
+}
+
+template <typename T> void removeElement( set<T>& s, T& elt )
+{
+  set<T>::iterator it = s.find( elt );
+  if( it != s.end() )
+    s.erase( it );
 }
 
 template <typename T> T* removeIndex( vector<T*>& v, int index )
@@ -65,47 +82,65 @@ template <typename T> T* removeIndex( vector<T*>& v, int index )
   return elt;
 }
 
-template <typename T> bool removeIndex( vector<T>& v, int index )
+template <typename T> T removeIndex( vector<T>& v, int index )
 {
+  T elt;
   if( index < 0 || index >= v.size() )
   {
     LOG( "vector::removeIndex(%d) OOB", index );
-    return 0;
   }
 
   // get the element, remove from vector
+  elt = v[index];
   v.erase( v.begin() + index );
-  return 1;
+  return elt;
 }
 
-template <typename T> bool removeElement( vector<T>& v, T& elt )
+// Gives you first element, NULL if element doesn't exist
+template <typename T> inline T first( set<T>& s )
 {
-  for( int i = v.size()-1 ; i >= 0; i-- )
-  {
-    if( v[i] == elt )
-    {
-      v.erase( v.begin() + i );
-      return 1;
-    }
-  }
-
-  return 0;
+  if( s.size() ) return *s.begin();
+  else return 0;
+}
+template <typename T> inline T* first( set<T*>& s )
+{
+  if( s.size() ) return *s.begin();
+  else return 0;
+}
+template <typename T> inline T first( vector<T>& v )
+{
+  if( v.size() ) return *v.begin();
+  else return 0;
+}
+template <typename T> inline T* first( vector<T*>& v )
+{
+  if( v.size() ) return *v.begin();
+  else return 0;
 }
 
-template <typename T> bool remove( set<T>& s, T& elt )
+template <typename T> inline bool in( set<T*>& s, T* elt )
 {
-  set<T>::iterator it = s.find( elt );
-  if( it != s.end() )
-  {
-    s.erase( it );
-    return 1;
-  }
-  return 0;
+  return s.find( elt ) != s.end();
 }
 
 template <typename T> inline bool in( set<T>& s, T& elt )
 {
   return s.find( elt ) != s.end();
+}
+
+template <typename T> inline int in( vector<T>& s, T& elt )
+{
+  for( int i = 0; i < s.size(); i++ )
+    if( s[i] == elt )
+      return i;
+  return -1;
+}
+template <typename T> inline int in( vector<T*>& s, T* elt )
+{
+  for( int i = 0; i < s.size(); i++ )
+    if( s[i] == elt )
+      return i;
+  return -1;
 }
 
 /// Removes an element t from a vector v
@@ -141,18 +176,59 @@ template <typename T> void DestroyAll( vector<T*> &v )
   v.clear();
 }
 
+template <typename T> void DestroyAll( set<T*> &v )
+{
+  for( T* t : v )
+    t->Destroy();
+  v.clear();
+}
+
+// Adds B to A, removing duplicates
 template <typename T> vector<T*>& operator+=( vector<T*>& A, const vector<T*>& B )
 {
-  for( int i = 0; i < B.size(); i++ )
-    A.push_back( B[i] ) ;
+  for( T* b : B )
+    if( in( A, b ) ) {
+      LOG( "don't keep: b was in A" );
+    }
+    else A.push_back( b ) ;
   return A;
 }
 
 template <typename T> vector<T*>& operator-=( vector<T*>& A, const vector<T*>& B )
 {
-  for( int i = 0; i < A.size(); i++ )
-    removeElement( A, B[i] ) ;
+  for( T* b : B )
+    removeElement( A, b ) ;
   return A;
+}
+
+template <typename T> set<T*>& operator+=( set<T*>& A, const set<T*>& B )
+{
+  for( T* b : B )
+    A.insert( b );
+  return A;
+}
+
+template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
+{
+  for( T* t : B )
+    removeElement( A, t );
+  return A;
+}
+
+template <typename T> vector<T*>& makeVector( const set<T*>& A )
+{
+  vector<T*> B;
+  for( T* t : A )
+    B.push_back( t );
+  return B;
+}
+
+template <typename T> set<T*>& makeSet( const vector<T*>& A )
+{
+  set<T*> B;
+  for( T* t : A )
+    B.insert( t );
+  return B;
 }
 
 inline FVector Rand()

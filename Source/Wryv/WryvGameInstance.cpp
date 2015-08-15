@@ -30,15 +30,17 @@ bool UWryvGameInstance::IsReady()
 
 void UWryvGameInstance::Init()
 {
-  init = 1;  //flag for IsReady() to know if instance ready or not
-
+  LOG( "UWryvGameInstance::Init()");
   Super::Init();
+  init = 1;  //flag for IsReady() to know if instance ready or not
 
   // Pull up the UnitTypeUClasses. The UnitTypeUClasses mapping just connects each
   // Types:: object to its UE4 UClass.
   LoadUClasses();
 
-  LOG( "UWryvGameInstance::Init()");
+  // Data table has bugs in it
+  // ------------------------------------------------------------------------------
+  return;
 
   if( !DataTable )
   {
@@ -67,34 +69,25 @@ void UWryvGameInstance::LoadUClasses()
 {
   // Connect Widgets & Stats with mappings from Types
   vector< Types > types;
-  for( int i = 0; i < Types::MAX; i++ )  types.push_back( (Types)i );
+  for( int i = 0; i < Types::MAX; i++ )
+    types.push_back( (Types)i );
   
   // Pull all the UCLASS names from the Blueprints we created.
   for( int i = 0; i < UnitTypeUClasses.Num(); i++ )
   {
-    Types ut = UnitTypeUClasses[i].Type;
-    UClass* uclass = UnitTypeUClasses[i].uClass;
-    if( !uclass )  continue;
-    LOG( "Loaded unit=%s / UClass=%s", *GetTypesName( ut ), *uclass->GetClass()->GetName() );
-    
+    Types type = UnitTypeUClasses[i].Type;
     // create a unit of that type from the blueprint to extract the properties
     // that were entered inside blueprints
-    AGameObject* unit = (AGameObject*)GetWorld()->SpawnActor( uclass );
-    if( ! unit )
+    AGameObject* unit = Make<AGameObject>( type );
+    if( !unit )
     {
-      LOG( "  Couldn't load: %s", *uclass->GetClass()->GetName() );
+      fatal( FS( "Couldn't load: %s", *GetTypesName( type ) ) );
       continue;
     }
 
-    // Save in all the defaults that blueprint specifies,
-    // including spawn costs, etc. We need this data here
-    // because we need to check if we have enough money
-    // to spawn a unit of a certain type before spawning it.
-    unit->Stats.uClass = uclass;  // Not available in dropdowns from table selector.
-    Game->unitsData[ ut ] = unit->Stats;
-    
-    //LOG( "Loaded unit: %s", *unit->Stats.ToString() );
-    unit->Destroy(); // destroy the unit 
+    unit->Stats.uClass = GetUClass( type );   // Write the uclass associated with the type here
+    Game->unitsData[ type ] = unit->Stats;    // 
+    unit->Destroy();                          // destroy the sample unit
   }
 }
 

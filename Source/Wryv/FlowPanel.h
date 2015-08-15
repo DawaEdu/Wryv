@@ -38,15 +38,15 @@ public:
     reflow( Size );
   }
 
-  void Set( vector<AGameObject*> objects )
+  void Set( set<AGameObject*> objects )
   {
     // Change rows/cols.
     Cols = Rows = ceilf( sqrtf( objects.size() ) ) ;
     Clear();
     if( !Cols ) return; //empty
 
-    for( int i = 0; i < objects.size(); i++ )
-      Add( new ImageWidget( objects[i]->Stats.Name, objects[i]->Stats.Portrait ) ) ;
+    for( AGameObject* go : objects )
+      Add( new ImageWidget( go->Stats.Name, go->Stats.Portrait ) ) ;
     if( Rows && Cols ) reflow();
   }
 };
