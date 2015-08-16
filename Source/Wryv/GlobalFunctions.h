@@ -281,6 +281,13 @@ inline float randFloat( int min, int max )
   return min + FMath::FRand()*( max - min );
 }
 
+template <typename T> inline T& Clamp( T&a, const T& min, const T& max )
+{
+  if( a < min ) a = min;
+  else if( a > max ) a = max;
+  return a;
+}
+
 template <typename T> static T* GetComponentByType( AActor* a )
 {
   TArray<UActorComponent*> comps = a->GetComponents();

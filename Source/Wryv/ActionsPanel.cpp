@@ -75,7 +75,8 @@ void AbilitiesPanel::Set( AGameObject *go )
     // Attach button with invokation of i'th ability
     clock->OnMouseDownLeft = [go,i,abilityData]( FVector2D mouse ) {
       LOG( "%s used ability %s", *go->Stats.Name, *abilityData.Name );
-      go->UseAbility( go->Abilities[i] );
+      // Invoke I'th action of the object
+      go->Action( i );
       return Consumed;
     };
   }

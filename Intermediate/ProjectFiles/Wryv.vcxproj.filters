@@ -250,6 +250,9 @@
     <ClInclude Include="..\..\Source\Wryv\UISounds.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\MouseWidget.h">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -377,6 +380,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\StatsPanel.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

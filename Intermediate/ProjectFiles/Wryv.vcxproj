@@ -56,6 +56,7 @@
     <ClInclude Include="..\..\Source\Wryv\ActionsPanel.h" />
     <ClInclude Include="..\..\Source\Wryv\Ability.h" />
     <ClInclude Include="..\..\Source\Wryv\AI.h" />
+    <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Buffs.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Building.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Border.h" />
@@ -98,6 +99,7 @@
     <ClInclude Include="..\..\Source\Wryv\ITextWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\MapSelectionScreen.h" />
     <ClInclude Include="..\..\Source\Wryv\MissionObjectivesScreen.h" />
+    <ClInclude Include="..\..\Source\Wryv\MouseWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />

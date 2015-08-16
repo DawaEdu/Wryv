@@ -46,29 +46,3 @@ public:
 };
 
 
-
-class MouseSelectBox : public Border
-{
-  FVector2D StartPt;
-public:
-  MouseSelectBox( FString name, FBox2DU box, float thickness, FLinearColor color ) :
-    Border( name, box, thickness, color )
-  {
-  }
-
-  void SetStart( FVector2D pt )
-  {
-    //LOG(  "box start (%f,%f)", pt.X, pt.Y );
-    StartPt = pt;
-    Box.Min = Box.Max = pt; // close box.
-    Set( Box );
-  }
-
-  void SetEnd( FVector2D pt )
-  {
-    //LOG(  "box endpt (%f,%f)", pt.X, pt.Y );
-    Box.Min = Box.Max = StartPt; // reset box
-    Box += pt; // expand to contain new point.
-    Set( Box );
-  }
-};

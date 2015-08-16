@@ -30,6 +30,11 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   // Make the fog of war instance.
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>( this, ADefaultPawn::MovementComponentName );
   MovementComponent->SetTickableWhenPaused( true );
+  
+  DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
+  MainCamera = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "MainCamera" );
+  OrthoCam = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "OrthoCam" );
+  
   CameraMovementSpeed = 1000.f;
 }
 
@@ -38,10 +43,6 @@ void AFlyCam::BeginPlay()
 {
 	Super::BeginPlay();
   LOG( "FlyCam::BeginPlay()" );
-
-  // We find ourselves inside the level of choice here.
-  // From here, we decide what UI set to load.
-  fogOfWar = GetWorld()->SpawnActor<AFogOfWar>( AFogOfWar::StaticClass() );
 }
 
 void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
@@ -65,7 +66,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Left, -1.f));
 
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MouseClickedLMB", EKeys::Q, -1.f));
-  MainCamera = GetComponentByName<UCameraComponent>( this, "Camera" );
+  //MainCamera = GetComponentByName<UCameraComponent>( this, "Camera" );
   
   // The "string" (eg. "Forward") is the mapping as defined in Project Settings / Input / Action Mappings.
   // We just associate the "Forward" action (which is bound to a key in 
@@ -171,17 +172,17 @@ void AFlyCam::InitializePathfinding()
       pathfinder->nodes[ idx ]->index = idx;
       pathfinder->nodes[ idx ]->point = p;
       
-      AActor *sphere = MakeSphere( p, radius, White );
+      AActor *sphere = MakeSphere( p, radius, FLinearColor::White );
       
       // if the actor intersects any other bodies inside the game
       // then don't use it
       if( !intersectsAnyOfType( sphere, intTypes ) ) {
         pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
-        SetColor( sphere, White );
+        SetColor( sphere, FLinearColor::White );
       }
       else {
         pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
-        SetColor( sphere, Red );
+        SetColor( sphere, FLinearColor::Red );
       }
 
       pathfinder->updateGraphConnections( coord );
@@ -208,7 +209,7 @@ void AFlyCam::InitializePathfinding()
   {
     FVector dir = e->dst->point - e->src->point;
     // set size of edge proportional to distance between nodes
-    MakeLine( e->src->point, e->dst->point, White );
+    MakeLine( e->src->point, e->dst->point, FLinearColor::White );
   }
 }
 
@@ -293,7 +294,30 @@ FHitResult AFlyCam::LOS( FVector p, FVector q, TArray<AActor*> ignoredActors )
   return hit;
 }
 
-void AFlyCam::SetColor( AActor* a, UMaterial* mat )
+UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
+{
+  for( pair<FLinearColor, UMaterialInstanceDynamic*> p : Colors )
+    info( FS( "Material (%f %f %f %f) / %p", p.first.R, p.first.G, p.first.B, p.first.A, p.second ) );
+  
+  UMaterialInstanceDynamic* material = 0;
+  map<FLinearColor,UMaterialInstanceDynamic*>::iterator it = Colors.find( color );
+  info( FS( "Color (%f %f %f %f): %d", color.R, color.G, color.B, color.A, Colors.size() ) );
+
+  if( it == Colors.end() )
+  {
+    material = UMaterialInstanceDynamic::Create( BaseWhiteInterface, this );
+    material->SetVectorParameterValue( FName( "Color" ), color );
+    material->SetVectorParameterValue( FName( "None" ), color ); // the parameter gets called "None" for some reason
+    Colors[ color ] = material;
+    ColorMaterials.Push( material );
+  }
+  else
+    material = it->second;
+
+  return material;
+}
+
+void AFlyCam::SetMaterial( AActor* a, UMaterialInterface* mat )
 {
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>( a );
     for( int i = 0; i < meshes.size(); i++ )
@@ -301,31 +325,38 @@ void AFlyCam::SetColor( AActor* a, UMaterial* mat )
         meshes[i]->SetMaterial( j, mat );
 }
 
-void AFlyCam::Visualize( FVector& v, UMaterial* color )
+void AFlyCam::SetColor( AActor* a, FLinearColor color )
+{
+  SetMaterial( a, GetMaterial( color ) );
+}
+
+void AFlyCam::Visualize( FVector& v, float s, FLinearColor color )
 {
   AActor *a = GetWorld()->SpawnActor( Game->unitsData[ Types::UNITSPHERE ].uClass, &v );
-  a->GetRootComponent()->SetWorldScale3D( FVector( 10.f ) );
+  a->GetRootComponent()->SetWorldScale3D( FVector( s ) );
+  SetColor( a, color );
   viz.push_back( a );
 }
 
-void AFlyCam::Visualize( vector<FVector>& v )
+void AFlyCam::Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
+{
+  for( int i = 0; i < v.size(); i++ )
+  {
+    LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
+    float p = (float)i/v.size();
+    FLinearColor color = FLinearColor::LerpUsingHSV( startColor, endColor, p );
+    Visualize( v[i], s, color );
+  }
+}
+
+void AFlyCam::ClearViz()
 {
   for( int i = 0; i < viz.size(); i++ )
     viz[i]->Destroy();
   viz.clear();
-
-  for( int i = 0; i < v.size(); i++ )
-  {
-    LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
-    Visualize( v[i], Game->flycam->White );
-  }
-
-  // color the beginning and end 
-  SetColor( viz.front(), Game->flycam->Green );
-  SetColor( viz.back(), Game->flycam->Red );
 }
 
-AActor* AFlyCam::MakeSphere( FVector center, float radius, UMaterial* color )
+AActor* AFlyCam::MakeSphere( FVector center, float radius, FLinearColor color )
 {
   UClass *uClassSphere = Game->unitsData[ Types::UNITSPHERE ].uClass;
   AActor *sphere = GetWorld()->SpawnActor( uClassSphere, &center );
@@ -342,7 +373,7 @@ AActor* AFlyCam::MakeSphere( FVector center, float radius, UMaterial* color )
   return sphere;
 }
 
-AActor* AFlyCam::MakeCube( FVector center, float radius, UMaterial* color )
+AActor* AFlyCam::MakeCube( FVector center, float radius, FLinearColor color )
 {
   UClass *uClassSphere = Game->unitsData[ Types::UNITSPHERE ].uClass;
   AActor *cube = GetWorld()->SpawnActor( uClassSphere, &center );
@@ -359,7 +390,7 @@ AActor* AFlyCam::MakeCube( FVector center, float radius, UMaterial* color )
   return cube;
 }
 
-AActor* AFlyCam::MakeLine( FVector a, FVector b, UMaterial* color )
+AActor* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
 {
   // The line is a unit line
   FVector dir = b - a;
@@ -445,11 +476,15 @@ vector<FHitResult> AFlyCam::getAllHitGeometry()
 FVector AFlyCam::getHitFloor(FVector eye, FVector look)
 {
   FHitResult hit;
-  FCollisionQueryParams fcqp( "dest trace", true );
-  bool intersects = floor->ActorLineTraceSingle( hit, eye, eye + look*1e6f, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
+  FCollisionQueryParams fcqp( "floor trace", true );
+  FVector endPt = eye + look*1e6f;
+  bool intersects = floor->ActorLineTraceSingle( hit, eye, endPt, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
   if( ! intersects )
   {
-    warning( "Ray didn't hit ground plane" );
+    //!! BUG: Sometimes the ground doesn't intersect
+    // Impact point would then be the origin.
+    //warning( FS( "Ray (%f %f %f) -> (%f %f %f) didn't hit ground plane",
+    //  eye.X, eye.Y, eye.Z,   endPt.X, endPt.Y, endPt.Z ) );
     return eye;
   }
   else
@@ -471,7 +506,12 @@ FVector AFlyCam::getHitFloor()
 
   FVector2D mouse = getMousePos();
   FHitResult hit;
-  Game->pc->Trace( mouse, floor, hit );
+  bool intersects = Game->pc->Trace( mouse, floor, hit );
+  if( !intersects )
+  {
+    warning( FS( "Ray cast from camera eye didn't hit ground plane, (%f %f %f)",
+      hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
+  }
   return hit.ImpactPoint;
 }
 
@@ -578,6 +618,15 @@ void AFlyCam::FindFloor()
 
   if( !floor )  fatal( "Floor not found" ); // must crash because need floor for game to work
   floorBox = floor->GetComponentsBoundingBox();
+
+  // create the fog of war now
+  fogOfWar = GetWorld()->SpawnActor<AFogOfWar>( AFogOfWar::StaticClass() );
+  FVector xyScale = floorBox.GetSize();
+  xyScale.Z = 1.f;
+  fogOfWar->SetActorScale3D( xyScale );
+  fogOfWar->SetActorLocation( FVector( 0, 0, 1500 ) );
+
+  
 }
 
 void AFlyCam::Select( set<AGameObject*> objects )
@@ -604,10 +653,10 @@ void AFlyCam::MouseDownLeft()
   // If the mouse click intersected a HUD element,
   // we don't let the click pass through to the 3d surface below it.
   if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
-  FUnitsDataRow NextSpell = Game->GetData( Game->hud->NextSpell );
+  FUnitsDataRow NextAction = Game->GetData( Game->hud->NextAction );
   
   // If a spell queued to be cast, a left click casts it
-  if( NextSpell.Type != NOTHING )
+  if( NextAction.Type != NOTHING )
   {
     if( !Game->hud->Selected.size() ) return;  // can't cast the spell with no caster.
 
@@ -619,13 +668,13 @@ void AFlyCam::MouseDownLeft()
       // These cast on next turn, they can't cast from UI click directly
       // since engine needs to record cast event 
       for( AGameObject *se : Game->hud->Selected )
-        se->CastSpell( NextSpell.Type, hit );
+        se->Action( NextAction.Type, hit );
     }
-    else if( NextSpell.AOE )
+    else if( NextAction.AOE )
     {
       // Cast the spell on the ground 
       for( AGameObject *se : Game->hud->Selected )
-        se->CastSpell( NextSpell.Type, getHitFloor() );
+        se->Action( NextAction.Type, getHitFloor() );
     }
     else
     {
@@ -673,18 +722,15 @@ void AFlyCam::MouseDownLeft()
       }
     }
   }
-  
-  
 }
 
 void AFlyCam::MouseUpRight()
 {
-  LOG( "MouseUpRight");
+  
 }
 
 void AFlyCam::MouseDownRight()
 {
-  LOG( "MouseDownRight" );
   FHitResult hit = getHitGeometry();
   AGameObject* target = Cast<AGameObject>( hit.GetActor() );
   // There's a GameObject target

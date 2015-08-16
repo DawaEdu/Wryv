@@ -2,12 +2,14 @@
 
 #include "ITextWidget.h"
 
+class UMaterialExpressionVectorParameter;
+
 class Clock : public ITextWidget
 {
 public:
   CooldownCounter counter; // The actual counter
   FLinearColor clockColor;
-  UMaterialInstanceDynamic *clockMaterial; //anim param
+  UMaterialInstanceDynamic* clockMaterial;
   
   static UMaterialInstanceDynamic *CreateClockMaterial(FLinearColor color);
   Clock( FString name, FVector2D size, CooldownCounter o, FLinearColor pieColor );

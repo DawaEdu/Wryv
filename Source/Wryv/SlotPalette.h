@@ -11,7 +11,7 @@ class SlotPalette : public ImageWidget
 public:
   FVector2D EntrySize;
   static UTexture* SlotPaletteTexture;
-
+  static FLinearColor DefaultColor;
   // Drag & Drop for items from slots
   // The item we are dragging (subhotspot)
   SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );

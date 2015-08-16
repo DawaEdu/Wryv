@@ -23,7 +23,7 @@ ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
   selectorShopPatron = 0;
-  NextSpell = NextBuilding = NOTHING;
+  NextAction = NextBuilding = NOTHING;
   WillSelectNextFrame = 0;
   Init = 0; // Have the slots & widgets been initialied yet? can only happen
   // in first call to draw.
@@ -33,11 +33,6 @@ void ATheHUD::BeginPlay()
 {
   Super::BeginPlay();
   LOG( "ATheHUD::BeginPlay()");
-  // Create a CanvasTarget.
-  RTFogOfWar = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(
-    GetWorld(), UCanvasRenderTarget2D::StaticClass(), 2048, 2048 );
-  RTFogOfWar->OnCanvasRenderTargetUpdate.AddDynamic( this, &ATheHUD::DrawFogOfWar );
-  RTFogOfWar->ClearColor = FLinearColor::Black;
 }
 
 TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
@@ -62,19 +57,19 @@ TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
 
 EventCode ATheHUD::BeginBoxSelect( FVector2D mouse ){
   // Set the opening of the select box
-  ui->selectBox->SetStart( mouse );
-  ui->selectBox->Show();
+  ui->mouseCursor->SelectStart( mouse );
   return NotConsumed;
 }
 
 EventCode ATheHUD::Hover( FVector2D mouse ){
   // Regular hover event
+  ui->mouseCursor->Set( mouse );
   return NotConsumed;
 }
 
 // Mouse motion with mouse down.
 EventCode ATheHUD::DragBoxSelect( FVector2D mouse ){
-  ui->selectBox->SetEnd( mouse );
+  ui->mouseCursor->DragBox( mouse );
   return NotConsumed;
 }
 
@@ -88,13 +83,13 @@ EventCode ATheHUD::EndBoxSelect( FVector2D mouse ){
     selectionParity = Subtracts;
   else
     selectionParity = New;
-  ui->selectBox->Hide();
+  ui->mouseCursor->SelectEnd();
   return NotConsumed;
 }
 
 set<AGameObject*> ATheHUD::Select( set<AGameObject*> objects )
 {
-  NextSpell = NOTHING; // Unset next spell & building
+  NextAction = NOTHING; // Unset next spell & building
   NextBuilding = NOTHING;
   DestroyAll( selectors );  // Destroy the old selectors
   DestroyAll( selAttackTargets );
@@ -291,7 +286,7 @@ void ATheHUD::InitWidgets()
   ui->Add( ui->missionObjectivesScreen );
 
   // Add the mouseCursor last so that it renders last.
-  ui->mouseCursor = new ImageWidget( "mouse cursor", MouseCursorHand.Texture );
+  MouseWidget *mousePointer = ui->mouseCursor = new MouseWidget( "mouse cursor", MouseCursorHand.Texture );
   ui->Add( ui->mouseCursor );
 
   /// Set the screen's to correct one for the gamestate
@@ -324,21 +319,6 @@ void ATheHUD::UpdateDisplayedResources()
 
   ui->gameChrome->resources->SetValues( FMath::RoundToInt( displayedGold ),
     FMath::RoundToInt( displayedLumber ), FMath::RoundToInt( displayedStone ) );
-}
-
-void ATheHUD::UpdateMouse()
-{
-  // Draw the mouse
-  ui->mouseCursor->Margin = Game->flycam->getMousePos();
-  // If the `NextSpell` is selected, cross hair is used, else hand.
-  if( NextSpell ) {
-    ui->mouseCursor->Tex = MouseCursorCrossHairs.Texture;
-    ui->mouseCursor->hotpoint = MouseCursorCrossHairs.Hotpoint;
-  }
-  else {
-    ui->mouseCursor->Tex = MouseCursorHand.Texture;
-    ui->mouseCursor->hotpoint = MouseCursorHand.Hotpoint;
-  }
 }
 
 void ATheHUD::DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, 
@@ -383,47 +363,6 @@ void ATheHUD::DrawTexture(UCanvas* canvas, UTexture* Texture, float ScreenX, flo
 	}
 }
 
-void ATheHUD::DrawFogOfWar(UCanvas* canvas, int32 Width, int32 Height)
-{
-  // This renders the fog of war into the canvas. I'm doing it as
-  // sprites.
-  //   1. get the units in the view frustum
-  //   2. render fogBlots at each unit's location
-  //   3. render the max(1-fogBlots,1.f) texture on top of the scene
-
-  // The location of the fogBlots texture is going to be actually just on top of the terrain.
-  // It will move with the camera (attached to the FlyCam object). We'll use a small quad instead
-  // of a very large quad so that the texture resolution is good.
-  FVector2D canvasSize( Width, Height );
-  FBox floorBox = Game->flycam->floorBox;
-  FVector2D floorBoxSize( floorBox.GetSize().X, floorBox.GetSize().Y );
-  
-  // Just use the X value (width) (or possibly maximum extent) to find the worldScale
-  for( int i = 0; i < Game->gm->playersTeam->units.size(); i++ )
-  {
-    AGameObject *go = Game->gm->playersTeam->units[i];
-    FVector pos = go->Pos;
-    // Render a fogBlot into the Canvas at projected position.
-    // Rather than use a projection matrix we'll just
-    // use the xy position & position on square ground plane.
-
-    // radius on the texture is the sightrange, then unitize
-    float radiusU = go->Stats.SightRange / floorBoxSize.X;
-    radiusU = 0.25f; //!! a lot of the SightRanges are setup as 0's temp .
-    
-    FVector2D percPos = FVector2D( pos.X - floorBox.Min.X, pos.Y - floorBox.Min.Y )
-                      / floorBoxSize;
-    percPos = percPos - radiusU; // Move from Center to TL corner
-    FVector2D blotPos = percPos * canvasSize;
-    float radiusPX = radiusU * canvasSize.X; // canvas is square
-
-    DrawMaterial( canvas, WarBlot, blotPos.X, blotPos.Y, radiusPX, radiusPX, 0, 0, 1, 1 );
-    // another approach would be to render actual SPHERES in the place
-    // of the objects. you can Mark ALL objects as HIDDEN
-    // https://forums.unrealengine.com/showthread.php?2964-Hiding-certain-objects-from-being-drawn-on-a-camera-or-SceneCapture2D-object
-  }
-}
-
 void ATheHUD::DrawPortrait()
 {
   // Draws the portrait of the first selected object
@@ -442,12 +381,11 @@ void ATheHUD::DrawHUD()
   // Canvas is only initialized here.
   Super::DrawHUD();
   HotSpot::hud = this;
-
   InitWidgets();
 
   if( WillSelectNextFrame )
   {
-    set<AGameObject*> selected = Pick( ui->selectBox->Box );
+    set<AGameObject*> selected = Pick( ui->mouseCursor->selectBox->Box );
     if( selectionParity == New )  Selected = selected;
     else if( selectionParity == Adds )  Selected += selected;
     else if( selectionParity == Subtracts )  Selected -= selected;
@@ -457,19 +395,15 @@ void ATheHUD::DrawHUD()
 
   UpdateDisplayedResources();
   DrawPortrait();
-  UpdateMouse();
   
   // Render the minimap, only if the floor is present
   FBox box = Game->flycam->floorBox;
   FVector p = box.GetCenter();
   RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
   
-  ui->Size = FVector2D( Canvas->SizeX, Canvas->SizeY );
+  ui->SetSize( FVector2D( Canvas->SizeX, Canvas->SizeY ) );
   ui->Move( Game->gm->T ); // Ticked here, in case reflow is needed
   ui->render();
-
-  // Draw the fog of war
-  //((AHUD*)DrawTexture)( RTFogOfWar, 0, 0, 200, 200, 0, 0, 1, 1 );
 }
 
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )

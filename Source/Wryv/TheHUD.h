@@ -52,8 +52,9 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* BuildButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NullTexture;
-  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
+  UPROPERTY() TArray<UMaterialInstanceDynamic*> MaterialInstances; // Referenced collection of material instances.
+  // Required to prevent auto-cleanup of instanced materials
   // The blueprint for the fog of war instance to use.
   
   // Render-to-texture target. Created inside the editor.
@@ -79,23 +80,24 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )  UMaterial* WarBlot;
 
   // The font used to render the text in the HUD.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
-  Types NextSpell;  // The next spell to be cast by the UI, 0 if no spell is queued & ready
+  Types NextAction;  // The next action to be taken by the UI, 0 if no spell is queued & ready
   Types NextBuilding;  // NULL if no building is trying to be placed.
 
   // This is the ring shaped selector that gets attached to the currently selected unit(s)
   vector<AWidget3D*> selectors, selAttackTargets;
   AWidget3D *selectorShopPatron;
 
-  // Make a texture for rendering the fog of war to
-  UCanvasRenderTarget2D* RTFogOfWar; // : UTexture
-
+  ////////
   // The blot in the material to use as a fogofwar blot
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial *WarBlot;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial *WarBlot;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UCanvasRenderTarget2D* RTFogOfWar;
+  ////////
 
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
@@ -127,9 +129,7 @@ public:
   void DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float MaterialU, float MaterialV, float MaterialUWidth, float MaterialVHeight);
   void DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float MaterialU, float MaterialV, float MaterialUWidth, float MaterialVHeight, float Scale, bool bScalePosition, float Rotation, FVector2D RotPivot);
   void DrawTexture(UCanvas* Canvas, UTexture* Texture, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float TextureU, float TextureV, float TextureUWidth, float TextureVHeight, FLinearColor TintColor=FLinearColor::White, EBlendMode BlendMode=BLEND_Translucent, float Scale=1.f, bool bScalePosition=false, float Rotation=0.f, FVector2D RotPivot=FVector2D::ZeroVector);
-
-  UFUNCTION()
-  void DrawFogOfWar(UCanvas* theCanvas, int32 Width, int32 Height);
+  
   void DrawPortrait();
   virtual void DrawHUD() override;
 

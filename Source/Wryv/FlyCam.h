@@ -19,30 +19,36 @@ struct Edge;
 class Pathfinder;
 class ALandscape;
 
+inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
+{
+  return c1.Quantize().AlignmentDummy < c2.Quantize().AlignmentDummy;
+}
+
 UCLASS()
 class WRYV_API AFlyCam : public APawn
 {
 	GENERATED_BODY()
 public:
-  AActor *floor; // Every level must have a Landscape object called the floor.
-  ALandscape *landscape;
+  AActor* floor; // Every level must have a Landscape object called the floor.
+  ALandscape* landscape;
   FBox floorBox; // we only find the floor's box once (at level start).
-  AGameObject *ghost; // ghost of the building being set for placement
-  Pathfinder *pathfinder;
-  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
-  AFogOfWar* fogOfWar;  // The fog of war instance plane, constructed from the uclass listed above
-  
+  AGameObject* ghost; // ghost of the building being set for placement
+  Pathfinder* pathfinder;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  USceneComponent* DummyRoot;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* OrthoCam;
+  AFogOfWar* fogOfWar;
+
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
   
   // Use a TARRAY to keep sfx organized, includes music & effects
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
-
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* White;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* Red;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* Green;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* Yellow;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterialInterface* BaseWhiteInterface;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* BaseWhiteMaterial;
+  UPROPERTY() TArray<UMaterialInstanceDynamic*> ColorMaterials; //Reference counted collection of created colors.
+  map<FLinearColor, UMaterialInstanceDynamic*> Colors;
 
   // the name of the title level
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  FName LevelMap;
@@ -75,13 +81,18 @@ public:
   
   void SetCameraPosition( FVector2D perc );
   FHitResult LOS( FVector p, FVector q, TArray<AActor*> ignoredActors );
-  static void SetColor( AActor* a, UMaterial* mat );
+  UMaterialInterface* GetMaterial( FLinearColor color );
+  void SetMaterial( AActor* a, UMaterialInterface* mat );
+  void SetColor( AActor* a, FLinearColor color );
+  UMaterialInstanceConstant* CreateMaterial( FLinearColor color );
   // Series of points to visualize
-  void Visualize( FVector& v, UMaterial* color );
-  void Visualize( vector<FVector>& v );
-  AActor* MakeSphere( FVector center, float radius, UMaterial* color );
-  AActor* MakeCube( FVector center, float radius, UMaterial* color );
-  AActor* MakeLine( FVector a, FVector b, UMaterial* color );
+  void Visualize( FVector& v, float s, FLinearColor color );
+  void Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
+  void ClearViz();
+  
+  AActor* MakeSphere( FVector center, float radius, FLinearColor color );
+  AActor* MakeCube( FVector center, float radius, FLinearColor color );
+  AActor* MakeLine( FVector a, FVector b, FLinearColor color );
   void RetrievePointers();
   void debug( int slot, FColor color, FString mess );
   void setGhost( Types ut );

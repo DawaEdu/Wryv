@@ -2,6 +2,8 @@
 #include "SlotPalette.h"
 #include "Clock.h"
 
+FLinearColor SlotPalette::DefaultColor( 0.15, 0.15, 0.15, 0.75 );
+
 SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   ImageWidget( name, bkg ), Rows(rows), Cols(cols), EntrySize(entrySize)
 {
@@ -24,7 +26,7 @@ Clock* SlotPalette::GetSlot( int i )
 {
   if( i < 0 || i >= children.size() )
   {
-    LOG(  "SlotPalette::GetSlot(%d) oob", i );
+    LOG( "SlotPalette::GetSlot(%d) oob", i );
     return 0;
   }
   return (Clock*)children[i];
@@ -111,8 +113,7 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   {
     // initialize a bunch of cooldown counters
     FString name = FString::Printf( TEXT("SP `%s`'s Clock %d"), *Name, i+1 );
-    Clock *clock = new Clock( name, EntrySize, CooldownCounter(),
-      FLinearColor( 0.15, 0.15, 0.15, 0.15 ) );
+    Clock *clock = new Clock( name, EntrySize, CooldownCounter(), DefaultColor );
     Add( clock );
     AdjustPosition( i );
     slots.push_back( clock );

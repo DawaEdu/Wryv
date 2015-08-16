@@ -6,6 +6,11 @@ ACombatUnit::ACombatUnit( const FObjectInitializer& PCIP ):Super( PCIP )
   
 }
 
+void ACombatUnit::Move( float t )
+{
+  AUnit::Move( t );
+}
+
 void ACombatUnit::ai( float t )
 {
   // Seek out opponents in groups.

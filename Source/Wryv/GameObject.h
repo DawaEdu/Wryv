@@ -48,10 +48,11 @@ public:
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
+
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   FVector AttackTargetOffset;  // Ground position of spell attacks
-  Types NextSpell;
+  Types NextAction;
 
   // 
   // UE4 & Utility
@@ -83,12 +84,14 @@ public:
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float speedPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
-  void CastSpell();
-  void CastSpell( Types type, AGameObject *target );
-  void CastSpell( Types type, FVector where );
-  void ApplyEffect( FUnitsDataRow item );
-  void UseAbility( Ability& ability );
-  void UseAbility( Ability& ability, AGameObject *target );
+  // Invokes queued action
+  void Action();
+  // Sets object to use indexed action
+  void Action( int index );
+  // 
+  void Action( Types type, AGameObject *target );
+  void Action( Types type, FVector where );
+  void ApplyEffect( Types item );
   void UpdateStats();
   bool Build( Types type );
   

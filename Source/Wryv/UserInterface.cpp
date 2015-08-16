@@ -13,11 +13,6 @@ UserInterface::UserInterface( FVector2D size ) : Screen( "UI-root" )
   Add( statusBar );
   HotSpot::TooltipWidget = statusBar->Text; // Setup the default tooltip location
   // connect the mouse drag functions 
-  selectBox = new MouseSelectBox( "MouseSelectBox border",
-    FBox2DU( FVector2D(100,100), FVector2D(50,50) ),
-    8.f, FLinearColor::Green);
-  Add( selectBox );
-  selectBox->Hide();
   mouseCursor = 0;
 }
 
@@ -38,4 +33,8 @@ void UserInterface::SetScreen( int mode )
   mouseCursor->Show();
 }
 
-
+void UserInterface::SetSize( FVector2D size )
+{
+  Size = size;
+  mouseCursor->Size = size;
+}

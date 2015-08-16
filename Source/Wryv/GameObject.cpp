@@ -24,8 +24,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   team = 0;
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
-  NextSpell = Types::NOTHING; // no spell is queued
-  UE_LOG( K, Warning, TEXT( "OK" ) );
+  NextAction = Types::NOTHING; // no spell is queued
 }
 
 void AGameObject::PostInitializeComponents()
@@ -184,63 +183,55 @@ void AGameObject::SetRot( const FRotator & ro )
   else error( "No root component" );
 }
 
-void AGameObject::CastSpell()
+void AGameObject::Action()
 {
-  if( NextSpell != NOTHING )
+  if( NextAction != NOTHING )
   {
-    ASpell* spell = Game->Make<ASpell>( NextSpell, Pos, Stats.TeamId );
+    ASpell* spell = Game->Make<ASpell>( NextAction, Pos, Stats.TeamId );
     spell->caster = this;
     spell->AttackTarget = AttackTarget;
     spell->AttackTargetOffset = AttackTargetOffset;
-    NextSpell = NOTHING;
+    NextAction = NOTHING;
   }
+}
+
+void AGameObject::Action( int index )
+{
+  
 }
 
 // Cast a spell at a target, either at owner's target or
 // at a specific vector location
-void AGameObject::CastSpell( Types type, AGameObject *target )
+void AGameObject::Action( Types type, AGameObject *target )
 {
-  // The NextSpell to be cast is (whatever spell was requested)
-  NextSpell = type;
+  // The NextAction to be cast by this actor is (whatever spell was requested)
+  NextAction = type;
   AttackTarget = target;
 }
 
 // Cast spell with a target location
-void AGameObject::CastSpell( Types type, FVector where )
+void AGameObject::Action( Types type, FVector where )
 {
-  NextSpell = type;
+  NextAction = type;
   AttackTargetOffset = where;
 }
 
-void AGameObject::ApplyEffect( FUnitsDataRow item )
+void AGameObject::ApplyEffect( Types item )
 {
+  FUnitsDataRow itemData = Game->GetData( item );
+
   // TimeLength, dataSet
-  LOG( "Applying %s for %f seconds", *item.Name, item.TimeLength );
+  LOG( "Applying %s for %f seconds", *itemData.Name, itemData.TimeLength );
+
   // Don't do anything for the Nothing item
-  if( !IsItem( item.Type ) )
+  if( IsItem( itemData.Type ) )
   {
-    LOG( "%s NOT AN ITEM", *item.Name );
+    BonusTraits.push_back( PowerUpTimeOut( itemData.TimeLength, itemData ) );
   }
   else
   {
-    BonusTraits.push_back( PowerUpTimeOut( item.TimeLength, item ) );
+    LOG( "%s NOT AN ITEM", *itemData.Name );
   }
-}
-
-void AGameObject::UseAbility( Ability& ability )
-{
-  if( ability.Done() ) // ability is ready.
-  {
-    // You can use the ability now
-    Game->unitsData[ ability.Type ];
-
-    // Reset refresh time.
-    ability.Reset(); // ability not ready now
-  }
-}
-
-void AGameObject::UseAbility( Ability& ability, AGameObject *target )
-{
 }
 
 void AGameObject::UpdateStats()
@@ -312,7 +303,7 @@ void AGameObject::Walk( float t )
     SetRot( Dir.Rotation() );
   }
 
-  SetOnGround( Pos );
+  SetOnGround( Pos + Game->flycam->floorBox.Max.Z*1.01f );
 }
 
 void AGameObject::SetDestination( FVector d )
@@ -323,9 +314,14 @@ void AGameObject::SetDestination( FVector d )
     LOG( "Warning: Set unit's destination on unit with SpeedMax=0" );
   }
 
+  // Make sure the destination is grounded
+  d = SetOnGround( d );
+
+  float vizSize = 32.f;
   // Visualize the start position itself
-  Game->flycam->Visualize( Pos, Game->flycam->Yellow );
-  Game->flycam->Visualize( d, Game->flycam->Yellow );
+  Game->flycam->ClearViz();
+  Game->flycam->Visualize( Pos, 44.f, FLinearColor::Green );
+  Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
   
   // find the path, then submit list of Waypoints
   Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
@@ -333,7 +329,9 @@ void AGameObject::SetDestination( FVector d )
   // Fix Waypoints z value so they sit on ground plane
   for( int i = 0; i < Waypoints.size(); i++ )
   {
-    Waypoints[i].Z = Game->flycam->floorBox.Max.Z + 100.f; // position ABOVE the ground plane.
+    Waypoints[i].Z = Game->flycam->floorBox.Max.Z*1.01f; // position ABOVE the ground plane.
+    //!!BUG: Sometimes a point doesn't hit the ground plane, and will end up at the upper limits
+    // of the bounding box.
     Waypoints[i] = SetOnGround( Waypoints[i] ); // Then set on ground.
   }
 
@@ -359,15 +357,17 @@ void AGameObject::SetDestination( FVector d )
     dir1.Normalize(), dir2.Normalize();
     const float a = cosf( WaypointAngleTolerance );
     float dot = FVector::DotProduct( dir1, dir2 );
-    error( FS( "DotProduct=%f", dot ) );
     if( dot < a )
     {
-      // Pop the middle one
-      Waypoints.erase( Waypoints.begin() + ( Waypoints.size() - 2 ) );
+      // Pop the 2nd from the back point, viz all back 3 pts.
+      vector<FVector>::iterator it = --(--(Waypoints.end()));
+      Waypoints.erase( --(--(Waypoints.end())) );
+      Game->flycam->Visualize( *it, 64.f, FLinearColor::Black );
     }
   }
 
-  Game->flycam->Visualize( Waypoints );
+  Game->flycam->Visualize( Waypoints, 32.f, 
+    FLinearColor( 0, 0.8f, 0, 1.f ), FLinearColor( 0.8f, 0.8f, 0, 1.f ) );
 
   Dest = Waypoints.front();
   pop_front( Waypoints );
@@ -377,6 +377,7 @@ void AGameObject::SetDestination( FVector d )
 
 void AGameObject::SetTarget( AGameObject* go )
 {
+  // unset previous attack target
   AttackTarget = go;
   SetDestination( go->Pos );
 }
@@ -390,16 +391,12 @@ void AGameObject::StopMoving()
 void AGameObject::Stop()
 {
   StopMoving();
-  AttackTarget = 0;
+  FollowTarget = AttackTarget = 0;
 }
 
 FVector AGameObject::SetOnGround( FVector v )
 {
   FVector floorPos = Game->flycam->getHitFloor( v );
-  LOG( "%s Pos (%f %f %f) -> (%f %f %f)", *Stats.Name, v.X, v.Y, v.Z,
-    floorPos.X, floorPos.Y, floorPos.Z );
-  // account for bounds half-height
-  //Pos.Z = bounds->GetScaledCapsuleHalfHeight() + floorPos.Z;//with bounds
   v.Z = floorPos.Z;
   return v;
 }
@@ -413,6 +410,7 @@ void AGameObject::Move( float t )
   // Recover HP at stock recovery rate
   if( Repairing ) {
     Hp += Stats.RepairHPFractionCost*t;
+    Clamp( Hp, 0.f, Stats.HpMax );
   }
 
   // Call the ai for this object type
@@ -454,7 +452,7 @@ void AGameObject::Move( float t )
   RootComponent->SetWorldLocation( Pos );  // Flush the computed position to the root component
 
   // Cast spell if any
-  CastSpell();
+  Action();
 }
 
 void AGameObject::ai( float t )

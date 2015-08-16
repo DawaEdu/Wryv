@@ -34,12 +34,7 @@ struct FBox2DU : public FBox2D
   FVector2D BR() { return Max; }
   FVector2D BL() { return FVector2D( Min.X, Max.Y ); }
   
-  void print(FString msg) {
-    LOG(  "%s fbox2du bounds min=(%f %f) max=(%f %f) meas=(%f %f)",
-      *msg, Min.X, Min.Y, Max.X, Max.Y, Size().X, Size().Y );
-  }
-  FVector2D Size() { 
-    return Max - Min;
-  }
+  void print(FString msg);
+  FVector2D Size() { return Max - Min; }
 };
 

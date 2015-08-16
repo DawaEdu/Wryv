@@ -44,7 +44,7 @@ void AUnit::ConsumeItem( int i )
   //
 
   // the `model` object of the player. Items[i] gets reflushed each frame.
-  ApplyEffect( Items[i] );
+  ApplyEffect( Items[i].Type );
   if( !Items[i].Quantity ) {
     Items[i].Type = Types::NOTHING;
     // strip from array
@@ -54,7 +54,7 @@ void AUnit::ConsumeItem( int i )
 
 void AUnit::Move( float t )
 {
-  Super::Move( t );
+  AGameObject::Move( t );
 
   // Tick all the traits
   for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
