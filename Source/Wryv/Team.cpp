@@ -28,8 +28,20 @@ void Team::Defaults()
   Lumber = 500;
   Stone = 250;
   DamageRepairThreshold = 2.f/3.f;
-  alliance = Alliance::Neutral;
+  alliance = Neutral;
   researchLevelMeleeWeapons = researchLevelRangedWeapons = researchLevelArmor = 0;
+}
+
+bool Team::isAllyTo( AGameObject* go )
+{
+  return go->team == this;
+}
+
+bool Team::isEnemyTo( AGameObject* go )
+{
+  // Cannot be enemies with the neutral team,
+  return alliance != Neutral   &&   go->team->alliance != Neutral &&
+         this != go->team; // Teams not the same, so enemies.
 }
 
 APeasant* Team::GetNextAvailablePeasant()
@@ -48,28 +60,6 @@ vector<ACombatUnit*> Team::GetWarriors()
     if( ACombatUnit* cu = Cast<ACombatUnit>( units[i] ) )
       combatUnits.push_back( cu );
   return combatUnits;
-}
-
-void Team::Construct( Types buildingType )
-{
-  // search for a peasant to construct the building
-  APeasant *p = GetNextAvailablePeasant();
-  if( !p )
-  {
-    LOG( "Cannot construct %s, no available peasants!", *GetTypesName(buildingType) );
-    return;
-  }
-  else
-  {
-    // Peasants build their building if they are supposed to build it,
-    // or harvest materials if they are otherwise idle.
-    // Try and build it with this peasant, if it can be afforded.
-    if( CanAfford( buildingType ) )
-    {
-      // Create the building and set it as a target for the peasant
-      p->aiPlaceBuildingAtRandomLocation( buildingType );
-    }
-  }
 }
 
 void Team::AddUnit( AGameObject *go )
@@ -191,41 +181,22 @@ void Team::runAI( float t )
   ai.timeSinceLastScout += t;
 
   // Check for engaged units, and send more units to assist
-  map< AGameObject*, int > numAttackers;
-  for( int i = 0; i < Game->gm->teams.size(); i++ )
+  int numAttackers = 0;
+  AGameObject* mostAttacked = 0;
+  for( int i = 0; i < units.size(); i++ )
   {
-    Team* oTeam = Game->gm->teams[i];
-    if( oTeam == this || oTeam->alliance == Alliance::Neutral )
-      continue; // skip same || neutral team
-    
-    for( int j = 0; j < oTeam->units.size(); j++ )
+    if( units[i]->Attackers.size() > numAttackers )
     {
-      // Look for units engaged with members of this team from opposing teams.
-      AGameObject* g = oTeam->units[j];
-
-      // If the attack target of the opponent piece is for a unit on this team, count it.
-      if( g->AttackTarget && g->AttackTarget->team == this )
-        numAttackers[ g->AttackTarget ]++;
+      mostAttacked = units[i];
+      numAttackers = units[i]->Attackers.size();
     }
   }
 
   // try and protect most victimized unit by fighting in its vicinity
   // Send units towards areas where they are needed.
-  AGameObject *target = 0;
-  int most = 0;
-  for( pair< AGameObject*, int > p : numAttackers )
-  {
-    if( p.second > most )
-    {
-      target = p.first;
-      most = p.second;
-    }
-  }
-
-  // Send the units after most attacked unit on your team
   for( int i = 0; i < units.size(); i++ )
     if( !units[i]->AttackTarget )
-      units[i]->SetDestination( target->Pos );
+      units[i]->SetDestination( mostAttacked->Pos );
 
   // Scout militia if they aren't engaged
   if( ai.timeSinceLastScout > ai.scoutInterval )
@@ -246,9 +217,12 @@ void Team::runAI( float t )
 
   // The AI function sends off a group of units to scout if it is time for that
   // Check food ratios
+
+  // Construct needed buildings
+  APeasant* peasant = GetNextAvailablePeasant();
   if( GetNumberOf( Types::BLDGTOWNHALL ) < 1   &&   CanAfford( Types::BLDGTOWNHALL ) )
   {
-    Construct( Types::BLDGTOWNHALL );
+    peasant->Build( Types::BLDGTOWNHALL );
   }
 
   // Do we need a farm?
@@ -260,12 +234,12 @@ void Team::runAI( float t )
     //LOG( "Team %s is building a farm", *team.Name );
     // request the team build a farm.
     // Try and assign the farm building to an available peasant
-    Construct( Types::BLDGFARM );
+    peasant->Build( Types::BLDGFARM );
   }
   
   else if( GetNumberOf( Types::BLDGBARRACKS )   &&   CanAfford( Types::BLDGBARRACKS ) )
   {
-    Construct( Types::BLDGBARRACKS );
+    peasant->Build( Types::BLDGBARRACKS );
   }
 }
 

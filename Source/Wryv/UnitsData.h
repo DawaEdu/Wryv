@@ -18,7 +18,8 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 LumberCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 StoneCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 ManaCost;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AOE;
+  // If this is a ground attack spell/property, then it doesn't require a gameobject target
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool GroundAttack;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AOERadius;
   // Repair costs a fraction of GoldCost, LumberCost, StoneCost per HP recovered.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float RepairHPFractionCost;
@@ -53,15 +54,15 @@ public:
   // The shortcut key to activate this thing. FKey: autopopulates dialog with available keys.
   // The UnitsData of all capabilities of the SelectedUnit in the UI's shortcut keys are activated.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FKey ShortcutKey;
-  // What this unit type spawns
-  // Type of unit spawned when this widget is pressed.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte<Types> > Spawns;
-  // The abilities this unit has.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
   // Required buildings to have built or possess to be able to build this object
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
+  // The abilities this unit has.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
+  // What this unit type builds
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Builds;
   // The blueprint from which class instance came from
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UClass* uClass;
+  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) 
+  UClass* uClass;
 
   FUnitsDataRow()
   {
@@ -70,7 +71,7 @@ public:
     Description = "Description";
     Quantity = 1;
     GoldCost = LumberCost = StoneCost = ManaCost = 0;
-    AOE = 0;
+    GroundAttack = 0;
     AOERadius = 0.f;
     RepairHPFractionCost = 0.f;
     RepairRate = 0.f;

@@ -18,8 +18,8 @@ public:
   // Constructs the MapSelection Screen.
   MapSelectionScreen( UTexture* logoTex,
     UTexture* mapFilesBkg, UTexture* mapSlotEntryBkg,
-    UTexture* thumbnailTex, FVector2D entrySize, UFont* font ) :
-    Screen( "MapSelectScreen" ),
+    UTexture* thumbnailTex, FVector2D size, FVector2D entrySize, UFont* font ) :
+    Screen( "MapSelectScreen", size ),
     MapFileEntrySize( entrySize ),
     MapSlotEntryBkg( mapSlotEntryBkg ),
     Selected( 0 ), Font( font )
@@ -65,7 +65,7 @@ public:
   // Make widget selected
   void Select( ITextWidget *widget )
   {
-    LOG(  "Selected %s", *widget->GetText() ) ;
+    LOG( "Selected %s", *widget->GetText() ) ;
 
     // turn prev selected back to white
     if( Selected )  Selected->Color = FColor::White;

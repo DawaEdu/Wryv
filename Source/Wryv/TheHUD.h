@@ -28,6 +28,11 @@ class FAssetRegistryModule;
 class UMediaTexture;
 class AWidget3D;
 
+enum SelectionParity
+{
+  NewSelection, Adds, Subtracts
+};
+
 UCLASS()
 class WRYV_API ATheHUD : public AHUD
 {
@@ -44,34 +49,30 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleLogoTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* RightPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MapSlotEntryBackgroundTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StackPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TooltipBackgroundTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* BuildButtonTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NullTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
   UPROPERTY() TArray<UMaterialInstanceDynamic*> MaterialInstances; // Referenced collection of material instances.
   // Required to prevent auto-cleanup of instanced materials
   // The blueprint for the fog of war instance to use.
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MapSlotEntryBackgroundTexture;
   
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
 
   // Because canvas has to be valid for box selection to work it seems
   bool WillSelectNextFrame;
-  enum SelectionParity
-  {
-    New, Adds, Subtracts
-  } selectionParity ;
+  SelectionParity selectionParity;
   set<AGameObject*> Selected;
 
   // The buttons currently showing on the user interface.
-  UserInterface* ui; // The root UI widget. It doesn't have a viz, but it parents all other display containers.
-  
-  bool Init;  // Global init for all objects
+  UserInterface* ui;  // The root UI widget. It doesn't have a viz, but it parents all other display containers.
+  bool Init;          // Global init for all objects
   FBox2D selectBox;
 
   // The uClass of the selected object highlight
@@ -86,18 +87,12 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
-  Types NextAction;  // The next action to be taken by the UI, 0 if no spell is queued & ready
-  Types NextBuilding;  // NULL if no building is trying to be placed.
+  Types NextAction;     // The next action to be taken by the UI, 0 if no spell is queued & ready
+  Types NextBuilding;   // NULL if no building is trying to be placed.
 
   // This is the ring shaped selector that gets attached to the currently selected unit(s)
-  vector<AWidget3D*> selectors, selAttackTargets;
+  vector<AWidget3D*> selectors, selAttackTargets, selFollowTargets;
   AWidget3D *selectorShopPatron;
-
-  ////////
-  // The blot in the material to use as a fogofwar blot
-  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial *WarBlot;
-  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UCanvasRenderTarget2D* RTFogOfWar;
-  ////////
 
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
@@ -107,17 +102,17 @@ public:
   virtual void BeginPlay() override;
   TArray<FAssetData> ScanFolder( FName folder );
   
-  EventCode BeginBoxSelect( FVector2D mouse );
-  EventCode Hover( FVector2D mouse );
-  EventCode DragBoxSelect( FVector2D mouse );
-  EventCode EndBoxSelect( FVector2D mouse );
+  HotSpot* MouseMoved( FVector2D mouse );
+  HotSpot* MouseUpLeft( FVector2D mouse );
+  HotSpot* MouseDownLeft( FVector2D mouse );
   set<AGameObject*> Pick( FBox2DU box );
-  set<AGameObject*> Select( set<AGameObject*> objects );
+  void Select( set<AGameObject*> objects );
+  void SelectAsFollow( AGameObject* object );
+  void SelectAsAttack( AGameObject* object );
+  void Unselect( set<AGameObject*> objects );
+  void UnselectAsFollow( AGameObject* object );
+  void UnselectAsAttack( AGameObject* object );
   
-  void Unselect( AGameObject* object );
-  void UnselectAsTarget( AGameObject* object );
-  EventCode TogglePause();
-
   void InitWidgets();
   void Setup();
   
@@ -133,14 +128,6 @@ public:
   void DrawPortrait();
   virtual void DrawHUD() override;
 
-  // Which widget was hit by the mouse
-  HotSpot* MouseDownLeft( FVector2D mouse );
-  HotSpot* MouseUpLeft( FVector2D mouse );
-  HotSpot* MouseDownRight( FVector2D mouse );
-  HotSpot* MouseUpRight( FVector2D mouse );
-  
-  HotSpot* MouseMoved( FVector2D mouse );
-  
   virtual void Tick( float t );
   // Get the Z distance that an object should be placed
   // when it has a world radius of radiusWorldUnits

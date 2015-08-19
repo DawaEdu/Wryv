@@ -13,17 +13,18 @@ class AUnit;
 class APeasant;
 class ACombatUnit;
 
-enum Alliance
+enum Alliances
 {
   Neutral, Friendly, Enemy
 };
 
+// Team consists of a single player's 
 struct Team
 {
   int teamId;
   FString Name;
   // Alliance for this team wrt the local player.
-  Alliance alliance;
+  Alliances alliance;
   AI ai;  // The AI controller for this team.
   FLinearColor color;
   float Gold, Lumber, Stone;
@@ -36,13 +37,13 @@ struct Team
   Team();
   Team( int iTeamId, FString str );
   void Defaults();
+  bool isAllyTo( AGameObject* go );
+  bool isEnemyTo( AGameObject* go );
   APeasant* GetNextAvailablePeasant();
   vector<ACombatUnit*> GetWarriors();
-  void Construct( Types type );
 
   void AddUnit( AGameObject *go );
   void RemoveUnit( AGameObject *go );
-
   void OnMapLoaded();
 
   // Check if this team can afford to build a unit of UnitType
@@ -65,3 +66,7 @@ struct Team
   void Move( float t );
 };
 
+struct Alliance
+{
+  vector<Team*> teams;
+};

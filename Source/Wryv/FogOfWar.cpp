@@ -35,11 +35,12 @@ void AFogOfWar::BeginPlay()
 void AFogOfWar::Init( FBox floorBox )
 {
   FloorBox = floorBox;
-  SetActorScale3D( FloorBox.GetSize() );
   FVector Center = FloorBox.GetCenter();
   Center.Z = FloorBox.Max.Z; // 
   SetActorLocation( Center ) ;
+  SetActorScale3D( FloorBox.GetSize() );
 }
+  
 
 void AFogOfWar::DrawFogOfWar( UCanvas* canvas, int32 Width, int32 Height )
 {

@@ -17,6 +17,8 @@ WRYV_API DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 // CALL: LOG( "Format string %d", intValue );
 #define LOG(x, ...) UE_LOG( LogTemp, Warning, TEXT( x ), __VA_ARGS__ )
 
+#define skip continue
+
 __forceinline void fatal( FString message )
 {
   UE_LOG( K, Fatal, TEXT("%s"), *message );
@@ -254,6 +256,12 @@ inline void Print( FString msg, FVector v )
   LOG( "%s %f %f %f", *msg, v.X, v.Y, v.Z );
 }
 
+inline void Print( FString msg, FBox box )
+{
+  LOG( "%s [%f %f %f] -> [%f %f %f]", *msg, box.Min.X, box.Min.Y, box.Min.Z,
+    box.Max.X, box.Max.Y, box.Max.Z );
+}
+
 inline FVector& ZERO( FVector & v ) {
   v.X=v.Y=v.Z=0.f; return v;
 }
@@ -281,7 +289,7 @@ inline float randFloat( int min, int max )
   return min + FMath::FRand()*( max - min );
 }
 
-template <typename T> inline T& Clamp( T&a, const T& min, const T& max )
+template <typename T> inline T& Clamp( T& a, const T& min, const T& max )
 {
   if( a < min ) a = min;
   else if( a > max ) a = max;

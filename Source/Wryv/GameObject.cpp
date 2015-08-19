@@ -14,6 +14,8 @@
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
 
+AGameObject* AGameObject::Nothing = 0;
+
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
@@ -31,7 +33,13 @@ void AGameObject::PostInitializeComponents()
 {
   //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
   Super::PostInitializeComponents();
-  
+  //if( !Game->IsReady() )
+  //{
+  //  warning( FS( "%s: GameInstance not initialized", *Stats.Name ) );
+  //  Pos = Rand();
+  //  return;
+  //}
+
   if( RootComponent )
   {
     // Initialize position, but put object on the ground
@@ -44,13 +52,7 @@ void AGameObject::PostInitializeComponents()
 
   if( isBuilding() )  Repairing = 0; // Buildings need an attending peasant to repair
   else  Repairing = 1; // Live units automatically regen
-
-  // Instantiate abilities
-  for( int i = 0; i < Stats.Abilities.Num(); i++ )
-  {
-    Types ability = Stats.Abilities[i];
-    Abilities.push_back( Ability( ability ) );
-  }
+  
   Dest = Pos;  // set the position to where the thing is.
 }
 
@@ -60,61 +62,20 @@ void AGameObject::BeginPlay()
   Super::BeginPlay();
   //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
   SetTeam( Stats.TeamId );
+
+  // Instantiate abilities
+  for( int i = 0; i < Stats.Abilities.Num(); i++ )
+  {
+    Types ability = Stats.Abilities[i];
+    //UE4 Bug: When in PostInitializeComponents This crashes when the Game object is invalid.. 
+    Abilities.push_back( Ability( ability ) );
+  }
+
 }
 
 void AGameObject::OnMapLoaded()
 {
-
-}
-
-float AGameObject::centroidDistance( AGameObject *go )
-{
-  if( !go ) {
-    LOG( "centroidDistance( 0 ): null" );
-    return FLT_MAX;
-  }
-  return FVector::Dist( Pos, go->Pos );
-}
-
-float AGameObject::outsideDistance( AGameObject *go )
-{
-  if( !go ) {
-    LOG( "outsideDistance( 0 ): null" );
-    return FLT_MAX;
-  }
-  float r1, h1, r2, h2;
-  GetComponentsBoundingCylinder( r1, h1, 1 );
-  go->GetComponentsBoundingCylinder( r2, h2, 1 );
-  float dist = centroidDistance( go );
-  dist -= r1 + r2;
-  return dist;
-}
-
-bool AGameObject::isAttackTargetWithinRange()
-{
-  if( AttackTarget )
-  {
-    return distanceToAttackTarget() < Stats.AttackRange;
-  }
-
-  return 0;
-}
-
-float AGameObject::distanceToAttackTarget()
-{
-  if( !AttackTarget )  return FLT_MAX;
-  return centroidDistance( AttackTarget );
-}
-
-float AGameObject::hpPercent()
-{
-  if( ! Stats.HpMax )  return Hp;
-  else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
-}
-
-float AGameObject::speedPercent()
-{
-  return Speed / Stats.SpeedMax;
+  
 }
 
 AGameObject* AGameObject::SetParent( AGameObject* newParent )
@@ -153,51 +114,46 @@ AGameObject* AGameObject::MakeChild( Types type )
   return child;
 }
 
-bool AGameObject::isAlly( AGameObject* go )
+float AGameObject::centroidDistance( AGameObject *go )
 {
-  return team == go->team   &&   go->team->alliance != Alliance::Neutral ;
-}
-
-bool AGameObject::isEnemy( AGameObject* go )
-{
-  return team != go->team   &&   go->team->alliance != Alliance::Neutral;
-}
-
-void AGameObject::removeAsTarget()
-{
-  Game->hud->UnselectAsTarget( this );
-
-  // Remove as target from all teams
-  for( pair<const int32,Team*> p : Game->gm->teams )
-  {
-    Team* team = p.second;
-    for( AGameObject *go : team->units )
-      if( go->AttackTarget == this )
-        go->AttackTarget = 0;
+  if( !go ) {
+    LOG( "centroidDistance( 0 ): null" );
+    return FLT_MAX;
   }
+  return FVector::Dist( Pos, go->Pos );
 }
 
-void AGameObject::SetRot( const FRotator & ro )
+float AGameObject::outsideDistance( AGameObject *go )
 {
-  if( RootComponent ) RootComponent->SetWorldRotation( ro );
-  else error( "No root component" );
+  if( !go ) {
+    LOG( "outsideDistance( 0 ): null" );
+    return FLT_MAX;
+  }
+  float r1, h1, r2, h2;
+  GetComponentsBoundingCylinder( r1, h1, 1 );
+  go->GetComponentsBoundingCylinder( r2, h2, 1 );
+  float dist = centroidDistance( go );
+  dist -= r1 + r2;
+  return dist;
 }
 
 void AGameObject::Action()
 {
   if( NextAction != NOTHING )
   {
-    ASpell* spell = Game->Make<ASpell>( NextAction, Pos, Stats.TeamId );
-    spell->caster = this;
-    spell->AttackTarget = AttackTarget;
-    spell->AttackTargetOffset = AttackTargetOffset;
-    NextAction = NOTHING;
+    if( IsSpell( NextAction ) )
+    {
+      if( Game->GetData( NextAction ).GroundAttack || // Ground attack casts regardless
+        (!Game->GetData( NextAction ).GroundAttack && AttackTarget ) ) // Non-ground with target
+      {
+        ASpell* spell = Game->Make<ASpell>( NextAction, Pos, Stats.TeamId );
+        spell->caster = this;
+        spell->Attack( AttackTarget );
+        spell->AttackTargetOffset = AttackTargetOffset;
+        NextAction = NOTHING;
+      }
+    }
   }
-}
-
-void AGameObject::Action( int index )
-{
-  
 }
 
 // Cast a spell at a target, either at owner's target or
@@ -206,13 +162,14 @@ void AGameObject::Action( Types type, AGameObject *target )
 {
   // The NextAction to be cast by this actor is (whatever spell was requested)
   NextAction = type;
-  AttackTarget = target;
+  Attack( target );
 }
 
 // Cast spell with a target location
 void AGameObject::Action( Types type, FVector where )
 {
   NextAction = type;
+  Attack( 0 );
   AttackTargetOffset = where;
 }
 
@@ -241,15 +198,169 @@ void AGameObject::UpdateStats()
     Stats += BonusTraits[i].traits;
 }
 
-bool AGameObject::Build( Types type )
+bool AGameObject::UseAbility( int index )
 {
-  if( team->CanAfford( type ) ) {
-    BuildQueueCounters.push_back( CooldownCounter( type ) );
-    return 1;
+  if( index <= 0 || index > Stats.Abilities.Num() )
+  {
+    error( FS( "%s cannot build item %d, OOB", *Stats.Name, index ) );
+    return 0;
   }
 
-  info( FS( "%s cannot afford building %s", *Stats.Name, *Game->unitsData[type].Name ) );
+  Types type = Stats.Builds[ index ];
+  if( !team->CanAfford( type ) )
+  {
+    info( FS( "%s cannot afford building %s", *Stats.Name, *Game->unitsData[type].Name ) );
+    Game->flycam->PlaySound( UISounds::Error );
+    return 0;
+  }
+  
+  // Start building.
+  BuildQueueCounters.push_back( CooldownCounter( type ) );
+  return 1;
+}
+
+bool AGameObject::Build( int index )
+{
+  if( index <= 0 || index > Stats.Builds.Num() )
+  {
+    error( FS( "%s cannot build item %d, OOB", *Stats.Name, index ) );
+    return 0;
+  }
+
+  Types type = Stats.Builds[ index ];
+  if( !team->CanAfford( type ) )
+  {
+    info( FS( "%s cannot afford building %s", *Stats.Name, *Game->unitsData[type].Name ) );
+    Game->flycam->PlaySound( UISounds::Error );
+    return 0;
+  }
+  
+  // Start building.
+  BuildQueueCounters.push_back( CooldownCounter( type ) );
+  return 1;
+}
+
+bool AGameObject::isAttackTargetWithinRange()
+{
+  if( AttackTarget )  return distanceToAttackTarget() < Stats.AttackRange;
   return 0;
+}
+
+float AGameObject::distanceToAttackTarget()
+{
+  if( !AttackTarget )  return FLT_MAX;
+  return centroidDistance( AttackTarget );
+}
+
+float AGameObject::hpPercent()
+{
+  if( ! Stats.HpMax ) {
+    error( FS( "HpMax not set for %s", *Stats.Name ) );
+    return 1.f;
+  }
+  else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
+}
+
+float AGameObject::speedPercent()
+{
+  if( ! Stats.SpeedMax )
+  {
+    error( FS( "SpeedMax not set for %s", *Stats.Name ) );
+    return 1.f;
+  }
+  return Speed / Stats.SpeedMax;
+}
+
+bool AGameObject::isAllyTo( AGameObject* go )
+{
+  return team->isAllyTo( go ); // Check with my team
+}
+
+bool AGameObject::isEnemyTo( AGameObject* go )
+{
+  return team->isEnemyTo( go );
+}
+
+void AGameObject::Follow( AGameObject* go )
+{
+  // Old follow target loses a follower
+  if( FollowTarget )
+    FollowTarget->LoseFollower( this );
+  FollowTarget = go;
+  if( go )
+  {
+    go->Followers.push_back( this );
+    SetDestination( go->Pos );
+    Game->hud->SelectAsFollow( go );
+  }
+}
+
+void AGameObject::StopFollowing()
+{
+  // Notify follow target that I'm no longer following him.
+  if( FollowTarget )
+    FollowTarget->LoseFollower( this );
+  FollowTarget = 0;
+}
+
+void AGameObject::LoseFollower( AGameObject* formerFollower )
+{
+  if( !formerFollower ) error( "Cannot lose null follower" );
+  formerFollower->Follow( 0 );
+  removeElement( Followers, formerFollower );
+  // if I lost all followers, update the hud
+  if( !Followers.size() )
+    Game->hud->UnselectAsFollow( this );
+}
+
+void AGameObject::LoseAllFollowers()
+{
+  for( AGameObject* fol : Followers )
+    fol->Follow( 0 );
+  Followers.clear();
+}
+
+void AGameObject::Attack( AGameObject* go )
+{
+  if( AttackTarget )
+    AttackTarget->LoseAttacker( this );
+  AttackTarget = go;
+  if( go )
+  {
+    go->Attackers.push_back( this );
+    SetDestination( go->Pos );
+    Game->hud->SelectAsAttack( go );
+  }
+}
+
+void AGameObject::StopAttacking()
+{
+  if( AttackTarget )
+    AttackTarget->LoseAttacker( this );
+  AttackTarget = 0;
+}
+
+void AGameObject::LoseAttacker( AGameObject* formerAttacker )
+{
+  if( !formerAttacker ) error( "Cannot lose null follower" );
+  removeElement( Attackers, formerAttacker );
+  // If there are no more attackers, unselect in ui
+  if( !Attackers.size() )
+    Game->hud->UnselectAsAttack( this );
+}
+
+void AGameObject::LoseAllAttackers()
+{
+  // Tell all attackers I'm no longer available for attack.
+  for( AGameObject* att : Attackers )
+    att->Attack( 0 );
+  Attackers.clear();
+}
+
+void AGameObject::SetRot( const FRotator & ro )
+{
+  if( RootComponent ) RootComponent->SetWorldRotation( ro );
+  else error( "No root component" );
 }
 
 bool AGameObject::Reached( FVector& v, float dist )
@@ -303,7 +414,7 @@ void AGameObject::Walk( float t )
     SetRot( Dir.Rotation() );
   }
 
-  SetOnGround( Pos + Game->flycam->floorBox.Max.Z*1.01f );
+  Game->flycam->SetOnGround( Pos + Game->flycam->floorBox.Max.Z*1.01f );
 }
 
 void AGameObject::SetDestination( FVector d )
@@ -311,17 +422,11 @@ void AGameObject::SetDestination( FVector d )
   LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name,
     Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
-    LOG( "Warning: Set unit's destination on unit with SpeedMax=0" );
+    error( "Warning: Set unit's destination on unit with SpeedMax=0" );
   }
 
   // Make sure the destination is grounded
-  d = SetOnGround( d );
-
-  float vizSize = 32.f;
-  // Visualize the start position itself
-  Game->flycam->ClearViz();
-  Game->flycam->Visualize( Pos, 44.f, FLinearColor::Green );
-  Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
+  d = Game->flycam->SetOnGround( d );
   
   // find the path, then submit list of Waypoints
   Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
@@ -332,7 +437,7 @@ void AGameObject::SetDestination( FVector d )
     Waypoints[i].Z = Game->flycam->floorBox.Max.Z*1.01f; // position ABOVE the ground plane.
     //!!BUG: Sometimes a point doesn't hit the ground plane, and will end up at the upper limits
     // of the bounding box.
-    Waypoints[i] = SetOnGround( Waypoints[i] ); // Then set on ground.
+    Waypoints[i] = Game->flycam->SetOnGround( Waypoints[i] ); // Then set on ground.
   }
 
   // Check that the 2nd point isn't more than 90
@@ -366,20 +471,14 @@ void AGameObject::SetDestination( FVector d )
     }
   }
 
-  Game->flycam->Visualize( Waypoints, 32.f, 
-    FLinearColor( 0, 0.8f, 0, 1.f ), FLinearColor( 0.8f, 0.8f, 0, 1.f ) );
-
+  // Visualize the pathway
+  Game->flycam->ClearViz();
+  Game->flycam->Visualize( Waypoints, 32.f, FLinearColor( 0, 0.8f, 0, 1.f ),
+    FLinearColor( 0.8f, 0.8f, 0, 1.f ) );
+  Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
+  
   Dest = Waypoints.front();
   pop_front( Waypoints );
-  FollowTarget = 0;
-  AttackTarget = 0; // Unset the attack target
-}
-
-void AGameObject::SetTarget( AGameObject* go )
-{
-  // unset previous attack target
-  AttackTarget = go;
-  SetDestination( go->Pos );
 }
 
 void AGameObject::StopMoving()
@@ -391,17 +490,10 @@ void AGameObject::StopMoving()
 void AGameObject::Stop()
 {
   StopMoving();
-  FollowTarget = AttackTarget = 0;
+  Follow( 0 );
+  Attack( 0 );
 }
 
-FVector AGameObject::SetOnGround( FVector v )
-{
-  FVector floorPos = Game->flycam->getHitFloor( v );
-  v.Z = floorPos.Z;
-  return v;
-}
-
-// BASE.
 void AGameObject::Move( float t )
 {
   // Update & Cache Unit's stats this frame.
@@ -416,43 +508,18 @@ void AGameObject::Move( float t )
   // Call the ai for this object type
   ai( t );
   
-  // dest is modified by the AttackTarget.
-  // Move towards the destination as long as we're not in attackRange
-  if( AttackTarget )
-  {
-    // If there is an AttackTarget, then the destination
-    // position is set at (AttackRange) units back from the AttackTarget.
-    // only need to move towards attack target if out of range.
-    FVector fromTarget = Pos - AttackTarget->Pos; 
-    float len = fromTarget.Size();
+  // recompute path
+  if( FollowTarget )  SetDestination( FollowTarget->Pos );
+  if( AttackTarget )  SetDestination( AttackTarget->Pos );
 
-    // if out of range, need to move closer
-    // Melee weapons (and spell bodies) have an attackRange of 0,
-    // since they just fly into the target.
-    if( len < Stats.AttackRange )
-    {
-      Stop();
-      Dest = Pos; // don't move then
-    }
-    else if( len >= Stats.AttackRange )
-    {
-      if( len ) // Don't normalize when zero length.
-        fromTarget /= len; // norm
-      
-      if( !Waypoints.size() )
-      {
-        FVector d = AttackTarget->Pos + fromTarget*Stats.AttackRange;
-        // move the unit only far enough so that it is within the attack range
-        Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
-      }
-    }
-  }
-  
   Walk( t );   // Walk towards destination
-  RootComponent->SetWorldLocation( Pos );  // Flush the computed position to the root component
-
-  // Cast spell if any
+  
+  DoAttack( t );
+  
   Action();
+
+  // Flush the computed position to the root component
+  RootComponent->SetWorldLocation( Pos );
 }
 
 void AGameObject::ai( float t )
@@ -460,7 +527,7 @@ void AGameObject::ai( float t )
   // Base GameObject doesn't have AI for it.
 }
 
-void AGameObject::fight( float t )
+void AGameObject::DoAttack( float t )
 {
   // If we have an AttackTarget and we are close enough to it,
   // and the cooldown is over, we attack it
@@ -489,22 +556,21 @@ AGameObject* AGameObject::GetClosestEnemyUnit()
 map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
 {
   map< float, AGameObject* > distances;
-  TTransArray<AActor*> &array = GetLevel()->Actors;
-	for( int i = 0; i < array.Num(); i++ )
+	for( pair<int32,Team*> p : Game->gm->teams )
   {
-    if( AGameObject *g = Cast<AGameObject>( array[i] ) )
+    Team* otherTeam = p.second;
+    if( ! otherTeam->isEnemyTo( this ) ) skip;
+
+    for( AGameObject* go : otherTeam->units )
     {
       // Cannot Target unit on same team (also prevents targetting self)
-      if( g->Stats.TeamId == Stats.TeamId )  continue;
-
-      float d = FVector::Dist( g->Pos, Pos );
-      if( d < Stats.SightRange )
-      {
-        distances[ d ] = g;
-      }
+      float dist = FVector::Dist( go->Pos, Pos );
+      if( dist < Stats.SightRange )
+        distances[ dist ] = go;
     }
   }
-
+  
+  //if( !distances.size() )  info( "No enemies to attack, you may be victorious" );
   return distances;
 }
 
@@ -569,8 +635,9 @@ void AGameObject::BeginDestroy()
 	// Remove it from the global collections.
   if( Game->IsReady() )
   {
+    LoseAllFollowers();
+    LoseAllAttackers();
     if( team )  team->RemoveUnit( this );
-    removeAsTarget();
   }
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }

@@ -85,9 +85,9 @@ void UWryvGameInstance::LoadUClasses()
       continue;
     }
 
-    unit->Stats.uClass = GetUClass( type );   // Write the uclass associated with the type here
-    Game->unitsData[ type ] = unit->Stats;    // 
-    unit->Destroy();                          // destroy the sample unit
+    unit->BaseStats.uClass = GetUClass( type );   // Write the uclass associated with the type here
+    Game->unitsData[ type ] = unit->BaseStats;    // 
+    unit->Destroy();                              // destroy the sample unit
   }
 }
 

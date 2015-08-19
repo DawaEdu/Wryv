@@ -14,10 +14,11 @@ class WRYV_API APeasant : public AUnit
 {
   GENERATED_UCLASS_BODY()
 public:
+  
   float MiningTime;  // Total time the peasant has been mining for
   ABuilding* building; // The building this unit is building
   AGameObject* repair; // The building this unit is currently Repairing
-  AResource* mining; // The Resource we are mining
+  AResource* MiningTarget; // The Resource we are mining
 
   //APeasant(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;

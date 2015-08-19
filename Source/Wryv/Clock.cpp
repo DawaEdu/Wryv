@@ -47,7 +47,10 @@ void Clock::Move( float t )
 
 void Clock::render( FVector2D offset )
 {
-  ImageWidget::render( offset );
+  if( hidden ) return ;
+
+  ITextWidget::render( offset );
+  
   // Put the overlay on top.
   FVector2D pos = Pos() + offset;
   if( clockMaterial->IsValidLowLevel() )

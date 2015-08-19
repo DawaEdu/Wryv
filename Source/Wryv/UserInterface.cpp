@@ -1,19 +1,20 @@
 #include "Wryv.h"
 #include "UserInterface.h"
+#include "TheHUD.h"
+#include "WryvGameInstance.h"
 
-UserInterface::UserInterface( FVector2D size ) : Screen( "UI-root" )
+UserInterface::UserInterface( FVector2D size ) :
+  Screen( "UI-root", size )
 {
-  Size = size;
   titleScreen = 0;
-  gameChrome = new GameChrome( "GameChrome" );
+  gameChrome = new GameChrome( "GameChrome", size );
   Add( gameChrome );
   mapSelectionScreen = 0, missionObjectivesScreen = 0;
   // Initialize the status bar
   statusBar = new StatusBar( FLinearColor::Black );
   Add( statusBar );
-  HotSpot::TooltipWidget = statusBar->Text; // Setup the default tooltip location
-  // connect the mouse drag functions 
-  mouseCursor = 0;
+  HotSpot::TooltipWidget = statusBar->Text;
+
 }
 
 void UserInterface::SetScreen( int mode )
@@ -30,11 +31,14 @@ void UserInterface::SetScreen( int mode )
   else if( mode == Running )  gameChrome->Show();
 
   statusBar->Show(); // Show the status bar at all times
-  mouseCursor->Show();
 }
 
 void UserInterface::SetSize( FVector2D size )
 {
   Size = size;
-  mouseCursor->Size = size;
+  gameChrome->Size = size;
 }
+
+
+
+

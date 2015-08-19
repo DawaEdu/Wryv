@@ -5,8 +5,17 @@
 class Screen : public HotSpot
 {
 public:
-  Screen( FString name ) : HotSpot( name ){
+  Screen( FString name, FVector2D size ) : HotSpot( name, size ){
     Align = Full;
+  }
+
+  // Screens are usually full screen, but have a lot of translucent areas.
+  bool hitsElement( FVector2D mouse )
+  {
+    for( int i = 0; i < children.size(); i++ )
+      if( children[i]->hit( mouse ) )
+        return 1;
+    return 0;
   }
 };
 

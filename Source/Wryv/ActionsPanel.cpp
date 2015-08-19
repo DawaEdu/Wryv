@@ -2,6 +2,7 @@
 #include "ActionsPanel.h"
 #include "Clock.h"
 #include "WryvGameInstance.h"
+#include "GameObject.h"
 
 Actions::Actions( FString name, FVector2D entrySize ) : HotSpot( name )
 {
@@ -59,39 +60,38 @@ void AbilitiesPanel::Set( AGameObject *go )
   HideChildren();
   if( !go ) return;
 
-  // Set abilities. Abilities panel always has [2 rows, 3 cols]
-  // We line up each ability with the slot number.
-  for( int i = 0; i < go->Abilities.size() && i < GetNumSlots()-1; i++ )
-  {
-    Ability ability = go->Abilities[i];
-    FUnitsDataRow abilityData = Game->unitsData[ability.Type];
-    
-    // Want to change texture, it recenters the texture in case it is
-    // the incorrect size for the slot.
-    SetSlotTexture( i, abilityData.Portrait );
-    Clock* clock = GetSlot( i );
-    clock->Show();
+  vector<Clock*> abilitiesClocks = Populate( go->Stats.Abilities );
+  return;
 
+
+  for( int i = 0; i < abilitiesClocks.size(); i++ )
+  {
+    Clock* clock = abilitiesClocks[ i ];
     // Attach button with invokation of i'th ability
-    clock->OnMouseDownLeft = [go,i,abilityData]( FVector2D mouse ) {
-      LOG( "%s used ability %s", *go->Stats.Name, *abilityData.Name );
+    clock->OnMouseDownLeft = [go,i]( FVector2D mouse ) {
       // Invoke I'th action of the object
-      go->Action( i );
+      go->UseAbility( i );
       return Consumed;
     };
   }
-
-  // the rest of the abilities can be set to null
-  for( int i = go->Abilities.size(); i < GetNumSlots(); i++ )
-  {
-    // Turn off the function object, jsut in case
-    GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
-    // hide slot 
-    GetSlot(i)->Hide();
+  
+  buildButton->Hide();
+  if( go->isPeasant() ) buildButton->Show();
+  else if( go->isBuilding() ) {
+    // show builds as 1st page items
+    vector<Clock*> buildClocks = Populate( go->Stats.Builds );
+    for( Clock* build : buildClocks )
+    {
+      // cancel the build if button clicked
+      build->OnMouseDownLeft = [build](FVector2D mouse){
+        info( FS( "Building a %s, %f complete",
+          *GetTypesName( build->counter.Type ),
+          build->counter.Percent() ) );
+        return NotConsumed;
+      };
+    }
   }
   
-  if( go->Stats.Type == Types::UNITPEASANT ) buildButton->Show();
-  else buildButton->Hide();
 }
 
 BuildPanel::BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
@@ -105,18 +105,16 @@ void BuildPanel::Set( AGameObject *go )
   HideChildren(); // Hide all buttons
   if( ! go )  return;
 
-  for( int i = 0; i < go->Stats.Spawns.Num(); i++ )
+  
+
+  // the rest of the abilities can be set to null
+  for( int i = go->Stats.Builds.Num(); i < GetNumSlots(); i++ )
   {
-    Types buildable = go->Stats.Spawns[i];
-    // Construct buttons that run abilities of the object.
-    SetSlotTexture( i, Game->GetPortrait( buildable ) );
-    Clock* button = GetSlot( i );
-    button->Show();
-    button->OnMouseDownLeft = [go,i]( FVector2D mouse ){
-      // try spawn the object type listed
-      go->Build( go->Stats.Spawns[i] );
-      return Consumed;
-    };
+    // Turn off the function object, jsut in case
+    GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+    // hide slot 
+    GetSlot(i)->Hide();
   }
+  
 }
 

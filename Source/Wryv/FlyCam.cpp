@@ -296,13 +296,8 @@ FHitResult AFlyCam::LOS( FVector p, FVector q, TArray<AActor*> ignoredActors )
 
 UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 {
-  for( pair<FLinearColor, UMaterialInstanceDynamic*> p : Colors )
-    info( FS( "Material (%f %f %f %f) / %p", p.first.R, p.first.G, p.first.B, p.first.A, p.second ) );
-  
   UMaterialInstanceDynamic* material = 0;
   map<FLinearColor,UMaterialInstanceDynamic*>::iterator it = Colors.find( color );
-  info( FS( "Color (%f %f %f %f): %d", color.R, color.G, color.B, color.A, Colors.size() ) );
-
   if( it == Colors.end() )
   {
     material = UMaterialInstanceDynamic::Create( BaseWhiteInterface, this );
@@ -342,7 +337,7 @@ void AFlyCam::Visualize( vector<FVector>& v, float s, FLinearColor startColor, F
 {
   for( int i = 0; i < v.size(); i++ )
   {
-    LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
+    //LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
     float p = (float)i/v.size();
     FLinearColor color = FLinearColor::LerpUsingHSV( startColor, endColor, p );
     Visualize( v[i], s, color );
@@ -515,6 +510,13 @@ FVector AFlyCam::getHitFloor()
   return hit.ImpactPoint;
 }
 
+FVector AFlyCam::SetOnGround( FVector v )
+{
+  FVector floorPos = getHitFloor( v );
+  v.Z = floorPos.Z;
+  return v;
+}
+
 bool AFlyCam::intersectsAny( AActor* actor )
 {
   vector<AActor*> except;
@@ -621,11 +623,7 @@ void AFlyCam::FindFloor()
 
   // create the fog of war now
   fogOfWar = GetWorld()->SpawnActor<AFogOfWar>( AFogOfWar::StaticClass() );
-  FVector xyScale = floorBox.GetSize();
-  xyScale.Z = 1.f;
-  fogOfWar->SetActorScale3D( xyScale );
-  fogOfWar->SetActorLocation( FVector( 0, 0, 1500 ) );
-
+  fogOfWar->Init( floorBox );
   
 }
 
@@ -653,6 +651,7 @@ void AFlyCam::MouseDownLeft()
   // If the mouse click intersected a HUD element,
   // we don't let the click pass through to the 3d surface below it.
   if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
+
   FUnitsDataRow NextAction = Game->GetData( Game->hud->NextAction );
   
   // If a spell queued to be cast, a left click casts it
@@ -670,7 +669,7 @@ void AFlyCam::MouseDownLeft()
       for( AGameObject *se : Game->hud->Selected )
         se->Action( NextAction.Type, hit );
     }
-    else if( NextAction.AOE )
+    else if( NextAction.GroundAttack )
     {
       // Cast the spell on the ground 
       for( AGameObject *se : Game->hud->Selected )
@@ -737,8 +736,8 @@ void AFlyCam::MouseDownRight()
   if( target && target != floor )
   {
     // An actor was hit by the click
-    for( AGameObject * go : Game->hud->Selected )
-      go->SetTarget( target );
+    for( AGameObject* go : Game->hud->Selected )
+      go->Attack( target );
   }
   else
   {
@@ -761,8 +760,7 @@ void AFlyCam::MouseMoved()
     OnLevelLoaded(); // This is here because it runs first for some reason (before ::Tick())
   }
 
-  FVector2D mouse = getMousePos();
-  Game->hud->MouseMoved( mouse );
+  HotSpot* hitElt = Game->hud->MouseMoved( getMousePos() );
 
   // if the mouse button is down, then its a drag event, elsee its a hover event
   if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )

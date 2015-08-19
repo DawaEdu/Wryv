@@ -7,18 +7,20 @@
 #include "MissionObjectivesScreen.h"
 #include "StatusBar.h"
 #include "Border.h"
-#include "MouseWidget.h"
 
 // The root UI component
 class UserInterface : public Screen
 {
 public:
-  TitleScreen*              titleScreen;
   GameChrome*               gameChrome;
+
+  // In-game screens.
+  TitleScreen*              titleScreen;
   MapSelectionScreen*       mapSelectionScreen;
   MissionObjectivesScreen*  missionObjectivesScreen;
   StatusBar*                statusBar;
-  MouseWidget*              mouseCursor;
+  
+  HotSpot*                  drag;
 
   UserInterface( FVector2D size );
   // Don't need to explicitly delete children of the UI object,

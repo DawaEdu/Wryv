@@ -44,9 +44,6 @@
     <Filter Include="Source\Wryv\AI">
       <UniqueIdentifier>{efc93990-19a3-4321-b4fb-d8ebd943079d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Wryv\Buildings">
-      <UniqueIdentifier>{9d71c554-14fb-4af5-bf6b-aff9a965aa13}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Wryv\Wryv">
       <UniqueIdentifier>{a5a6e3b8-8def-4708-868f-185940be79c7}</UniqueIdentifier>
     </Filter>
@@ -65,19 +62,22 @@
     <Filter Include="Source\Wryv\Net">
       <UniqueIdentifier>{1dcd10c0-0574-40f3-8220-e6145fe83239}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\GameObject\Buildings">
+      <UniqueIdentifier>{9d71c554-14fb-4af5-bf6b-aff9a965aa13}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\AI.h">
       <Filter>Source\Wryv\AI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Building.h">
-      <Filter>Source\Wryv\Buildings</Filter>
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Item.h">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ItemShop.h">
-      <Filter>Source\Wryv\Buildings</Filter>
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h">
       <Filter>Source\Wryv\AI</Filter>
@@ -250,7 +250,13 @@
     <ClInclude Include="..\..\Source\Wryv\UISounds.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\MouseWidget.h">
+    <ClInclude Include="..\..\Source\Wryv\ProgressBar.h">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GameCanvas.h">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Minimap.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
   </ItemGroup>
@@ -259,13 +265,13 @@
       <Filter>Source\Wryv\AI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Building.cpp">
-      <Filter>Source\Wryv\Buildings</Filter>
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Item.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ItemShop.cpp">
-      <Filter>Source\Wryv\Buildings</Filter>
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp">
       <Filter>Source\Wryv\AI</Filter>
@@ -383,6 +389,24 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ProgressBar.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ITextWidget.cpp">
+      <Filter>Source\Wryv\UI\Gadgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Controls.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameCanvas.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Minimap.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\CostWidget.cpp">
+      <Filter>Source\Wryv\UI\Screens</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

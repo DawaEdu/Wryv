@@ -1,6 +1,7 @@
 #include "Wryv.h"
 #include "SlotPalette.h"
 #include "Clock.h"
+#include "WryvGameInstance.h"
 
 FLinearColor SlotPalette::DefaultColor( 0.15, 0.15, 0.15, 0.75 );
 
@@ -99,7 +100,7 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   // If there are NO slots, then return here
   if( !rows && !cols ) {
     Hide(); // hides the SlotPalette when empty, this is the usual side effect of emptying all slots
-    LOG(  "SlotPalette %s has no entries", *Name );
+    //LOG(  "SlotPalette %s has no entries", *Name );
     return slots; // don't change the size vars when 0 size because
     // it will corrupt the Size variables
   }
@@ -123,3 +124,33 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   recomputeSizeToContainChildren();
   return slots;
 }
+
+vector<Clock*> SlotPalette::Populate( TArray< TEnumAsByte<Types> > elts )
+{
+  vector<Clock*> clocks;
+  for( int i = 0; i < elts.Num()   && 
+                  i < GetNumSlots(); i++ )
+  {
+    Types e = elts[i];
+    // Construct buttons that run abilities of the object.
+    SetSlotTexture( i, Game->GetPortrait( e ) );
+    Clock* button = GetSlot( i );
+    button->Show();
+    clocks.push_back( button );
+  }
+
+  // Turn off the rest of the slots
+  //for( int i = elts.Num(); i < GetNumSlots(); i++ )
+  //{
+  //  // Turn off the function object, just in case
+  //  GetSlot(i)->OnMouseDownLeft = [i](FVector2D mouse){
+  //    info( FS( "Slot %d not used", i ) );
+  //    return NotConsumed;
+  //  };
+  //  GetSlot(i)->Hide();
+  //}
+  
+  return clocks;
+}
+
+

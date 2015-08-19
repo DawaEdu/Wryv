@@ -15,9 +15,9 @@ AWryvGameMode::AWryvGameMode(const FObjectInitializer& PCIP) : Super( PCIP )
 
 Team* AWryvGameMode::GetTeam( int32 teamId )
 {
-  Team* team = teams[ teamId ];
-  check( team && "Team not existing" );
-  return team;
+  if( !teams[ teamId ] )
+    teams[ teamId ] = new Team( teamId, FS( "Team %d", teamId ) );
+  return teams[ teamId ];
 }
 
 void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage )
@@ -29,11 +29,11 @@ void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FS
   // This happens before AActor::BeginPlay().
   Game->gm = this;
   neutralTeam = teams[ 0 ] = new Team( 0, "Neutral" );
-  teams[ 0 ]->alliance = Alliance::Neutral;
+  teams[ 0 ]->alliance = Alliances::Neutral;
   playersTeam = teams[ 1 ] = new Team( 1, "Player" );
-  teams[ 1 ]->alliance = Alliance::Friendly;
+  teams[ 1 ]->alliance = Alliances::Friendly;
   enemyTeam = teams[ 2 ] = new Team( 2, "Opponent" );
-  teams[ 2 ]->alliance = Alliance::Enemy;
+  teams[ 2 ]->alliance = Alliances::Enemy;
 }
 
 void AWryvGameMode::StartPlay()

@@ -1,23 +1,27 @@
 #include "Wryv.h"
 #include "Building.h"
+#include "GlobalFunctions.h"
 
 ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
-  buildProgress = 0.f;
+  TimeBuilding = 0.f;
 }
 
-void ABuilding::Tick( float t )
+void ABuilding::Move( float t )
 {
-  buildProgress += t;
-  if( buildProgress < Stats.TimeLength )
+  TimeBuilding += t;
+  if( TimeBuilding < Stats.TimeLength )
   {
-    // Building not complete yet, so increase HP and
-    float perc = t / Stats.TimeLength;
-
-    // increase HP by that fraction
-    Hp += perc * Stats.HpMax;
+    // Building not complete yet, so increase HP and increase HP by a fraction
+    Hp += t / Stats.TimeLength * Stats.HpMax;// hp increases because building may be attacked while being built.
     // The building cannot do anything else while building.
-    //return;
+    Clamp( Hp, 0.f, Stats.HpMax );
+  }
+  else
+  {
+    // Building complete.
+
   }
 }
+
 

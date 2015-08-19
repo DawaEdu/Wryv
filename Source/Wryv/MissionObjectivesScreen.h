@@ -8,9 +8,9 @@ class MissionObjectivesScreen : public Screen
   UTexture *SlotBkg;
   StackPanel *Objectives;
 public:
-  MissionObjectivesScreen( UTexture *bkg, UTexture *slotBkg,
+  MissionObjectivesScreen( UTexture *bkg, UTexture *slotBkg, FVector2D size,
     FVector2D slotSize, FVector2D pad ) :
-    Screen( "MissionObjectives" )
+    Screen( "MissionObjectives", size )
   {
     Objectives = new StackPanel( "Objectives stackpanel", bkg );
   }

@@ -14,35 +14,13 @@ class CostWidget : public StackPanel
   TextWidget* TopText;
   ResourcesWidget* Cost;
   TextWidget* BottomText;
-
 public:
+  static UTexture* CostWidgetBackground;
   // Using a popup for the UI information about the build costs
   // makes it so new players don't actually have to look for it.
   // It pops up, so you always notice it right away.
-  CostWidget( UTexture* bkg ) : StackPanel( "CostWidget", bkg )
-  {
-    Pad = FVector2D(16,13);
-    TopText = new TextWidget( "TopText" );
-    TopText->Align = TopCenter;
-    StackBottom( TopText );
-
-    Cost = new ResourcesWidget( "CostWidget's ResourcesWidget", 16, 4 );
-    Cost->Align = TopCenter;
-    StackBottom(Cost);
-
-    BottomText = new TextWidget( "BottomText" );
-    BottomText->Align = TopCenter;
-    StackBottom(BottomText);
-
-    recomputeSizeToContainChildren();
-  }
+  CostWidget();
   virtual ~CostWidget(){}
-  void Set( FString top, int goldCost, int lumberCost, int stoneCost, FString bottom )
-  {
-    TopText->Set( top );
-    Cost->SetValues( goldCost, lumberCost, stoneCost );
-    BottomText->Set( bottom );
-    dirty = 1;
-  }
+  void Set( FString top, int goldCost, int lumberCost, int stoneCost, FString bottom );
 };
 

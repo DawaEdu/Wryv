@@ -5,12 +5,10 @@
 class Controls : public StackPanel
 {
 public:
+  static UTexture* PauseButtonTexture;
+  static UTexture* ResumeButtonTexture;
   ImageWidget *Pause;
 
-  Controls( UTexture* texPause ) : StackPanel( "Controls" )
-  {
-    Pause = new ImageWidget( "pause", texPause );
-    StackRight( Pause );
-  }
+  Controls();
 };
 

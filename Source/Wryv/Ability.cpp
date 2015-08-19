@@ -9,7 +9,8 @@ Ability::Ability( Types type ) :
 }
 
 CooldownCounter::CooldownCounter( Types type ) :
-  Type(type), Time(0.f), TotalTime( Game->unitsData[type].TimeLength )
+  Type(type), Time(0.f)
 {
+  TotalTime = Game->unitsData[ type ].TimeLength;
 }
   

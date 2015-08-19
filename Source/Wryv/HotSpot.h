@@ -137,11 +137,15 @@ public:
     }
   }
 
-  template <typename T>
-  T* Add( T* w ) {
+  // Runs after Add, overrideable. Since Add is templated,
+  // it is not an overrideable function.
+  virtual void PostAdd() { }
+
+  template <typename T> T* Add( T* w ) {
     if( w->Parent )  w->Orphan();
     w->Parent = this;
     children.push_back( w );
+    PostAdd();
     return w;
   }
   void SetByCorners( FVector2D TL, FVector2D BR )
@@ -228,10 +232,18 @@ public:
   // ABSOLUTE bounds on the object
   FBox2DU GetBounds( FVector2D offset ){
     FBox2DU bounds;
+    // If this gets called on a hidden widget,
+    // just return a single-point bound on the offset.
+    // This won't count to the parent.
+    if( hidden ) {
+      bounds += offset;
+      return bounds;
+    }
     // bound this and all children
     bounds += offset + Pos();
     bounds += offset + Pos() + Size;
     for( int i = 0; i < children.size(); i++ ) {
+      if( children[i]->hidden )  skip;
       bounds += children[i]->GetBounds( offset + Pos() );
     }
     return bounds;
@@ -245,15 +257,16 @@ public:
   FBox2DU GetChildBounds()
   {
     FBox2DU bounds ;
-    if( !children.size() )
+    if( !children.size() || hidden )
     {
-      LOG(  "Widget %s had NO CHILDREN!", *Name );
+      LOG(  "Widget %s had NO CHILDREN || hidden!", *Name );
       // return the bounds of the container instead
       //bounds += GetBounds();
       // give 0 size box
       bounds = FBox2DU( FVector2D(0,0), FVector2D(0,0) );
     }
     else for( int i = 0; i < children.size(); i++ ) {
+      if( children[i]->hidden )  skip;
       bounds += children[i]->GetBounds( Pos() );
     }
     return bounds;

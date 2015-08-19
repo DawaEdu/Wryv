@@ -7,10 +7,8 @@ UCLASS()
 class WRYV_API ABuilding : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
-	
-public:
   //ABuilding(const FObjectInitializer& PCIP);
-  float buildProgress;    // When a unit is building, this is the % progress it is to completion.
-  
-  virtual void Tick( float t ) override;
+  float TimeBuilding;    // When a unit is building, this is the % progress it is to completion.
+  virtual void Move( float t ) override;
+  float percentBuilt(){ return TimeBuilding / Stats.TimeLength; }
 };

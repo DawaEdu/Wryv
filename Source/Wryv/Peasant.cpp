@@ -134,8 +134,8 @@ void APeasant::Build( float t )
     // proceed with building current building, if exists
     // if multiple peasants are building the same building, then
     // the building progresses faster
-    building->buildProgress += t;
-    if( building->buildProgress > building->Stats.TimeLength )
+    building->TimeBuilding += t;
+    if( building->TimeBuilding > building->Stats.TimeLength )
     {
       // building is complete.
       building = 0;
@@ -182,12 +182,12 @@ void APeasant::Mine( float t )
 {
   // When a peasant is "attacking" a tree or goldmine,
   // it is actually harvesting from it
-  if( mining )
+  if( MiningTarget )
   {
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
-    if( outsideDistance( AttackTarget )   <=   Stats.AttackRange )
+    if( outsideDistance( MiningTarget )   <=   Stats.AttackRange )
     {
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTime -= t;   // Progress mining.
@@ -200,23 +200,23 @@ void APeasant::Mine( float t )
       if( MiningTime < 0 )
       {
         // Just mined it. Get the resource.
-        switch( mining->Stats.Type )
+        switch( MiningTarget->Stats.Type )
         {
-          case RESTREE:  team->Lumber += mining->Multiplier;  break;
-          case RESGOLDMINE:  team->Gold += mining->Multiplier;  break;
-          case RESSTONE:  team->Stone += mining->Multiplier;  break;
+          case RESTREE:  team->Lumber += MiningTarget->Multiplier;  break;
+          case RESGOLDMINE:  team->Gold += MiningTarget->Multiplier;  break;
+          case RESSTONE:  team->Stone += MiningTarget->Multiplier;  break;
         }
 
         // We've mined.
-        mining->Amount--;
+        MiningTarget->Amount--;
         
         // Reset mining time. TimeLength is a polymorphic property.
-        MiningTime = Game->unitsData[ mining->Stats.Type ].TimeLength;
+        MiningTime = Game->unitsData[ MiningTarget->Stats.Type ].TimeLength;
         
-        if( !mining->Amount )
+        if( !MiningTarget->Amount )
         {
-          mining->Destroy();
-          AttackTarget = 0;
+          MiningTarget->Destroy();
+          MiningTarget = 0;
         }
       }
     }
@@ -233,16 +233,16 @@ void APeasant::Mine( float t )
   Types neededResType = team->GetNeededResourceType();
 
   // if the resource type i'm mining changed..
-  if( !AttackTarget   ||   neededResType != AttackTarget->Stats.Type )
+  if( !MiningTarget   ||   neededResType != MiningTarget->Stats.Type )
   {
     // may have changed, but only change mining type after
     // successful mining operation of this type
     // Try and find an object of type resType in the level
-    AttackTarget = GetClosestObjectOfType( neededResType );
+    MiningTarget = Cast<AResource>( GetClosestObjectOfType( neededResType ) );
 
     // Reset mining time remaining
-    if( AttackTarget ) {
-      MiningTime = AttackTarget->Stats.TimeLength; // polymorphic property
+    if( MiningTarget ) {
+      MiningTime = MiningTarget->Stats.TimeLength; // polymorphic property
     }
   }
 }
@@ -280,7 +280,7 @@ void APeasant::SetTarget( AGameObject* go )
   // Depending on the type of object GO is, we set it as either building, mining, attack or repair target
   if( AResource* res = Cast<AResource>( go ) )
   {
-    mining = res; // starting to mine this resource
+    MiningTarget = res; // starting to mine this resource
   }
   else if( go->isBuilding() )
   {

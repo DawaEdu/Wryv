@@ -46,19 +46,19 @@ public:
   
   // Uses the UI-populated unit-types-UClasses array.
   inline UClass* GetUClass( Types type ) {
-    UClass* uclass = UnitTypeUClasses[ type ].uClass;
-    if( !uclass )  error( "Make: uclass was null" );
-    return uclass;
+    int t = (int)type;
+    if( t < 0 || t >= UnitTypeUClasses.Num() ) {
+      error( FS( "Unit type %d / %s doesn't exist in UnitTypesUClasses mapping",
+        t, *GetTypesName( type ) ) );
+      t = NOTHING; // Return the nothing object instead
+    }
+    return UnitTypeUClasses[ t ].uClass;
   }
   template <typename T> T* Make( Types type ) {
-    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
-    if( !obj )  error( "Making gameobject" );
-    return obj;
+    return GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
   }
   template <typename T> T* Make( Types type, FVector v ) {
-    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
-    if( !obj )  error( "Making gameobject" );
-    return obj;
+    return GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
   }
   template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );

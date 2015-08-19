@@ -24,13 +24,15 @@ class WRYV_API AGameObject : public AActor
   GENERATED_UCLASS_BODY()
   const static float WaypointAngleTolerance; // 
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
-public:
+  static AGameObject* Nothing;
+  
   // 
   // Stats.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
   vector< PowerUpTimeOut > BonusTraits;
   vector< Ability > Abilities;
+
   Team *team;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float AttackCooldown; // Cooldown on this unit since last attack
@@ -51,6 +53,8 @@ public:
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
+  // Cached collections of followers & attackers
+  vector<AGameObject*> Followers, Attackers;
   FVector AttackTargetOffset;  // Ground position of spell attacks
   Types NextAction;
 
@@ -73,9 +77,6 @@ public:
 
   // 
   // Gameplay.
-  bool isAlly( AGameObject* go );
-  bool isEnemy( AGameObject* go );
-  void removeAsTarget();
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool isAttackTargetWithinRange();
@@ -84,16 +85,16 @@ public:
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float speedPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
+
   // Invokes queued action
   void Action();
   // Sets object to use indexed action
-  void Action( int index );
-  // 
   void Action( Types type, AGameObject *target );
   void Action( Types type, FVector where );
   void ApplyEffect( Types item );
   void UpdateStats();
-  bool Build( Types type );
+  bool UseAbility( int index );
+  bool Build( int index );
   
   // 
   // Movement functions.
@@ -101,15 +102,32 @@ public:
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
   void Walk( float t );
-  virtual void SetTarget( AGameObject* go );
+  void SetDestination( FVector d );
   void StopMoving();
   void Stop();
-  FVector SetOnGround( FVector v );
-  void SetDestination( FVector d );
+
+  // 
+  // Unit relationship functions
+  bool isAllyTo( AGameObject* go );
+  bool isEnemyTo( AGameObject* go );
+
+  void Follow( AGameObject* go );
+  // Stops following my target
+  void StopFollowing();
+  void LoseFollower( AGameObject* formerFollower );
+  void LoseAllFollowers();
+
+  // sets an object as the attack target
+  void Attack( AGameObject* go );
+  void StopAttacking();
+  void LoseAttacker( AGameObject* formerAttacker );
+  void LoseAllAttackers();
+
+  // time-stepped attack of current target (if any)
   virtual void Move( float t );
   virtual void ai( float t );
-  void fight( float t );
-
+  void DoAttack( float t );
+  
   // 
   // AI
   AGameObject* GetClosestEnemyUnit();
@@ -127,6 +145,7 @@ public:
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]
+  bool isPeasant() { return Stats.Type == Types::UNITPEASANT; }
   bool isUnit(){ return IsUnit( Stats.Type ); }
   bool isBuilding(){ return IsBuilding( Stats.Type ); }
   bool isResource(){ return IsResource( Stats.Type ); }

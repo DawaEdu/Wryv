@@ -33,11 +33,13 @@ public:
     }
   }
 
-  virtual void Move( float t )
+  // re-flow after each add
+  virtual void PostAdd()
   {
-    reflow( Size );
+    HotSpot::PostAdd();
+    reflow();
   }
-
+  
   void Set( set<AGameObject*> objects )
   {
     // Change rows/cols.

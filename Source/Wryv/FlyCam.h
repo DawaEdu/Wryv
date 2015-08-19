@@ -103,6 +103,7 @@ public:
   FVector getHitFloor( FVector eye, FVector look );
   FVector getHitFloor( FVector eye );
   FVector getHitFloor();
+  FVector SetOnGround( FVector v );
   bool intersectsAny( AActor* actor );
   bool intersectsAny( AActor* actor, vector<AActor*>& except );
   bool intersectsAnyOfType( AActor* actor, vector<Types>& types );

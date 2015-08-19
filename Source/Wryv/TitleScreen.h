@@ -6,7 +6,7 @@ class TitleScreen : public Screen
 {
 public:
   ImageWidget *graphic;
-  TitleScreen( UTexture* titleTex ) : Screen( "Title screen" )
+  TitleScreen( UTexture* titleTex, FVector2D size ) : Screen( "Title screen", size )
   {
     graphic = new ImageWidget( "title graphic", titleTex );
     graphic->Align = Full;
