@@ -37,8 +37,8 @@ public:
     widget->Align = CenterLeft;
     // Situates the bounds @ the origin,
     // which means its just a measure of the widget's total size.
-    FBox2DU childBounds = GetChildBounds();
-    widget->Margin.X = childBounds.right();
+    FBox2DU childBounds = GetChildAbsBounds();
+    widget->Margin.X = childBounds.Size().X;
     Add( widget );
     recomputeSizeToContainChildren();
     return widget;
@@ -51,8 +51,8 @@ public:
   template <typename T> T* StackBottom( T* widget )
   {
     widget->Align = TopCenter;
-    FBox2DU childBounds = GetChildBounds();
-    widget->Margin.Y = childBounds.bottom();
+    FBox2DU childBounds = GetChildAbsBounds();
+    widget->Margin.Y = childBounds.Size().Y;
     Add( widget );
     recomputeSizeToContainChildren();
     return widget;
@@ -63,7 +63,7 @@ public:
   template <typename T> T* StackLeft( HotSpot* widget )
   {
     widget->Align = CenterLeft;
-    // pull all the children already in the widget over to the left
+    // push all the children already in the widget over to the right
     for( int i = 0 ; i < children.size(); i++ )
       children[i]->Margin.X += widget->Size.X + Pad.X;
     Add( widget );

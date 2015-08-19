@@ -15,8 +15,8 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
 
   Stats = new StatsPanel( "Stats", SolidWidget::SolidWhiteTexture, FLinearColor(0.15, 0.15, 0.15, 0.2) );
   StackBottom( Stats );
-    
-  actions = new Actions( "Actions", FVector2D( size.X/3, size.X/3 ) );
+  
+  actions = new ActionsPanel( "ActionsPanel", FVector2D( size.X/3, size.X/3 ) );
   StackBottom( actions );
 
   minimap = new Minimap( 4.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
@@ -33,6 +33,19 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
 
   controls = new Controls();
   Add( controls );
+
+  OnMouseDownLeft = [this](FVector2D mouse){
+    //LOG( "Sidepanel Absorbed click" );
+    return Consumed;
+  };
+  OnMouseUpLeft = [this](FVector2D mouse){
+    //LOG( "Sidepanel Absorbed mouse up" );
+    return Consumed;
+  };
+  OnMouseDragLeft = [this](FVector2D mouse){
+    //LOG( "Sidepanel Absorbed mouse drag" );
+    return Consumed;
+  };
 
 }
 

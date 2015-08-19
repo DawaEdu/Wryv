@@ -4,7 +4,7 @@
 #include "WryvGameInstance.h"
 #include "GameObject.h"
 
-Actions::Actions( FString name, FVector2D entrySize ) : HotSpot( name )
+ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name )
 {
   abilities = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
     entrySize, FVector2D(8,8) );
@@ -18,19 +18,19 @@ Actions::Actions( FString name, FVector2D entrySize ) : HotSpot( name )
   recomputeSizeToContainChildren();
 }
 
-void Actions::ShowAbilitiesPanel()
+void ActionsPanel::ShowAbilitiesPanel()
 {
   abilities->Show();
   buildPanel->Hide();
 }
 
-void Actions::ShowBuildingsPanel()
+void ActionsPanel::ShowBuildingsPanel()
 {
   buildPanel->Show();
   abilities->Hide();
 }
 
-void Actions::Set( AGameObject* go )
+void ActionsPanel::Set( AGameObject* go )
 {
   abilities->Set( go );
   buildPanel->Set( go );
@@ -38,7 +38,7 @@ void Actions::Set( AGameObject* go )
 
 
 
-AbilitiesPanel::AbilitiesPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
+AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
   actions = iActions;
@@ -61,8 +61,6 @@ void AbilitiesPanel::Set( AGameObject *go )
   if( !go ) return;
 
   vector<Clock*> abilitiesClocks = Populate( go->Stats.Abilities );
-  return;
-
 
   for( int i = 0; i < abilitiesClocks.size(); i++ )
   {
@@ -77,24 +75,11 @@ void AbilitiesPanel::Set( AGameObject *go )
   
   buildButton->Hide();
   if( go->isPeasant() ) buildButton->Show();
-  else if( go->isBuilding() ) {
-    // show builds as 1st page items
-    vector<Clock*> buildClocks = Populate( go->Stats.Builds );
-    for( Clock* build : buildClocks )
-    {
-      // cancel the build if button clicked
-      build->OnMouseDownLeft = [build](FVector2D mouse){
-        info( FS( "Building a %s, %f complete",
-          *GetTypesName( build->counter.Type ),
-          build->counter.Percent() ) );
-        return NotConsumed;
-      };
-    }
-  }
-  
 }
 
-BuildPanel::BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
+
+
+BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "BuildPanel", bkg, rows, cols, entrySize, pad )
 {
   actions = iActions;
@@ -105,10 +90,8 @@ void BuildPanel::Set( AGameObject *go )
   HideChildren(); // Hide all buttons
   if( ! go )  return;
 
-  
-
   // the rest of the abilities can be set to null
-  for( int i = go->Stats.Builds.Num(); i < GetNumSlots(); i++ )
+  for( int i = go->Stats.Abilities.Num(); i < GetNumSlots(); i++ )
   {
     // Turn off the function object, jsut in case
     GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback

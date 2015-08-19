@@ -109,7 +109,7 @@ bool AGameObject::isChildOf( AGameObject* parent )
 
 AGameObject* AGameObject::MakeChild( Types type )
 {
-  AWidget3D* child = Game->Make<AWidget3D>( type );
+  AGameObject* child = Game->Make<AGameObject>( type );
   AddChild( child );
   return child;
 }
@@ -199,44 +199,41 @@ void AGameObject::UpdateStats()
 }
 
 bool AGameObject::UseAbility( int index )
-{
-  if( index <= 0 || index > Stats.Abilities.Num() )
+{ 
+  if( index < 0 || index > Stats.Abilities.Num() )
   {
-    error( FS( "%s cannot build item %d, OOB", *Stats.Name, index ) );
+    error( FS( "%s cannot use ability %d, OOB", *Stats.Name, index ) );
     return 0;
   }
 
-  Types type = Stats.Builds[ index ];
-  if( !team->CanAfford( type ) )
+  Types type = Stats.Abilities[index];
+  if( IsAction( type ) )
   {
-    info( FS( "%s cannot afford building %s", *Stats.Name, *Game->unitsData[type].Name ) );
-    Game->flycam->PlaySound( UISounds::Error );
-    return 0;
+    FUnitsDataRow action = Game->GetData( type );
+    info( FS( "%s used action %s", *Stats.Name, *action.Name ) );
+    NextAction = type;
   }
-  
-  // Start building.
-  BuildQueueCounters.push_back( CooldownCounter( type ) );
+  else if( IsBuilding( type ) )
+  {
+    info( FS( "Building a %s", *GetTypesName( type ) ));
+    
+  }
+  else if( IsUnit( type ) )
+  {
+    // makes unit of type
+    info( FS( "Making a unit of type %s", *GetTypesName( type ) ));
+    Make( type );
+  }
   return 1;
 }
 
-bool AGameObject::Build( int index )
+bool AGameObject::Make( Types type )
 {
-  if( index <= 0 || index > Stats.Builds.Num() )
-  {
-    error( FS( "%s cannot build item %d, OOB", *Stats.Name, index ) );
-    return 0;
-  }
-
-  Types type = Stats.Builds[ index ];
-  if( !team->CanAfford( type ) )
-  {
-    info( FS( "%s cannot afford building %s", *Stats.Name, *Game->unitsData[type].Name ) );
-    Game->flycam->PlaySound( UISounds::Error );
-    return 0;
-  }
-  
   // Start building.
   BuildQueueCounters.push_back( CooldownCounter( type ) );
+
+  Game->hud->ui->gameChrome->buildQueue->Refresh(); // enqueue a refresh of the build queue
+
   return 1;
 }
 
@@ -628,6 +625,17 @@ void AGameObject::SetTeam( int32 teamId )
   BaseStats.TeamId = Stats.TeamId = teamId;
   team = Game->gm->GetTeam( teamId );
   team->AddUnit( this );
+}
+
+void AGameObject::Die()
+{
+  // Don't call DESTROY for a few frames.
+
+  // Spawn explosion animation (particle emitter).
+  MakeChild( (Types)(EXPLOSION1 + randInt(0,3)) );
+
+  // Turn off collisions.
+
 }
 
 void AGameObject::BeginDestroy()

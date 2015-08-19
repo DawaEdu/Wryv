@@ -54,14 +54,20 @@ public:
     }
     return UnitTypeUClasses[ t ].uClass;
   }
-  template <typename T> T* Make( Types type ) {
-    return GetWorld()->SpawnActor<T>( GetUClass(type), FVector(0.f), FRotator(0.f) );
-  }
   template <typename T> T* Make( Types type, FVector v ) {
-    return GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    if( type < 0 || type >= Types::MAX ) {
+      error( FS( "Type %d is OOB defined types", (int)type ) );
+      type = NOTHING;
+    }
+    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    if( !obj ) error( FS( "Object of type %s could not be spawned (check cast?)", *GetTypesName( type ) ) );
+    return obj;
+  }
+  template <typename T> T* Make( Types type ) {
+    return Make<T>( type, FVector( 0.f ) );
   }
   template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
-    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    T* obj = Make<T>( type, v );
     if( !obj )  error( "Making gameobject" );
     obj->SetTeam( teamId ); // must be AGameObject derivative
     return obj;

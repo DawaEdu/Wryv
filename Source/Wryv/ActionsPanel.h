@@ -5,7 +5,7 @@
 class AbilitiesPanel;
 class BuildPanel;
 
-class Actions : public HotSpot
+class ActionsPanel : public HotSpot
 {
 public:
   // the group of abilities this unit is capable of
@@ -13,7 +13,7 @@ public:
   // the group of buildPanel this unit can build
   BuildPanel* buildPanel;
 
-  Actions( FString name, FVector2D entrySize );
+  ActionsPanel( FString name, FVector2D entrySize );
   void ShowAbilitiesPanel();
   void ShowBuildingsPanel();
   void Set( AGameObject* go );
@@ -21,9 +21,9 @@ public:
 
 class BuildPanel : public SlotPalette
 {
-  Actions *actions;
+  ActionsPanel *actions;
 public:
-  BuildPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
+  BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
 };
 
@@ -31,14 +31,14 @@ public:
 // from a game object's capabilities
 class AbilitiesPanel : public SlotPalette
 {
-  Actions* actions;
+  ActionsPanel* actions;
 public:
   // The Build button appears for Peasant-class units that build buildings.
   static UTexture* BuildButtonTexture;
   Clock* buildButton;
 
   // parent container is the actions panel
-  AbilitiesPanel( Actions* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
+  AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
 };
 

@@ -219,18 +219,20 @@ public:
     return p;
   }
   //bool hit( FVector2D v ) {
-  //  FBox2DU bounds = GetBounds();
+  //  FBox2DU bounds = GetAbsBounds();
   //  return bounds.IsInside( v ); // check if v is inside the box (<-)
   //}
   // This function checks absolute coordinates
 	// Check main bounds
   bool hit( FVector2D v ) {
-    FBox2DU bounds = GetBounds();
+    FBox2DU bounds = GetAbsBounds();
     return bounds.IsInside( v ); // check if v is inside the box (<-)
   }
   
-  // ABSOLUTE bounds on the object
-  FBox2DU GetBounds( FVector2D offset ){
+  // ABSOLUTE bounds on the object.
+  // If you need RELATIVE bounds, use the SIZE of the
+  // Absolute bounds.
+  FBox2DU GetAbsBounds( FVector2D offset ){
     FBox2DU bounds;
     // If this gets called on a hidden widget,
     // just return a single-point bound on the offset.
@@ -241,33 +243,33 @@ public:
     }
     // bound this and all children
     bounds += offset + Pos();
-    bounds += offset + Pos() + Size;
+    bounds += offset + Pos() + Size; // *Scale;
     for( int i = 0; i < children.size(); i++ ) {
       if( children[i]->hidden )  skip;
-      bounds += children[i]->GetBounds( offset + Pos() );
+      bounds += children[i]->GetAbsBounds( offset + Pos() );
     }
     return bounds;
   }
-  FBox2DU GetBounds()
+  FBox2DU GetAbsBounds()
   {
-    return GetBounds( FVector2D(0,0) );
+    return GetAbsBounds( FVector2D(0,0) );
   }
 
   // Get absolute bounds containing the children, excluding this
-  FBox2DU GetChildBounds()
+  FBox2DU GetChildAbsBounds()
   {
     FBox2DU bounds ;
     if( !children.size() || hidden )
     {
       LOG(  "Widget %s had NO CHILDREN || hidden!", *Name );
       // return the bounds of the container instead
-      //bounds += GetBounds();
-      // give 0 size box
-      bounds = FBox2DU( FVector2D(0,0), FVector2D(0,0) );
+      //bounds += GetAbsBounds();
+      // give 0 size box @ POS
+      bounds += Pos(); //
     }
     else for( int i = 0; i < children.size(); i++ ) {
       if( children[i]->hidden )  skip;
-      bounds += children[i]->GetBounds( Pos() );
+      bounds += children[i]->GetAbsBounds( Pos() );
     }
     return bounds;
   }
@@ -275,7 +277,7 @@ public:
   // Recomputes the widget's bounds size based on the size of the children
   void recomputeSizeToContainChildren()
   {
-    Size = GetChildBounds().Size() + Pad*2.f;
+    Size = GetChildAbsBounds().Size() + Pad*2.f;
   }
 
   void Show() { hidden = 0; }

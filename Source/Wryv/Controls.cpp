@@ -9,7 +9,7 @@ UTexture* Controls::ResumeButtonTexture = 0;
 Controls::Controls() : StackPanel( "Controls" )
 {
   Pause = new ImageWidget( "Pause", PauseButtonTexture );
-  Align = Top | ToLeftOfParent;
+  Align = TopRight;
   StackRight( Pause );
 
   Pause->OnMouseDownLeft = [this]( FVector2D mouse ){

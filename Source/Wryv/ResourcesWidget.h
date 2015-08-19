@@ -21,11 +21,14 @@ public:
     // +-----------------+
     // The 3 resource types
     StackRight( new ImageWidget( "Gold icon", GoldTexture ) ); // icon
-    Gold = StackRight( new TextWidget( "1000" ) );
+    Gold = new TextWidget( "1000" );
+    StackRight( Gold );
     StackRight( new ImageWidget( "Lumber icon", LumberTexture ) );
-    Lumber = StackRight( new TextWidget( "1000" ) );
+    Lumber =  new TextWidget( "1000" );
+    StackRight( Lumber );
     StackRight( new ImageWidget( "Stone icon", StoneTexture ) );
-    Stone = StackRight( new TextWidget( "1000" ) );
+    Stone = new TextWidget( "1000" );
+    StackRight( Stone );
 
     recomputeSizeToContainChildren();
   }

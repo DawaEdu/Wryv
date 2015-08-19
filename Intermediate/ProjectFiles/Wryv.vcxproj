@@ -74,7 +74,9 @@
     <ClInclude Include="..\..\Source\Wryv\CursorTexture.h" />
     <ClCompile Include="..\..\Source\Wryv\Controls.cpp" />
     <ClCompile Include="..\..\Source\Wryv\CostWidget.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\Explosion.cpp" />
     <ClCompile Include="..\..\Source\Wryv\FlyCam.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\Explosion.h" />
     <ClInclude Include="..\..\Source\Wryv\FlowPanel.h" />
     <ClInclude Include="..\..\Source\Wryv\FlyCam.h" />
     <ClCompile Include="..\..\Source\Wryv\FogOfWar.cpp" />

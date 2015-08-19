@@ -56,10 +56,8 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FKey ShortcutKey;
   // Required buildings to have built or possess to be able to build this object
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
-  // The abilities this unit has.
+  // The abilities this unit has, including ability to build, etc.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
-  // What this unit type builds
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Builds;
   // The blueprint from which class instance came from
   //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) 
   UClass* uClass;

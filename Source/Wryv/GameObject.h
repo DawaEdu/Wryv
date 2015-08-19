@@ -86,6 +86,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
 
+
   // Invokes queued action
   void Action();
   // Sets object to use indexed action
@@ -94,7 +95,7 @@ class WRYV_API AGameObject : public AActor
   void ApplyEffect( Types item );
   void UpdateStats();
   bool UseAbility( int index );
-  bool Build( int index );
+  bool Make( Types type );
   
   // 
   // Movement functions.
@@ -150,7 +151,7 @@ class WRYV_API AGameObject : public AActor
   bool isBuilding(){ return IsBuilding( Stats.Type ); }
   bool isResource(){ return IsResource( Stats.Type ); }
   bool isItem(){ return IsItem( Stats.Type ); }
-
+  virtual void Die();
   virtual void BeginDestroy() override;
 
 };

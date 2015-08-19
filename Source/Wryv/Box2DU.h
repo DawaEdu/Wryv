@@ -21,6 +21,11 @@ struct FBox2DU : public FBox2D
     Min.X = Min.Y = 1e6f;
     Max.X = Max.Y = -1e6f;
   }
+  FBox2DU( float s )
+  {
+    Min.X = Min.Y = -s;
+    Max.X = Max.Y =  s;
+  }
   // Translates the box by V
   FBox2DU operator+( FVector2D v ){ return FBox2DU( Min+v, Max+v ); }
   FBox2DU operator-( FVector2D v ){ return FBox2DU( Min-v, Max-v ); }
