@@ -110,11 +110,10 @@ public:
 
 struct PowerUpTimeOut
 {
-  float time;
   FUnitsDataRow traits;
-  PowerUpTimeOut():time(0.f){}
-  PowerUpTimeOut( float t, FUnitsDataRow &iTraits ) :
-    time( t ), traits( iTraits ) { }
-  void Tick( float t ) { time += t; }
+  float timeRemaining;
+  PowerUpTimeOut():timeRemaining(0.f){}
+  PowerUpTimeOut( FUnitsDataRow &iTraits, float timeLength ) :
+    traits( iTraits ), timeRemaining( timeLength ) { }
 };
 

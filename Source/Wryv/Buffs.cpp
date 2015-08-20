@@ -10,7 +10,7 @@ void Buffs::Set( AGameObject* go )
   for( int i = 0; i < go->BonusTraits.size(); i++ )
   {
     Types buff = go->BonusTraits[i].traits.Type;
-    StackRight( new ImageWidget( "a buff", Game->GetPortrait( buff ) ) );
+    StackRight( new ImageWidget( "a buff", Game->GetPortrait( buff ) ), Top );
   }
 }
 

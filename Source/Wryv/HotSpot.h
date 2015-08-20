@@ -9,7 +9,7 @@ using namespace std;
 
 #include "GlobalFunctions.h"
 #include "WryvGameMode.h"
-#include "Ability.h"
+#include "CooldownCounter.h"
 #include "Types.h"
 #include "GameObject.h"
 #include "Unit.h"
@@ -19,6 +19,7 @@ class TextWidget;
 class AGameObject;
 class AHUD;
 class ATheHUD;
+
 
 // None (null) alignment means positioned absolutely
 enum HAlign { None=0, Left=1<<0, HCenter=1<<1, Right=1<<2, 
@@ -33,6 +34,27 @@ enum Alignment {
 };
 enum LayoutMode { Pixels, Percentages };
 enum EventCode { NotConsumed=0, Consumed=1 };
+
+inline FString GetAlignmentString( int Align )
+{
+  FString A = "";
+  if( Align & Left )  A += "Left";
+  else if( Align & Right )  A += "Right";
+  else if( Align & HCenter )  A += "HCenter";
+  else if( Align & ToLeftOfParent )  A += "ToLeftOfParent";
+  else if( Align & ToRightOfParent )  A += "ToRightOfParent";
+  else if( Align & HFull )  A += "HFull";
+  else  A += "Left";
+
+  if( Align & Top )  A += "Top";
+  else if( Align & Bottom )  A += "Bottom";
+  else if( Align & VCenter )  A += "VCenter";
+  else if( Align & BelowBottomOfParent )  A += "BelowBottomOfParent";
+  else if( Align & OnTopOfParent )  A += "OnTopOfParent";
+  else if( Align & VFull )  A += "VFull";
+  else A += "Top";
+  return A;
+}
 
 class HotSpot
 {
@@ -185,6 +207,7 @@ public:
     FVector2D PSize = Parent->Size;
     FVector2D PM = Margin + Parent->Pad;
 
+
     // Null alignment (0) means absolutely positioned (does not reflow in parent, Pos is
     // just set from Margins)
     if( Align & Left )  P.X = PM.X;
@@ -192,16 +215,19 @@ public:
     else if( Align & HCenter )  P.X = (PSize.X - Size.X)/2; // centering
     else if( Align & ToLeftOfParent )  P.X = -Size.X - Parent->Margin.X - Margin.X;
     else if( Align & ToRightOfParent )  P.X = PSize.X + 2*PM.X + Parent->Margin.X;
-    else if( Align & HFull )  P.X = 0, Size.X = PSize.X;
+    else if( Align & HFull )  P.X = PM.X, Size.X = PSize.X - 2.f*Parent->Pad.X;
     else P.X = PM.X; // When absolutely positioned (None) values, the X position 
     // is just Left aligned
+
+    //info( FS("elt %s's [%d/%s] has P.X=%f Size.X=%f, Parent->Size.X=%f",
+    //  *Name, Align, *GetAlignmentString(Align), P.X, Size.X, Parent->Size.X) );
 
     if( Align & Top )  P.Y = PM.Y;
     else if( Align & Bottom )  P.Y = PSize.Y - Size.Y - PM.Y;
     else if( Align & VCenter )  P.Y = (PSize.Y - Size.Y)/2;
     else if( Align & BelowBottomOfParent )  P.Y = PSize.Y + 2*PM.Y + Parent->Margin.Y;
     else if( Align & OnTopOfParent )  P.Y = -Size.Y - Parent->Margin.Y - Margin.Y;
-    else if( Align & VFull )  P.Y = 0, Size.Y = PSize.Y;
+    else if( Align & VFull )  P.Y = PM.Y, Size.Y = PSize.Y - 2.f*Parent->Pad.Y;
     else P.Y = PM.Y; // default Top aligned
 
     return P;
@@ -303,7 +329,8 @@ public:
     bounds += Pos() + Size;
     return bounds;
   }
-  void Clear(){
+  virtual void Clear()
+  {
     for( int i = 0; i < children.size(); i++ )
       delete children[i];
     children.clear();

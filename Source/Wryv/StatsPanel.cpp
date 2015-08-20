@@ -3,29 +3,28 @@
 #include "TextWidget.h"
 #include "Building.h"
 
-StatsPanel::StatsPanel( FString iname, UTexture* tex, FLinearColor color ) :
-  StackPanel( iname, tex, color )
+StatsPanel::StatsPanel() :
+  StackPanel( "Stats", SolidWidget::SolidWhiteTexture, FLinearColor( 0.15, 0.15, 0.15, 0.15 ) )
 { 
   unitName = new TextWidget( "|" );
-  StackBottom( unitName );
-  progress = new ProgressBar( "Progress bar", FLinearColor::Red, FLinearColor::Green, FVector2D( Size.X*0.8, 50.f ) );
-  StackBottom( progress );
-  hp = new TextWidget( "|" );
-  StackBottom( hp );
+  hpBar = new ProgressBar( "HpBar", 25.f,
+    FLinearColor(0.655, 0.000, 0.125,1.f), //Purplish-red
+    FLinearColor(0.169, 0.796, 0.278,1.f) );
+  hpText = new TextWidget( "|" );
   damage = new TextWidget( "|" );
-  StackBottom( damage );
   armor = new TextWidget( "|" );
-  StackBottom( armor );
   description = new TextWidget( "|" );
-  StackBottom( description );
   Selected = 0;
-  Blank();
+  Align = HFull | VCenter;
+
+  Restack();
 }
 
 void StatsPanel::Blank()
 {
   unitName -> Set( "" );
-  hp -> Set( "" );
+  hpBar->Set( 0.f );
+  hpText -> Set( "" );
   damage -> Set( "" );
   armor -> Set( "" );
   description -> Set( "" );
@@ -33,43 +32,40 @@ void StatsPanel::Blank()
 
 void StatsPanel::Restack()
 {
-  StackBottom( unitName );
-  StackBottom( progress );
-  StackBottom( hp );
-  StackBottom( damage );
-  StackBottom( armor );
-  StackBottom( description );
+  children.clear();
+
+  Add( unitName );
+  StackBottom( hpBar, HFull );
+  StackBottom( hpText, HCenter );
+  StackBottom( damage, HCenter );
+  StackBottom( armor, HCenter );
+  StackBottom( description, HCenter );
 }
 
 void StatsPanel::Set( AGameObject* go )
 {
   Selected = go;
-  if( !go ) {
-    Blank();  // blank the stats
-    return;
-  }
+  Blank();  // blank the stats
+  Restack();
+  if( !go )  return;
   
   // set the text inside with gameobject
   unitName->Set( go->Stats.Name );
-  Add( unitName ); // RE-add, because text has changed
-
   if( go->isBuilding() )
   {
     ABuilding* building = Cast<ABuilding>( go );
-    progress->Set( building->percentBuilt() );
-    progress->Show();
+    hpBar->Set( building->percentBuilt() );
   }
-  else progress->Hide();
-
-  hp -> Set( FS( "%.0f / %.0f", go->Hp, go->Stats.HpMax ) );
-  hp -> Color = FLinearColor::LerpUsingHSV( FLinearColor::Red, FLinearColor::Green, go->hpPercent() );
-  Add( hp );
+  else
+  {
+    hpBar->Set( go->hpPercent() );
+  }
+  hpText -> Set( FS( "%.0f / %.0f", go->Hp, go->Stats.HpMax ) );
+  hpText -> Color = FLinearColor::LerpUsingHSV( FLinearColor(0.639f, 0.f, 0.192f), 
+    FLinearColor(0.f, 0.7f, 0.f), go->hpPercent() );
   damage -> Set( FS( "Damage: %d", go->Stats.AttackDamage ) );
-  Add( damage );
   armor -> Set( FS( "Armor: %d", go->Stats.Armor ) );
-  Add( armor );
   description -> Set( go->Stats.Description );
-  Add( description );
 
   Restack();
 }
@@ -77,6 +73,7 @@ void StatsPanel::Set( AGameObject* go )
 void StatsPanel::Move( float t )
 {
   StackPanel::Move( t );
+  
   Set( Selected );
 }
 

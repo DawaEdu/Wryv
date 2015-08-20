@@ -50,12 +50,13 @@
     <None Include="..\..\Config\DefaultEngine.ini" />
     <None Include="..\..\Config\DefaultGame.ini" />
     <None Include="..\..\Config\DefaultInput.ini" />
-    <ClCompile Include="..\..\Source\Wryv\Ability.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\CooldownCounter.cpp" />
     <ClCompile Include="..\..\Source\Wryv\ActionsPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\AI.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ActionsPanel.h" />
-    <ClInclude Include="..\..\Source\Wryv\Ability.h" />
+    <ClInclude Include="..\..\Source\Wryv\CooldownCounter.h" />
     <ClInclude Include="..\..\Source\Wryv\AI.h" />
+    <ClCompile Include="..\..\Source\Wryv\Border.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Buffs.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Building.cpp" />
@@ -117,6 +118,7 @@
     <ClCompile Include="..\..\Source\Wryv\Resource.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ProgressBar.h" />
     <ClInclude Include="..\..\Source\Wryv\Resource.h" />
+    <ClCompile Include="..\..\Source\Wryv\ResourcesWidget.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Settings.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ResourcesWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\Screen.h" />

@@ -58,7 +58,7 @@ public:
       Select( text );
       return Consumed;
     };
-    MapFiles->StackBottom( text );
+    MapFiles->StackBottom( text, HCenter );
     return text;
   }
 

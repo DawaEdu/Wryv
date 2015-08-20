@@ -10,7 +10,7 @@ Controls::Controls() : StackPanel( "Controls" )
 {
   Pause = new ImageWidget( "Pause", PauseButtonTexture );
   Align = TopRight;
-  StackRight( Pause );
+  StackRight( Pause, Top );
 
   Pause->OnMouseDownLeft = [this]( FVector2D mouse ){
     // Pauses or unpauses the game

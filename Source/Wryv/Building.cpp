@@ -9,6 +9,8 @@ ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 
 void ABuilding::Move( float t )
 {
+  AGameObject::Move( t );
+
   TimeBuilding += t;
   if( TimeBuilding < Stats.TimeLength )
   {

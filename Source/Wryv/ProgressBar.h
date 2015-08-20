@@ -6,16 +6,9 @@ class ProgressBar : public SolidWidget
 {
 public:
   SolidWidget* progress;
-  ProgressBar( FString name, FLinearColor backgroundColor,
-    FLinearColor foregroundColor, FVector2D size ) :
-    SolidWidget( name, size, backgroundColor )
-  {
-    progress = new SolidWidget( "foreground progress", foregroundColor );
-    Add( progress );
-  }
+  ProgressBar( FString name, float height, FLinearColor backgroundColor, FLinearColor foregroundColor );
+  void Set( float fraction );
+  void SetColors( FLinearColor foreground, FLinearColor background );
+  virtual void render( FVector2D offset ) override;
 
-  void Set( float percent )
-  {
-    progress->Size.X = percent * Size.X;
-  }
 };

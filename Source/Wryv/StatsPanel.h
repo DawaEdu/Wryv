@@ -8,15 +8,14 @@ class TextWidget;
 class StatsPanel : public StackPanel
 {
   TextWidget* unitName;
-  TextWidget* hp;
+  ProgressBar* hpBar;
+  TextWidget* hpText;
   TextWidget* damage;
   TextWidget* armor;
   TextWidget* description;
-  ProgressBar* progress;
   AGameObject* Selected;
-
 public:
-  StatsPanel( FString iname, UTexture* tex, FLinearColor color );
+  StatsPanel();
   void Blank();
   void Restack();
   void Set( AGameObject* go );

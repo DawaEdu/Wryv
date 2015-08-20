@@ -46,7 +46,7 @@ void AGameObject::PostInitializeComponents()
     Pos = RootComponent->GetComponentLocation();
   }
 
-  UpdateStats();
+  UpdateStats( 0.f );
   Hp = Stats.HpMax;
   Speed = Stats.SpeedMax;
 
@@ -65,12 +65,7 @@ void AGameObject::BeginPlay()
 
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
-  {
-    Types ability = Stats.Abilities[i];
-    //UE4 Bug: When in PostInitializeComponents This crashes when the Game object is invalid.. 
-    Abilities.push_back( Ability( ability ) );
-  }
-
+    Abilities.push_back( CooldownCounter( Stats.Abilities[i] ) );
 }
 
 void AGameObject::OnMapLoaded()
@@ -173,7 +168,15 @@ void AGameObject::Action( Types type, FVector where )
   AttackTargetOffset = where;
 }
 
-void AGameObject::ApplyEffect( Types item )
+void AGameObject::ApplyEffect( FUnitsDataRow item )
+{
+  // 1-frame application of effect.
+  Hp += item.HpMax; // This field contains hp boosts.
+
+}
+
+// Function adds a buff of type for specified time interval
+void AGameObject::AddBuff( Types item )
 {
   FUnitsDataRow itemData = Game->GetData( item );
 
@@ -183,7 +186,9 @@ void AGameObject::ApplyEffect( Types item )
   // Don't do anything for the Nothing item
   if( IsItem( itemData.Type ) )
   {
-    BonusTraits.push_back( PowerUpTimeOut( itemData.TimeLength, itemData ) );
+    // If there's no timeout, (0.0) then it applies for one frame only (hp boost +250 hp eg
+    // applies next frame).
+    BonusTraits.push_back( PowerUpTimeOut( itemData, itemData.TimeLength ) );
   }
   else
   {
@@ -191,11 +196,48 @@ void AGameObject::ApplyEffect( Types item )
   }
 }
 
-void AGameObject::UpdateStats()
+void AGameObject::UpdateStats( float t )
 {
   Stats = BaseStats;
   for( int i = 0; i < BonusTraits.size(); i++ )
     Stats += BonusTraits[i].traits;
+
+  // Recover HP at stock recovery rate
+  if( Repairing ) {
+    Hp += Stats.RepairHPFractionCost*t;
+    Clamp( Hp, 0.f, Stats.HpMax );
+  }
+
+  // Check buffs
+  for( int i = 0; i < BonusTraits.size(); i++ )
+  {
+    // Apply any per-frame effects to the unit in bonus traits
+    ApplyEffect( BonusTraits[i].traits );
+  }
+  
+  // Tick all the traits
+  for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
+    BonusTraits[i].timeRemaining -= t;
+    if( BonusTraits[i].timeRemaining <= 0 )
+      BonusTraits.erase( BonusTraits.begin() + i );
+  }
+
+  // tick builds
+  for( int i = BuildQueueCounters.size() - 1; i >= 0; i-- ) {
+    BuildQueueCounters[i].Time += t;
+    // update the viz of the build queue counter, ith clock
+    if( BuildQueueCounters[i].Done() )
+    {
+      // Remove it and consider ith building complete. Place @ unoccupied position around building.
+      FVector buildPos = Pos + GetActorForwardVector() * GetBoundingRadius();
+      
+      Game->Make( BuildQueueCounters[i].Type, buildPos, team->teamId );
+
+      // Remove counter & refresh the build queue.
+      removeIndex( BuildQueueCounters, i );
+      Game->hud->ui->gameChrome->buildQueue->Refresh();
+    }
+  }
 }
 
 bool AGameObject::UseAbility( int index )
@@ -464,15 +506,15 @@ void AGameObject::SetDestination( FVector d )
       // Pop the 2nd from the back point, viz all back 3 pts.
       vector<FVector>::iterator it = --(--(Waypoints.end()));
       Waypoints.erase( --(--(Waypoints.end())) );
-      Game->flycam->Visualize( *it, 64.f, FLinearColor::Black );
+      //Game->flycam->Visualize( *it, 64.f, FLinearColor::Black );
     }
   }
 
   // Visualize the pathway
-  Game->flycam->ClearViz();
-  Game->flycam->Visualize( Waypoints, 32.f, FLinearColor( 0, 0.8f, 0, 1.f ),
-    FLinearColor( 0.8f, 0.8f, 0, 1.f ) );
-  Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
+  //Game->flycam->ClearViz();
+  //Game->flycam->Visualize( Waypoints, 32.f, FLinearColor( 0, 0.8f, 0, 1.f ),
+  //  FLinearColor( 0.8f, 0.8f, 0, 1.f ) );
+  //Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
   
   Dest = Waypoints.front();
   pop_front( Waypoints );
@@ -494,14 +536,8 @@ void AGameObject::Stop()
 void AGameObject::Move( float t )
 {
   // Update & Cache Unit's stats this frame.
-  UpdateStats();
-
-  // Recover HP at stock recovery rate
-  if( Repairing ) {
-    Hp += Stats.RepairHPFractionCost*t;
-    Clamp( Hp, 0.f, Stats.HpMax );
-  }
-
+  UpdateStats( t );
+  
   // Call the ai for this object type
   ai( t );
   

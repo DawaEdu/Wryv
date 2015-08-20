@@ -38,29 +38,16 @@ void AUnit::ConsumeItem( int i )
   // use the item. qty goes down by 1
   Items[i].Quantity--; // we don't affect the UI here, only
 
-  //
-  // << Consume the item, either by applying an effect to the consumer or spawning an effect in the world >>
-  //
-
   // the `model` object of the player. Items[i] gets reflushed each frame.
-  ApplyEffect( Items[i].Type );
-  if( !Items[i].Quantity ) {
-    Items[i].Type = Types::NOTHING;
-    // strip from array
+  AddBuff( Items[i].Type );
+  if( !Items[i].Quantity )
     Items.RemoveAt( i );
-  }
+  
 }
 
 void AUnit::Move( float t )
 {
   AGameObject::Move( t );
-
-  // Tick all the traits
-  for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
-    BonusTraits[i].time -= t;
-    if( BonusTraits[i].time <= 0 )
-      BonusTraits.erase( BonusTraits.begin() + i );
-  }
 }
 
 

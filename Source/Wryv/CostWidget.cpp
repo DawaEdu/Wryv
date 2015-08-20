@@ -8,16 +8,13 @@ CostWidget::CostWidget() : StackPanel( "CostWidget", CostWidgetBackground )
   Pad = FVector2D(16, 13);
 
   TopText = new TextWidget( "TopText" );
-  TopText->Align = TopCenter;
-  StackBottom( TopText );
+  StackBottom( TopText, HCenter );
 
   Cost = new ResourcesWidget( "CostWidget's ResourcesWidget", 16, 4 );
-  Cost->Align = TopCenter;
-  StackBottom( Cost );
+  StackBottom( Cost, HCenter );
 
   BottomText = new TextWidget( "BottomText" );
-  BottomText->Align = TopCenter;
-  StackBottom( BottomText );
+  StackBottom( BottomText, HCenter );
 
   recomputeSizeToContainChildren();
 }

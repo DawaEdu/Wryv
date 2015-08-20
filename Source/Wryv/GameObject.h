@@ -9,7 +9,7 @@ using namespace std;
 
 #include "Types.h"
 #include "UnitsData.h"
-#include "Ability.h"
+#include "CooldownCounter.h"
 #include "SoundEffect.h"
 #include "GameFramework/Actor.h"
 #include "GameObject.generated.h"
@@ -28,16 +28,17 @@ class WRYV_API AGameObject : public AActor
   
   // 
   // Stats.
+  Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
   vector< PowerUpTimeOut > BonusTraits;
-  vector< Ability > Abilities;
-
-  Team *team;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
+  float Mana;           // Current Mana.
   float AttackCooldown; // Cooldown on this unit since last attack
   bool Repairing;       // If the building/unit is Repairing
-  vector<CooldownCounter> BuildQueueCounters;  // The queue of objects being spawned
+  
+  vector< CooldownCounter > Abilities;
+  vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Attacks;
@@ -92,8 +93,9 @@ class WRYV_API AGameObject : public AActor
   // Sets object to use indexed action
   void Action( Types type, AGameObject *target );
   void Action( Types type, FVector where );
-  void ApplyEffect( Types item );
-  void UpdateStats();
+  void ApplyEffect( FUnitsDataRow item );
+  void AddBuff( Types item );
+  void UpdateStats( float t );
   bool UseAbility( int index );
   bool Make( Types type );
   

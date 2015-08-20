@@ -10,17 +10,16 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   Pad = spacing;
 
   Portraits = new FlowPanel( "FlowPanel", 0, 1, 1, FVector2D( size.X, size.Y / 4 ) );
-  Portraits->Align = TopCenter;
-  StackBottom( Portraits );
+  StackBottom( Portraits, HFull );
 
-  Stats = new StatsPanel( "Stats", SolidWidget::SolidWhiteTexture, FLinearColor(0.15, 0.15, 0.15, 0.2) );
-  StackBottom( Stats );
+  Stats = new StatsPanel();
+  StackBottom( Stats, HFull );
   
   actions = new ActionsPanel( "ActionsPanel", FVector2D( size.X/3, size.X/3 ) );
-  StackBottom( actions );
+  StackBottom( actions, HFull );
 
   minimap = new Minimap( 4.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
-  StackBottom( minimap );
+  StackBottom( minimap, HCenter );
     
   // Add the leftBorder in as last child, because it takes up full height,
   // and stackpanel will stack it in below the border

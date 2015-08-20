@@ -157,9 +157,6 @@
     <ClInclude Include="..\..\Source\Wryv\Unit.h">
       <Filter>Source\Wryv\GameObject\Character</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Ability.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Widget3D.h">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
@@ -265,6 +262,9 @@
     <ClInclude Include="..\..\Source\Wryv\TitleScreen.h">
       <Filter>Source\Wryv\UI\Widgets\Screens</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\CooldownCounter.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -338,9 +338,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Unit.cpp">
       <Filter>Source\Wryv\GameObject\Character</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Ability.cpp">
-      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
@@ -416,6 +413,15 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Explosion.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Border.cpp">
+      <Filter>Source\Wryv\UI\BaseElements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ResourcesWidget.cpp">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\CooldownCounter.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

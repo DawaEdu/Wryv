@@ -6,6 +6,8 @@
 
 ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name )
 {
+  Align = TopCenter;
+
   abilities = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
     entrySize, FVector2D(8,8) );
   Add( abilities );
@@ -41,8 +43,8 @@ void ActionsPanel::Set( AGameObject* go )
 AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
+  Align = TopCenter;
   actions = iActions;
-
   if( GetNumSlots() )
   {
     buildButton = GetSlot( GetNumSlots() - 1 );
@@ -71,6 +73,7 @@ void AbilitiesPanel::Set( AGameObject *go )
       go->UseAbility( i );
       return Consumed;
     };
+    
   }
   
   buildButton->Hide();
@@ -82,6 +85,7 @@ void AbilitiesPanel::Set( AGameObject *go )
 BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "BuildPanel", bkg, rows, cols, entrySize, pad )
 {
+  Align = TopCenter;
   actions = iActions;
 }
 

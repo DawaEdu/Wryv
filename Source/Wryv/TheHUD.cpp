@@ -408,7 +408,7 @@ void ATheHUD::RenderScreen( USceneCaptureComponent2D* renderer,
 
 void ATheHUD::BeginDestroy()
 {
-  LOG( "ATheHUD::BeginDestroy()");
+  //LOG( "ATheHUD::BeginDestroy()");
   if( ui ) {
     delete ui;
     ui = 0;

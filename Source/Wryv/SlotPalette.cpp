@@ -3,7 +3,7 @@
 #include "Clock.h"
 #include "WryvGameInstance.h"
 
-FLinearColor SlotPalette::DefaultColor( 0.15, 0.15, 0.15, 0.75 );
+FLinearColor SlotPalette::DefaultColor( 0.0, 0.0, 0.0, 0.15 );
 
 SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   ImageWidget( name, bkg ), Rows(rows), Cols(cols), EntrySize(entrySize)
@@ -114,7 +114,7 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   {
     // initialize a bunch of cooldown counters
     FString name = FString::Printf( TEXT("SP `%s`'s Clock %d"), *Name, i+1 );
-    Clock *clock = new Clock( name, EntrySize, CooldownCounter(), DefaultColor );
+    Clock *clock = new Clock( name, EntrySize, NullTexture, DefaultColor );
     Add( clock );
     AdjustPosition( i );
     slots.push_back( clock );
