@@ -10,7 +10,7 @@ enum Types
   NOTHING = 0           UMETA(DisplayName = "NOTHING"),
 
   UNITSPHERE            UMETA(DisplayName = "Sphere"),
-  UNITBOX               UMETA(DisplayName = "Box"),
+  UNITCUBE              UMETA(DisplayName = "Cube"),
   UNITEDGE              UMETA(DisplayName = "Edge"),
 
   // Units.
@@ -57,6 +57,8 @@ enum Types
   UIFOLLOWSELECTOR      UMETA(DisplayName = "UI Follow Selector"),
   UISHOPPATRONSELECTOR  UMETA(DisplayName = "UI Shop Patron Selector"),
 
+  WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
+
   EXPLOSION1            UMETA(DisplayName = "Explosion 1"),
   EXPLOSION2            UMETA(DisplayName = "Explosion 2"),
   EXPLOSION3            UMETA(DisplayName = "Explosion 3"),
@@ -92,6 +94,9 @@ inline bool IsSpell( Types b ) {
 }
 inline bool IsAction( Types b ) {
   return Between( b, ACTIONMOVE, ACTIONDOUBLEDAMAGE );
+}
+inline bool IsShape( Types b ) {
+  return Between( b, UNITSPHERE, UNITEDGE );
 }
 
 inline FString GetEnumName( TCHAR* enumType, int enumValue )

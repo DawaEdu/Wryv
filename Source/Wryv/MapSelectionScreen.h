@@ -54,7 +54,7 @@ public:
   {
     ITextWidget* text = new ITextWidget( FS("mss text %s",*ftext),
       MapSlotEntryBkg, MapFileEntrySize, ftext, textAlignment );
-    text->OnMouseDownLeft = [this,text](FVector2D mouse){
+    text->OnMouseDownLeft = [this,text](FVector2D mouse) -> EventCode {
       Select( text );
       return Consumed;
     };

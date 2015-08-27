@@ -10,7 +10,7 @@
 
 using namespace std;
 
-WRYV_API DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
+DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 
 #define FS(x,...) FString::Printf( TEXT( x ), __VA_ARGS__ )
 
@@ -295,6 +295,36 @@ template <typename T> inline T& Clamp( T& a, const T& min, const T& max )
   else if( a > max ) a = max;
   return a;
 }
+
+struct Ray
+{
+  FVector start, dir, end; // normalized direction vector
+  float len;
+  Ray()
+  {
+    start = FVector(0,0,0);
+    dir = FVector(0,0,1);
+    len = 1.f;
+    end = start + dir*len;
+  }
+  Ray(FVector o, FVector d) : start(o), dir(d)
+  {
+    end = o + d;
+    len = d.Size();
+    if( len )
+      d /= len;
+  }
+  void SetLen( float iLen ) {
+    len = iLen;
+    end = start + dir*len;
+  }
+  void Print( FString msg )
+  {
+    info( FS( "%s: Ray Start@(%f %f %f), Dir=(%f %f %f), len=%f, end=%f %f %f",
+      *msg, start.X,start.Y,start.Z, dir.X,dir.Y,dir.Z, len, end.X,end.Y,end.Z ) );
+  }
+};
+
 
 template <typename T> static T* GetComponentByType( AActor* a )
 {

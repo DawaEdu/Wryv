@@ -11,27 +11,14 @@ public:
     Center,Full
   };
   
-  StackPanel( FString name ) : ImageWidget( name )
-  {
-  }
-  StackPanel( FString name, UTexture* bkg ) : ImageWidget( name, bkg )
-  {
-  }
-  StackPanel( FString name, UTexture* bkg, FLinearColor color ) : ImageWidget( name, bkg, color )
-  {
-  }
+  StackPanel( FString name );
+  StackPanel( FString name, UTexture* bkg );
+  StackPanel( FString name, UTexture* bkg, FLinearColor color );
   virtual ~StackPanel(){}
   
   // Override base class function, to prevent warning when
   // texture not provided
-  virtual void render( FVector2D offset ) override
-  {
-    // Doesn't render the texture if it isn't set,
-    // so that clear background is allowed
-    if( Tex )  ImageWidget::render( offset );
-    // render children
-    HotSpot::render( offset );
-  }
+  virtual void render( FVector2D offset ) override;
 
   //    _ _
   // > |_|_|

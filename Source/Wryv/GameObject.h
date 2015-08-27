@@ -31,6 +31,7 @@ class WRYV_API AGameObject : public AActor
   Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
+  //UBoxComponent* BoundingShape;
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
@@ -75,6 +76,7 @@ class WRYV_API AGameObject : public AActor
   bool isParentOf( AGameObject* go );
   bool isChildOf( AGameObject* parent );
   AGameObject* MakeChild( Types type );
+  void SetSize( FVector size );
 
   // 
   // Gameplay.
@@ -87,8 +89,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
 
-
-  // Invokes queued action
+  // Invokes next queued action
   void Action();
   // Sets object to use indexed action
   void Action( Types type, AGameObject *target );
@@ -104,10 +105,15 @@ class WRYV_API AGameObject : public AActor
   void SetRot( const FRotator & ro );
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
+  void SetPosition( FVector v );
   void Walk( float t );
   void SetDestination( FVector d );
   void StopMoving();
   void Stop();
+  // time-stepped attack of current target (if any)
+  virtual void Move( float t );
+  virtual void ai( float t );
+  void DoAttack( float t );
 
   // 
   // Unit relationship functions
@@ -125,11 +131,6 @@ class WRYV_API AGameObject : public AActor
   void StopAttacking();
   void LoseAttacker( AGameObject* formerAttacker );
   void LoseAllAttackers();
-
-  // time-stepped attack of current target (if any)
-  virtual void Move( float t );
-  virtual void ai( float t );
-  void DoAttack( float t );
   
   // 
   // AI
@@ -144,7 +145,9 @@ class WRYV_API AGameObject : public AActor
   float GetBoundingRadius();
   void SetTeam( int32 teamId );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }
-  
+  void SetMaterial( UMaterialInterface* mat );
+  void SetColor( FLinearColor color );
+
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]
@@ -153,6 +156,7 @@ class WRYV_API AGameObject : public AActor
   bool isBuilding(){ return IsBuilding( Stats.Type ); }
   bool isResource(){ return IsResource( Stats.Type ); }
   bool isItem(){ return IsItem( Stats.Type ); }
+  bool isShape(){ return IsShape( Stats.Type ); }
   virtual void Die();
   virtual void BeginDestroy() override;
 

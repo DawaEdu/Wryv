@@ -2,6 +2,7 @@
 #include "GameCanvas.h"
 #include "TheHUD.h"
 #include "WryvGameInstance.h"
+#include "PlayerControl.h"
 
 FCursorTexture GameCanvas::MouseCursorHand;
 FCursorTexture GameCanvas::MouseCursorCrossHairs;
@@ -24,14 +25,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     return Consumed;
   };
   OnMouseUpLeft = [this]( FVector2D mouse ){ 
-    // Cannot select here, must in render call.
-    Game->hud->WillSelectNextFrame = 1;
-    if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
-      Game->hud->selectionParity = Adds;
-    else if( Game->pc->IsAnyKeyDown( { EKeys::LeftControl, EKeys::RightControl } ) )
-      Game->hud->selectionParity = Subtracts;
-    else
-      Game->hud->selectionParity = NewSelection;
+    Game->hud->Pick( selectBox->Box );
     SelectEnd();
     return Consumed;
   };

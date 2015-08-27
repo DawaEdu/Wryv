@@ -15,7 +15,7 @@ class ACombatUnit;
 
 enum Alliances
 {
-  Neutral, Friendly, Enemy
+  Neutral=0, Friendly=1, Enemy=2
 };
 
 // Team consists of a single player's 
@@ -26,7 +26,7 @@ struct Team
   // Alliance for this team wrt the local player.
   Alliances alliance;
   AI ai;  // The AI controller for this team.
-  FLinearColor color;
+  FLinearColor Color;
   float Gold, Lumber, Stone;
   // How much damage an object should have before starting repair on it
   float DamageRepairThreshold;
@@ -36,6 +36,7 @@ struct Team
 
   Team();
   Team( int iTeamId, FString str );
+  Team( int iTeamId, FString str, Alliances iAlliance, FLinearColor color );
   void Defaults();
   bool isAllyTo( AGameObject* go );
   bool isEnemyTo( AGameObject* go );

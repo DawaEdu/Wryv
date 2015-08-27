@@ -4,6 +4,7 @@
 #include "WryvGameInstance.h"
 
 FLinearColor SlotPalette::DefaultColor( 0.0, 0.0, 0.0, 0.15 );
+UTexture* SlotPalette::SlotPaletteTexture = 0;
 
 SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
   ImageWidget( name, bkg ), Rows(rows), Cols(cols), EntrySize(entrySize)
@@ -113,8 +114,8 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   for( int i = 0; i < numSlots; i++ )
   {
     // initialize a bunch of cooldown counters
-    FString name = FString::Printf( TEXT("SP `%s`'s Clock %d"), *Name, i+1 );
-    Clock *clock = new Clock( name, EntrySize, NullTexture, DefaultColor );
+    FString name = FString::Printf( TEXT("SlotPalette `%s`'s Clock %d"), *Name, i+1 );
+    Clock *clock = new Clock( name, EntrySize, NoTextureTexture, DefaultColor );
     Add( clock );
     AdjustPosition( i );
     slots.push_back( clock );
@@ -143,7 +144,7 @@ vector<Clock*> SlotPalette::Populate( TArray< TEnumAsByte<Types> > elts )
   //for( int i = elts.Num(); i < GetNumSlots(); i++ )
   //{
   //  // Turn off the function object, just in case
-  //  GetSlot(i)->OnMouseDownLeft = [i](FVector2D mouse){
+  //  GetSlot(i)->OnMouseDownLeft = [i](FVector2D mouse) -> EventCode {
   //    info( FS( "Slot %d not used", i ) );
   //    return NotConsumed;
   //  };

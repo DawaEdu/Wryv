@@ -66,13 +66,18 @@ public:
   template <typename T> T* Make( Types type ) {
     return Make<T>( type, FVector( 0.f ) );
   }
-  template <typename T> T* Make( Types type, FVector v, int32 teamId ) {
-    T* obj = Make<T>( type, v );
-    if( !obj )  error( "Making gameobject" );
-    obj->SetTeam( teamId ); // must be AGameObject derivative
+  template <typename T> T* Make( Types type, FVector pos, FVector scale ) {
+    T* obj = Make<T>( type, pos );
+    obj->SetActorScale3D( scale );
     return obj;
   }
-  AGameObject* Make( Types type, FVector v, int teamId );
+  //template <typename T> T* Make( Types type, FVector pos, int32 teamId ) {
+  //  T* obj = Make<T>( type, pos );
+  //  if( !obj )  error( "Making gameobject" );
+  //  obj->SetTeam( teamId ); // must be AGameObject derivative
+  //  return obj;
+  //}
+  //AGameObject* Make( Types type, FVector v, int teamId );
   FUnitsDataRow GetData( Types type ) { return unitsData[ type ]; }
   UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
   virtual void BeginDestroy() override;

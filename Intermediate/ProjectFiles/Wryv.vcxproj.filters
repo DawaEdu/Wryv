@@ -211,9 +211,6 @@
     <ClInclude Include="..\..\Source\Wryv\SidePanel.h">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Screen.h">
-      <Filter>Source\Wryv\UI\Widgets</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ItemBelt.h">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
@@ -264,6 +261,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\CooldownCounter.h">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Screen.h">
+      <Filter>Source\Wryv\UI\Widgets\Screens</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Tooltip.h">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -422,6 +425,18 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\CooldownCounter.cpp">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\StackPanel.cpp">
+      <Filter>Source\Wryv\UI\BaseElements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\FlowPanel.cpp">
+      <Filter>Source\Wryv\UI\BaseElements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Screen.cpp">
+      <Filter>Source\Wryv\UI\Widgets\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Tooltip.cpp">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

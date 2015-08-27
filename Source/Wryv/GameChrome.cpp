@@ -1,8 +1,6 @@
 #include "Wryv.h"
 #include "GameChrome.h"
 
-UTexture* GameChrome::TooltipBackgroundTexture = 0;
-
 GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 {
   resources = new ResourcesWidget( "GameChrome ResourcesWidget", 16, 4 );
@@ -25,10 +23,10 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
   costWidget->Align = CenterCenter;
   costWidget->Hide();
 
-  tooltip = new ITextWidget( "tooltip", TooltipBackgroundTexture, "tip", Alignment::CenterCenter );
+  tooltip = new Tooltip();
   Add( tooltip );
   tooltip->Pad = FVector2D( 8, 8 );
-  tooltip->OnMouseDownLeft = [this](FVector2D mouse){
+  tooltip->OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     LOG( "Hiding the tooltip" );
     tooltip->Hide();
     return Consumed;

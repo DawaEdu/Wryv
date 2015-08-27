@@ -4,8 +4,8 @@
 #include <set>
 using namespace std;
 
-#include "Types.h"
-#include "GameFramework/Pawn.h"
+#include <Types.h>
+#include <GameFramework/Pawn.h>
 #include "FogOfWar.h"
 #include "UISounds.h"
 #include "SoundEffect.h"
@@ -82,17 +82,13 @@ public:
   void SetCameraPosition( FVector2D perc );
   FHitResult LOS( FVector p, FVector q, TArray<AActor*> ignoredActors );
   UMaterialInterface* GetMaterial( FLinearColor color );
-  void SetMaterial( AActor* a, UMaterialInterface* mat );
-  void SetColor( AActor* a, FLinearColor color );
   UMaterialInstanceConstant* CreateMaterial( FLinearColor color );
   // Series of points to visualize
-  void Visualize( FVector& v, float s, FLinearColor color );
-  void Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
+  void Visualize( Types type, FVector& v, float s, FLinearColor color );
+  void Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
   void ClearViz();
   
-  AActor* MakeSphere( FVector center, float radius, FLinearColor color );
-  AActor* MakeCube( FVector center, float radius, FLinearColor color );
-  AActor* MakeLine( FVector a, FVector b, FLinearColor color );
+  AGameObject* MakeLine( FVector a, FVector b, FLinearColor color );
   void RetrievePointers();
   void debug( int slot, FColor color, FString mess );
   void setGhost( Types ut );
@@ -101,7 +97,6 @@ public:
   FHitResult getHitGeometry();
   vector<FHitResult> getAllHitGeometry();
   FVector getHitFloor( FVector eye, FVector look );
-  FVector getHitFloor( FVector eye );
   FVector getHitFloor();
   FVector SetOnGround( FVector v );
   bool intersectsAny( AActor* actor );

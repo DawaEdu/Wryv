@@ -27,6 +27,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   NextAction = Types::NOTHING; // no spell is queued
+  //BoundingShape = PCIP.CreateDefaultSubobject<UBoxComponent>( this, "Bounding Shape" );
 }
 
 void AGameObject::PostInitializeComponents()
@@ -44,11 +45,13 @@ void AGameObject::PostInitializeComponents()
   {
     // Initialize position, but put object on the ground
     Pos = RootComponent->GetComponentLocation();
+    // Throw on a bounding volume
+    
   }
 
   UpdateStats( 0.f );
   Hp = Stats.HpMax;
-  Speed = Stats.SpeedMax;
+  Speed = 0.f;
 
   if( isBuilding() )  Repairing = 0; // Buildings need an attending peasant to repair
   else  Repairing = 1; // Live units automatically regen
@@ -109,6 +112,18 @@ AGameObject* AGameObject::MakeChild( Types type )
   return child;
 }
 
+void AGameObject::SetSize( FVector size )
+{
+  float maxDimen = GetComponentsBoundingBox().GetExtent().GetMax();
+  if( !maxDimen )
+  {
+    LOG( "::SetSize(): %s had %f size bounding box", *GetName(), maxDimen );
+    SetActorScale3D( size );
+  }
+  else
+    SetActorScale3D( size/maxDimen );
+}
+
 float AGameObject::centroidDistance( AGameObject *go )
 {
   if( !go ) {
@@ -132,6 +147,37 @@ float AGameObject::outsideDistance( AGameObject *go )
   return dist;
 }
 
+bool AGameObject::isAttackTargetWithinRange()
+{
+  if( AttackTarget )  return distanceToAttackTarget() < Stats.AttackRange;
+  return 0;
+}
+
+float AGameObject::distanceToAttackTarget()
+{
+  if( !AttackTarget )  return FLT_MAX;
+  return centroidDistance( AttackTarget );
+}
+
+float AGameObject::hpPercent()
+{
+  if( ! Stats.HpMax ) {
+    error( FS( "HpMax not set for %s", *Stats.Name ) );
+    return 1.f;
+  }
+  else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
+}
+
+float AGameObject::speedPercent()
+{
+  if( ! Stats.SpeedMax )
+  {
+    error( FS( "SpeedMax not set for %s", *Stats.Name ) );
+    return 100.f;
+  }
+  return 100.f * Speed / Stats.SpeedMax;
+}
+
 void AGameObject::Action()
 {
   if( NextAction != NOTHING )
@@ -141,7 +187,8 @@ void AGameObject::Action()
       if( Game->GetData( NextAction ).GroundAttack || // Ground attack casts regardless
         (!Game->GetData( NextAction ).GroundAttack && AttackTarget ) ) // Non-ground with target
       {
-        ASpell* spell = Game->Make<ASpell>( NextAction, Pos, Stats.TeamId );
+        ASpell* spell = Game->Make<ASpell>( NextAction, Pos );
+        team->AddUnit( spell );
         spell->caster = this;
         spell->Attack( AttackTarget );
         spell->AttackTargetOffset = AttackTargetOffset;
@@ -231,7 +278,8 @@ void AGameObject::UpdateStats( float t )
       // Remove it and consider ith building complete. Place @ unoccupied position around building.
       FVector buildPos = Pos + GetActorForwardVector() * GetBoundingRadius();
       
-      Game->Make( BuildQueueCounters[i].Type, buildPos, team->teamId );
+      AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, buildPos );
+      team->AddUnit( newUnit );
 
       // Remove counter & refresh the build queue.
       removeIndex( BuildQueueCounters, i );
@@ -279,123 +327,6 @@ bool AGameObject::Make( Types type )
   return 1;
 }
 
-bool AGameObject::isAttackTargetWithinRange()
-{
-  if( AttackTarget )  return distanceToAttackTarget() < Stats.AttackRange;
-  return 0;
-}
-
-float AGameObject::distanceToAttackTarget()
-{
-  if( !AttackTarget )  return FLT_MAX;
-  return centroidDistance( AttackTarget );
-}
-
-float AGameObject::hpPercent()
-{
-  if( ! Stats.HpMax ) {
-    error( FS( "HpMax not set for %s", *Stats.Name ) );
-    return 1.f;
-  }
-  else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
-}
-
-float AGameObject::speedPercent()
-{
-  if( ! Stats.SpeedMax )
-  {
-    error( FS( "SpeedMax not set for %s", *Stats.Name ) );
-    return 1.f;
-  }
-  return Speed / Stats.SpeedMax;
-}
-
-bool AGameObject::isAllyTo( AGameObject* go )
-{
-  return team->isAllyTo( go ); // Check with my team
-}
-
-bool AGameObject::isEnemyTo( AGameObject* go )
-{
-  return team->isEnemyTo( go );
-}
-
-void AGameObject::Follow( AGameObject* go )
-{
-  // Old follow target loses a follower
-  if( FollowTarget )
-    FollowTarget->LoseFollower( this );
-  FollowTarget = go;
-  if( go )
-  {
-    go->Followers.push_back( this );
-    SetDestination( go->Pos );
-    Game->hud->SelectAsFollow( go );
-  }
-}
-
-void AGameObject::StopFollowing()
-{
-  // Notify follow target that I'm no longer following him.
-  if( FollowTarget )
-    FollowTarget->LoseFollower( this );
-  FollowTarget = 0;
-}
-
-void AGameObject::LoseFollower( AGameObject* formerFollower )
-{
-  if( !formerFollower ) error( "Cannot lose null follower" );
-  formerFollower->Follow( 0 );
-  removeElement( Followers, formerFollower );
-  // if I lost all followers, update the hud
-  if( !Followers.size() )
-    Game->hud->UnselectAsFollow( this );
-}
-
-void AGameObject::LoseAllFollowers()
-{
-  for( AGameObject* fol : Followers )
-    fol->Follow( 0 );
-  Followers.clear();
-}
-
-void AGameObject::Attack( AGameObject* go )
-{
-  if( AttackTarget )
-    AttackTarget->LoseAttacker( this );
-  AttackTarget = go;
-  if( go )
-  {
-    go->Attackers.push_back( this );
-    SetDestination( go->Pos );
-    Game->hud->SelectAsAttack( go );
-  }
-}
-
-void AGameObject::StopAttacking()
-{
-  if( AttackTarget )
-    AttackTarget->LoseAttacker( this );
-  AttackTarget = 0;
-}
-
-void AGameObject::LoseAttacker( AGameObject* formerAttacker )
-{
-  if( !formerAttacker ) error( "Cannot lose null follower" );
-  removeElement( Attackers, formerAttacker );
-  // If there are no more attackers, unselect in ui
-  if( !Attackers.size() )
-    Game->hud->UnselectAsAttack( this );
-}
-
-void AGameObject::LoseAllAttackers()
-{
-  // Tell all attackers I'm no longer available for attack.
-  for( AGameObject* att : Attackers )
-    att->Attack( 0 );
-  Attackers.clear();
-}
-
 void AGameObject::SetRot( const FRotator & ro )
 {
   if( RootComponent ) RootComponent->SetWorldRotation( ro );
@@ -423,45 +354,54 @@ void AGameObject::CheckWaypoint()
   }
 }
 
+void AGameObject::SetPosition( FVector v )
+{
+  
+}
+
 void AGameObject::Walk( float t )
 {
   CheckWaypoint();
-
   Dir = Dest - Pos;
-  float len = Dir.Size();
-  static float epsTravel = 1.f;
 
   // Clamp travel length so that we can't overshoot destination
-  if( len > epsTravel )
+  if( float len = Dir.Size() )
   {
-    Dir = Dir / len; // normalize
-    if( !Speed )  error( FS("%s had 0 speed", *GetName()) );
+    Dir /= len; // normalize
+    if( !Stats.SpeedMax )  error( FS("%s had 0 speed", *GetName()) );
     
+    Speed = Stats.SpeedMax;
     Vel = Dir*Speed;
     FVector disp = Vel*t;
 
     // If travel exceeds destination, then jump to dest,
     // so we don't jitter over the final position.
-    if( disp.Size() < len )  Pos += disp;
-    else
+    if( len < disp.Size() )
     {
+      // snap to position & stop moving.
       Pos = Dest; // we are @ destination.
+      Speed = 0;
       Vel = FVector( 0, 0, 0 );
     }
+    else
+    {
+      Pos += disp;
+      // Push UP from the ground plane, using the bounds on the actor.
+      SetRot( Dir.Rotation() );
+    }
 
-    // Push UP from the ground plane, using the bounds on the actor.
-    SetRot( Dir.Rotation() );
+    Pos.Z += Game->flycam->floorBox.Max.Z;
+    Pos = Game->flycam->SetOnGround( Pos );
   }
-
-  Game->flycam->SetOnGround( Pos + Game->flycam->floorBox.Max.Z*1.01f );
+  
 }
 
 void AGameObject::SetDestination( FVector d )
 {
-  LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name,
-    Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
+  //LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
-    error( "Warning: Set unit's destination on unit with SpeedMax=0" );
+    error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
+    return;
   }
 
   // Make sure the destination is grounded
@@ -578,6 +518,92 @@ void AGameObject::DoAttack( float t )
   AttackCooldown -= t;
 }
 
+bool AGameObject::isAllyTo( AGameObject* go )
+{
+  return team->isAllyTo( go ); // Check with my team
+}
+
+bool AGameObject::isEnemyTo( AGameObject* go )
+{
+  return team->isEnemyTo( go );
+}
+
+void AGameObject::Follow( AGameObject* go )
+{
+  // Old follow target loses a follower
+  if( FollowTarget )
+    FollowTarget->LoseFollower( this );
+  FollowTarget = go;
+  if( go )
+  {
+    go->Followers.push_back( this );
+    SetDestination( go->Pos );
+    Game->hud->SelectAsFollow( go );
+  }
+}
+
+void AGameObject::StopFollowing()
+{
+  // Notify follow target that I'm no longer following him.
+  if( FollowTarget )
+    FollowTarget->LoseFollower( this );
+  FollowTarget = 0;
+}
+
+void AGameObject::LoseFollower( AGameObject* formerFollower )
+{
+  if( !formerFollower ) error( "Cannot lose null follower" );
+  formerFollower->Follow( 0 );
+  removeElement( Followers, formerFollower );
+  // if I lost all followers, update the hud
+  if( !Followers.size() )
+    Game->hud->UnselectAsFollow( this );
+}
+
+void AGameObject::LoseAllFollowers()
+{
+  for( AGameObject* fol : Followers )
+    fol->Follow( 0 );
+  Followers.clear();
+}
+
+void AGameObject::Attack( AGameObject* go )
+{
+  if( AttackTarget )
+    AttackTarget->LoseAttacker( this );
+  AttackTarget = go;
+  if( go )
+  {
+    go->Attackers.push_back( this );
+    SetDestination( go->Pos );
+    Game->hud->SelectAsAttack( go );
+  }
+}
+
+void AGameObject::StopAttacking()
+{
+  if( AttackTarget )
+    AttackTarget->LoseAttacker( this );
+  AttackTarget = 0;
+}
+
+void AGameObject::LoseAttacker( AGameObject* formerAttacker )
+{
+  if( !formerAttacker ) error( "Cannot lose null follower" );
+  removeElement( Attackers, formerAttacker );
+  // If there are no more attackers, unselect in ui
+  if( !Attackers.size() )
+    Game->hud->UnselectAsAttack( this );
+}
+
+void AGameObject::LoseAllAttackers()
+{
+  // Tell all attackers I'm no longer available for attack.
+  for( AGameObject* att : Attackers )
+    att->Attack( 0 );
+  Attackers.clear();
+}
+
 AGameObject* AGameObject::GetClosestEnemyUnit()
 {
   map<float, AGameObject*> closeUnits = FindEnemyUnitsInSightRange();
@@ -589,9 +615,8 @@ AGameObject* AGameObject::GetClosestEnemyUnit()
 map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
 {
   map< float, AGameObject* > distances;
-	for( pair<int32,Team*> p : Game->gm->teams )
+	for( Team* otherTeam : Game->gm->teams )
   {
-    Team* otherTeam = p.second;
     if( ! otherTeam->isEnemyTo( this ) ) skip;
 
     for( AGameObject* go : otherTeam->units )
@@ -659,8 +684,48 @@ void AGameObject::SetTeam( int32 teamId )
   if( team ) { team->RemoveUnit( this ); }
   // change team.
   BaseStats.TeamId = Stats.TeamId = teamId;
-  team = Game->gm->GetTeam( teamId );
-  team->AddUnit( this );
+  Game->gm->teams[ teamId ]->AddUnit( this );
+
+  // Grab all meshes with material parameters & set color of each
+  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
+  for( UMeshComponent* mesh : meshes )
+  {
+    for( int i = 0; i < mesh->GetNumMaterials(); i++ )
+    {
+      UMaterialInterface *mi = mesh->GetMaterial( i );
+      if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
+      {
+        info( "the mID was created " );
+        mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
+      }
+      else
+      {
+        info( "the mID wasn't created " );
+        mid = UMaterialInstanceDynamic::Create( mi, this );
+        FLinearColor defaultColor;
+        if( mid->GetVectorParameterValue( FName( "TeamColor" ), defaultColor ) )
+        {
+          mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
+          mesh->SetMaterial( i, mid );
+          info( "setting mnid param" );
+        }
+      }
+    }
+  }
+}
+
+void AGameObject::SetMaterial( UMaterialInterface* mat )
+{
+  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
+    for( int i = 0; i < meshes.size(); i++ )
+      for( int j = 0; j < meshes[i]->GetNumMaterials(); j++ )
+        meshes[i]->SetMaterial( j, mat );
+
+}
+
+void AGameObject::SetColor( FLinearColor color )
+{
+  SetMaterial( Game->flycam->GetMaterial( color ) );
 }
 
 void AGameObject::Die()

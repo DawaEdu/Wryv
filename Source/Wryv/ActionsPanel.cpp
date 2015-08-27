@@ -4,6 +4,8 @@
 #include "WryvGameInstance.h"
 #include "GameObject.h"
 
+UTexture* AbilitiesPanel::BuildButtonTexture = 0;
+
 ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name )
 {
   Align = TopCenter;

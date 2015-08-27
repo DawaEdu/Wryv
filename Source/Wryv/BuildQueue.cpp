@@ -40,7 +40,7 @@ void BuildQueue::Set( AGameObject* go )
     clocks.push_back( clock );
     
     // Register a function to remove the widget from this queue when clicked.
-    clock->OnMouseDownLeft = [this,go,clock,i](FVector2D mouse)
+    clock->OnMouseDownLeft = [this,go,clock,i](FVector2D mouse) -> EventCode
     {
       LOG( "Cancelled item [%d] belonging to %s", i, *go->Stats.Name );
       removeIndex( go->BuildQueueCounters, i );

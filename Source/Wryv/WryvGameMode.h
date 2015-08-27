@@ -29,11 +29,11 @@ public:
   // Gets you the timestep size given current game speed.
   uint64 tick; // The tick number.
   // Groups of teams.. this is the stock location for the Team objects.
-  map< int32, Team* > teams;
+  vector< Team* > teams;
   Team *neutralTeam, *playersTeam, *enemyTeam;
+  //vector< vector< Team* > > teams ; //later: expand into teams[ Alliances::Friendly ] is a list of teams.
   
   AWryvGameMode(const FObjectInitializer& PCIP);
-  Team* GetTeam( int32 teamId );
   virtual void InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage ) override;
   virtual void StartPlay();
   virtual void StartMatch();

@@ -24,10 +24,8 @@ ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   LOG( "ATheHUD::ATheHUD(ctor)");
   selectorShopPatron = 0;
   NextAction = NextBuilding = NOTHING;
-  WillSelectNextFrame = 0;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
-  selectionParity = Adds;
 }
 
 void ATheHUD::BeginPlay()
@@ -86,29 +84,20 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
   return 0;
 }
 
-set<AGameObject*> ATheHUD::Pick( FBox2DU box )
+void ATheHUD::Pick( FBox2DU box )
 {
-  // Give CombatUnits priority.
-  TArray<AActor*> selectedActors;
-  GetActorsInSelectionRectangle( TSubclassOf<ACombatUnit>( ACombatUnit::StaticClass() ),
-    box.TL(), box.BR(), selectedActors );
-  info( FS( "Selected %d CombatUnits", selectedActors.Num() ) );
+  set<AGameObject*> selected = Game->pc->Pick( box );
+  
+  if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
+    Selected += selected; //Add
+  else if( Game->pc->IsAnyKeyDown( { EKeys::LeftControl, EKeys::RightControl } ) )
+    Selected -= selected; //Subtract
+  else
+    Selected = selected;  //Replace old selection
 
-  // If you've selected buildings & combat units, you select only the combat units.
-  // Else, if there are no combatunits selected, you've selected buildings.
-  if( !selectedActors.Num() )
-  {
-    // Try & select buildings
-    GetActorsInSelectionRectangle( TSubclassOf< ABuilding >( ABuilding::StaticClass() ),
-      box.TL(), box.BR(), selectedActors );
-  }
-
-  // Make a new set of selected units (don't use previously selected units)
-  set<AGameObject*> selected;
-  for( int i = 0; i < selectedActors.Num(); i++ )
-    if( AGameObject* go = Cast<AGameObject>( selectedActors[i] ) )
-      selected.insert( go );
-  return selected;
+  for( AGameObject* obj : Selected )
+    info( FS( "Now selecting: %s", *obj->Stats.Name ) );
+  Select( Selected );
 }
 
 void ATheHUD::Select( set<AGameObject*> objects )
@@ -201,7 +190,7 @@ void ATheHUD::InitWidgets()
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
   StackPanel::StackPanelTexture = StackPanelTexture;
   AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
-  ImageWidget::NullTexture = NullTexture;
+  ImageWidget::NoTextureTexture = NoTextureTexture;
   GameCanvas::MouseCursorHand = MouseCursorHand;
   GameCanvas::MouseCursorCrossHairs = MouseCursorCrossHairs;
   Controls::PauseButtonTexture = PauseButtonTexture;
@@ -209,6 +198,7 @@ void ATheHUD::InitWidgets()
   SidePanel::RightPanelTexture = RightPanelTexture;
   Minimap::MinimapTexture = MinimapTexture;
   CostWidget::CostWidgetBackground = TooltipBackgroundTexture;
+  Tooltip::TooltipBackgroundTexture = TooltipBackgroundTexture;
 
   FVector2D canvasSize( Canvas->SizeX, Canvas->SizeY );
   ui = new UserInterface( canvasSize );
@@ -221,7 +211,7 @@ void ATheHUD::InitWidgets()
       canvasSize, FVector2D( 120, 24 ), largeFont );
   ui->titleScreen = new TitleScreen( TitleScreenTexture, canvasSize );
   ui->Add( mss );
-  mss->OKButton->OnMouseDownLeft = [mss](FVector2D mouse){
+  mss->OKButton->OnMouseDownLeft = [mss](FVector2D mouse) -> EventCode {
     // OK button clicked, so load the map if there is a selected widget
     // else display error message
     if( mss->Selected )
@@ -333,16 +323,6 @@ void ATheHUD::DrawHUD()
   Super::DrawHUD();
   HotSpot::hud = this;
   InitWidgets();
-
-  if( WillSelectNextFrame )
-  {
-    set<AGameObject*> selected = Pick( ui->gameChrome->gameCanvas->selectBox->Box );
-    if( selectionParity == NewSelection )  Selected = selected;
-    else if( selectionParity == Adds )  Selected += selected;
-    else if( selectionParity == Subtracts )  Selected -= selected;
-    Select( Selected );
-    WillSelectNextFrame = 0;
-  }
 
   UpdateDisplayedResources();
   DrawPortrait();

@@ -19,6 +19,7 @@
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
 {
   LOG( "AFlyCam::AFlyCam() ctor" );
+
   // Set this character to call Tick() every frame.
   // Turn this off to improve performance if you don't need it.
   PrimaryActorTick.bCanEverTick = true;
@@ -27,22 +28,26 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   floor = 0;
   pathfinder = 0;
   setupLevel = 0;
+
   // Make the fog of war instance.
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>( this, ADefaultPawn::MovementComponentName );
   MovementComponent->SetTickableWhenPaused( true );
   
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
+  SetRootComponent( DummyRoot );
   MainCamera = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "MainCamera" );
+  MainCamera->AttachTo( DummyRoot );
   OrthoCam = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "OrthoCam" );
-  
+  OrthoCam->AttachTo( DummyRoot );
+
   CameraMovementSpeed = 1000.f;
 }
 
 // Called when the game starts or when spawned
 void AFlyCam::BeginPlay()
 {
+  LOG( "AFlyCam::BeginPlay()" );
 	Super::BeginPlay();
-  LOG( "FlyCam::BeginPlay()" );
 }
 
 void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
@@ -66,7 +71,6 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MoveRight", EKeys::Left, -1.f));
 
   UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("MouseClickedLMB", EKeys::Q, -1.f));
-  //MainCamera = GetComponentByName<UCameraComponent>( this, "Camera" );
   
   // The "string" (eg. "Forward") is the mapping as defined in Project Settings / Input / Action Mappings.
   // We just associate the "Forward" action (which is bound to a key in 
@@ -139,59 +143,57 @@ void AFlyCam::InitializePathfinding()
 
   // Initialize a bunch of bounding spheres
   if( !Rows )  Rows = Cols = 20;
-  if( pathfinder ) delete pathfinder;
+  if( pathfinder )  delete pathfinder;
   pathfinder = new Pathfinder( Rows, Cols );
-  
-  FVector diff = floorBox.Max - floorBox.Min;
+
   vector<Types> intTypes;
   intTypes.push_back( Types::RESTREE );
   intTypes.push_back( Types::RESSTONE );
   intTypes.push_back( Types::RESGOLDMINE );
   
   // get the actual spacing between nodes, then divide by 2
-  float radius = 0.95f*(1.f/Coord::Rows * diff.X)/2.f; // use 95% prox to ensure that
-  // adjacent spheres don't overlap
+  // use 95% prox to ensure that
+  FVector scale = 0.45 * floorBox.GetSize() / FVector( Rows, Cols, 1.f );
+  scale.Z = scale.X; // Keep it rounder
 
-  for( int i = 0; i < Coord::Rows; i++ )
+  // adjacent spheres don't overlap
+  for( int row = 0; row < Rows; row++ )
   {
-    for( int j = 0; j < Coord::Cols; j++ )
+    for( int col = 0; col < Cols; col++ )
     {
-      Coord coord( i, j );
-      FVector perc( (float)i/Coord::Rows, (float)j/Coord::Cols, 0 );
+      // Lay out the spheres
+      FVector fraction( (row + .5f)/Rows, (col + .5f)/Cols, 1.f );
 
       // For the landscape, the lower left is actually box.Min + ext.XY0.
-      FVector ext = floorBox.GetExtent();
-      ext.Z = 0.f;
-      FVector ll = floorBox.Min;// + ext; // the center of the box is actually the lower left
-      FVector p = perc*ll + (FVector(1.f, 1.f, 0.f) - perc)*floorBox.Max;
-      p.Z = floorBox.Max.Z + radius*2.f; // move sphere above floor
+      FVector p = FMath::Lerp( floorBox.Min, floorBox.Max, fraction );
+      p = SetOnGround( p );
 
-      p = getHitFloor( p );
-
+      Coord coord( row, col );
       int idx = coord.index();
       pathfinder->nodes[ idx ]->index = idx;
       pathfinder->nodes[ idx ]->point = p;
       
-      AActor *sphere = MakeSphere( p, radius, FLinearColor::White );
+      AGameObject* sphere = Game->Make<AGameObject>( UNITSPHERE, p );
+      sphere->SetSize( scale );
       
       // if the actor intersects any other bodies inside the game
       // then don't use it
       if( !intersectsAnyOfType( sphere, intTypes ) ) {
         pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
-        SetColor( sphere, FLinearColor::White );
+        sphere->SetColor( FLinearColor::White );
       }
       else {
         pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
-        SetColor( sphere, FLinearColor::Red );
+        sphere->SetColor( FLinearColor::Red );
       }
 
       pathfinder->updateGraphConnections( coord );
-      sphere->SetActorScale3D( FVector( radius/2.f ) );
-
       if( !VizGrid )  sphere->Destroy(); // Don't show the sphere visualization
     }
   }
   
+  GetWorld()->ForceGarbageCollection(true); // Force a cleanup of all the Sphere actors
+
   if( !VizGrid )  return;
 
   // Visualization of graph
@@ -207,7 +209,6 @@ void AFlyCam::InitializePathfinding()
 
   for( Edge* e : edges )
   {
-    FVector dir = e->dst->point - e->src->point;
     // set size of edge proportional to distance between nodes
     MakeLine( e->src->point, e->dst->point, FLinearColor::White );
   }
@@ -242,7 +243,7 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
     LOG( "no floor" );
     return;
   }
-  LOG( "startLoc %f %f", perc.X, perc.Y );
+  
   FVector P = GetActorLocation(); // restore the z value after movement
   FVector fwd = MainCamera->GetForwardVector();
   FBox box = floor->GetComponentsBoundingBox();
@@ -266,9 +267,6 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   FVector P2 = G - len * fwd;
   P2.Z = P.Z; // nail z-value to old z-value to prevent camera climb
   
-  // Stop the camera from previous motions
-  //ControlInputVector = FVector::ZeroVector;
-
   // Move the camera back from the point on the plane in -cameraDir
   // vertically move the camera up to the higher plane
   // Move BACK in the direction of the fwd vector length of previous location
@@ -312,35 +310,21 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
   return material;
 }
 
-void AFlyCam::SetMaterial( AActor* a, UMaterialInterface* mat )
+void AFlyCam::Visualize( Types type, FVector& v, float s, FLinearColor color )
 {
-  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>( a );
-    for( int i = 0; i < meshes.size(); i++ )
-      for( int j = 0; j < meshes[i]->GetNumMaterials(); j++ )
-        meshes[i]->SetMaterial( j, mat );
+  AGameObject* go = Game->Make<AGameObject>( type, v, FVector(s) );
+  go->SetColor( color );
+  viz.push_back( go );
 }
 
-void AFlyCam::SetColor( AActor* a, FLinearColor color )
-{
-  SetMaterial( a, GetMaterial( color ) );
-}
-
-void AFlyCam::Visualize( FVector& v, float s, FLinearColor color )
-{
-  AActor *a = GetWorld()->SpawnActor( Game->unitsData[ Types::UNITSPHERE ].uClass, &v );
-  a->GetRootComponent()->SetWorldScale3D( FVector( s ) );
-  SetColor( a, color );
-  viz.push_back( a );
-}
-
-void AFlyCam::Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
+void AFlyCam::Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
 {
   for( int i = 0; i < v.size(); i++ )
   {
     //LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
-    float p = (float)i/v.size();
+    float p = (float)i / v.size();
     FLinearColor color = FLinearColor::LerpUsingHSV( startColor, endColor, p );
-    Visualize( v[i], s, color );
+    Visualize( type, v[i], s, color );
   }
 }
 
@@ -351,53 +335,21 @@ void AFlyCam::ClearViz()
   viz.clear();
 }
 
-AActor* AFlyCam::MakeSphere( FVector center, float radius, FLinearColor color )
-{
-  UClass *uClassSphere = Game->unitsData[ Types::UNITSPHERE ].uClass;
-  AActor *sphere = GetWorld()->SpawnActor( uClassSphere, &center );
-  SetColor( sphere, color );
-  float s = sphere->GetComponentsBoundingBox().GetExtent().GetMax();
-  if( !s )
-  {
-    LOG( "::MakeSphere(): %s had %f size bounding box", *sphere->GetName(), s );
-    sphere->SetActorScale3D( FVector( radius ) );
-  }
-  else
-    sphere->SetActorScale3D( FVector( radius/s ) );
-
-  return sphere;
-}
-
-AActor* AFlyCam::MakeCube( FVector center, float radius, FLinearColor color )
-{
-  UClass *uClassSphere = Game->unitsData[ Types::UNITSPHERE ].uClass;
-  AActor *cube = GetWorld()->SpawnActor( uClassSphere, &center );
-  SetColor( cube, color );
-  float s = cube->GetComponentsBoundingBox().GetExtent().GetMax();
-  if( !s )
-  {
-    LOG( "::MakeCube(): %s had %f size bounding box", *cube->GetName(), s );
-    cube->SetActorScale3D( FVector( radius ) );
-  }
-  else
-    cube->SetActorScale3D( FVector( radius/s ) );
-
-  return cube;
-}
-
-AActor* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
+AGameObject* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
 {
   // The line is a unit line
   FVector dir = b - a;
   float len = dir.Size();
+  if( !len ) {
+    error( FS( "Making an edge of 0 length from %f %f %f to %f %f %f",
+      a.X,a.Y,a.Z, b.X,b.Y,b.Z ) ) ;
+    return 0;
+  }
   dir /= len;
 
-  UClass *uClassEdge = Game->unitsData[ Types::UNITEDGE ].uClass;
-  AActor *line = GetWorld()->SpawnActor( uClassEdge, &a );
-  SetColor( line, color );
-  line->SetActorScale3D( FVector( len ) );
+  AGameObject *line = Game->Make<AGameObject>( Types::UNITEDGE, a, FVector(len) );
+  line->SetColor( color );
   line->SetActorRotation( dir.Rotation() );
-
   return line;
 }
 
@@ -421,7 +373,7 @@ void AFlyCam::debug( int slot, FColor color, FString mess )
 void AFlyCam::setGhost( Types ut )
 {
   FVector vec( 0. );
-
+  
   // Delete the old ghost
   if( ghost )
   {
@@ -435,7 +387,7 @@ void AFlyCam::setGhost( Types ut )
   if( IsBuilding( ut ) )
   {
     // Remakes the ghost each frame a ghost is present.
-    ghost = Game->Make( ut, vec, Game->gm->playersTeam->teamId );
+    ghost = Game->Make<AGameObject>( ut, vec );
   }
   else
   {
@@ -486,9 +438,10 @@ FVector AFlyCam::getHitFloor(FVector eye, FVector look)
     return hit.ImpactPoint;
 }
 
-FVector AFlyCam::getHitFloor( FVector eye )
+FVector AFlyCam::SetOnGround( FVector v )
 {
-  return getHitFloor( eye, FVector( 0, 0, -1 ) );
+  FVector floorPos = getHitFloor( v, FVector( 0, 0, -1 ) );
+  return floorPos;
 }
 
 FVector AFlyCam::getHitFloor()
@@ -498,23 +451,15 @@ FVector AFlyCam::getHitFloor()
     LOG( "No floor");
     return FVector(0.f);
   }
-
   FVector2D mouse = getMousePos();
   FHitResult hit;
-  bool intersects = Game->pc->Trace( mouse, floor, hit );
-  if( !intersects )
+  bool didHit = Game->pc->Trace( mouse, floor, hit );
+  if( !didHit )
   {
     warning( FS( "Ray cast from camera eye didn't hit ground plane, (%f %f %f)",
       hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
   }
   return hit.ImpactPoint;
-}
-
-FVector AFlyCam::SetOnGround( FVector v )
-{
-  FVector floorPos = getHitFloor( v );
-  v.Z = floorPos.Z;
-  return v;
 }
 
 bool AFlyCam::intersectsAny( AActor* actor )
@@ -699,7 +644,8 @@ void AFlyCam::MouseDownLeft()
         PlaySound( UISounds::BuildingPlaced );
 
         // It goes down as a little turf thing
-        AGameObject* building = Game->Make( NextBuilding.Type, ghost->Pos, ghost->team->teamId );
+        AGameObject* building = Game->Make<AGameObject>( NextBuilding.Type, ghost->Pos );
+        building->SetTeam( ghost->team->teamId );
         
         // Selected objects will go build it
         for( AGameObject* se : Game->hud->Selected )

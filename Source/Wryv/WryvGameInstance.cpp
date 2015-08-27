@@ -110,14 +110,6 @@ bool UWryvGameInstance::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& O
   return Super::Exec( InWorld, Cmd, Out );
 }
 
-AGameObject* UWryvGameInstance::Make( Types type, FVector v, int teamId )
-{
-  AGameObject* go = GetWorld()->SpawnActor<AGameObject>( GetUClass(type), v, FRotator(0.f) );
-  if( !go )  error( FS( "Couldn't make object of type %s", *GetTypesName( type ) ) );
-  go->SetTeam( teamId );
-  return go;
-}
-
 void UWryvGameInstance::BeginDestroy()
 {
   Super::BeginDestroy();

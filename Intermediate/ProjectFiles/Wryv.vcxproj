@@ -76,6 +76,7 @@
     <ClCompile Include="..\..\Source\Wryv\Controls.cpp" />
     <ClCompile Include="..\..\Source\Wryv\CostWidget.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Explosion.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\FlowPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\FlyCam.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Explosion.h" />
     <ClInclude Include="..\..\Source\Wryv\FlowPanel.h" />
@@ -119,6 +120,7 @@
     <ClInclude Include="..\..\Source\Wryv\ProgressBar.h" />
     <ClInclude Include="..\..\Source\Wryv\Resource.h" />
     <ClCompile Include="..\..\Source\Wryv\ResourcesWidget.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\Screen.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Settings.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ResourcesWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\Screen.h" />
@@ -136,9 +138,11 @@
     <ClInclude Include="..\..\Source\Wryv\StatusBar.h" />
     <ClInclude Include="..\..\Source\Wryv\TextWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\TitleScreen.h" />
+    <ClInclude Include="..\..\Source\Wryv\Tooltip.h" />
     <ClInclude Include="..\..\Source\Wryv\UISounds.h" />
     <ClInclude Include="..\..\Source\Wryv\Spell.h" />
     <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h" />
+    <ClCompile Include="..\..\Source\Wryv\StackPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\StatsPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Team.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Team.h" />
@@ -146,6 +150,7 @@
     <ClCompile Include="..\..\Source\Wryv\TheHUD.cpp" />
     <ClInclude Include="..\..\Source\Wryv\TheHUD.h" />
     <ClInclude Include="..\..\Source\Wryv\Types.h" />
+    <ClCompile Include="..\..\Source\Wryv\Tooltip.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Unit.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Unit.h" />
     <ClCompile Include="..\..\Source\Wryv\UnitsData.cpp" />

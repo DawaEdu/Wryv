@@ -27,19 +27,20 @@ struct FBox2DU : public FBox2D
     Max.X = Max.Y =  s;
   }
   // Translates the box by V
-  FBox2DU operator+( FVector2D v ){ return FBox2DU( Min+v, Max+v ); }
-  FBox2DU operator-( FVector2D v ){ return FBox2DU( Min-v, Max-v ); }
-  float left(){ return Min.X; }
-	float right(){ return Max.X; }
-	float top(){ return Min.Y; }
-	float bottom(){ return Max.Y; }
+  FBox2DU operator+( FVector2D v ) const { return FBox2DU( Min+v, Max+v ); }
+  FBox2DU operator-( FVector2D v ) const { return FBox2DU( Min-v, Max-v ); }
+  float left() const { return Min.X; }
+	float right() const { return Max.X; }
+	float top() const { return Min.Y; }
+	float bottom() const { return Max.Y; }
 
-  FVector2D TL() { return Min; }
-  FVector2D TR() { return FVector2D( Max.X, Min.Y ); }
-  FVector2D BR() { return Max; }
-  FVector2D BL() { return FVector2D( Min.X, Max.Y ); }
+  FVector2D TL() const { return Min; }
+  FVector2D TR() const { return FVector2D( Max.X, Min.Y ); }
+  FVector2D BR() const { return Max; }
+  FVector2D BL() const { return FVector2D( Min.X, Max.Y ); }
   
-  void print(FString msg);
-  FVector2D Size() { return Max - Min; }
+  void print(FString msg) const;
+  FVector2D Size() const { return Max - Min; }
+  bool Empty() const { return Min.Equals( Max, 1e-6f ); }
 };
 

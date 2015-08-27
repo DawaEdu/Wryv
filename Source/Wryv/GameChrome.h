@@ -9,6 +9,7 @@
 #include "BuildQueue.h"
 #include "Controls.h"
 #include "GameCanvas.h"
+#include "Tooltip.h"
 
 // The in-game chrome object, consisting of many subpanels etc
 // +---------------------------------+
@@ -29,10 +30,9 @@ public:
   Buffs*            buffs;        // list of buffs applied to this unit
   BuildQueue*       buildQueue;   // queue of things we are building (in order)
   CostWidget*       costWidget;   // a flyover cost of the hovered item from 
-  ITextWidget*      tooltip;      // 
+  Tooltip*          tooltip;      // 
   GameCanvas*       gameCanvas;   // like acetate sheet user uses to select units etc.
   set<AGameObject*> Selected;
-  static UTexture*  TooltipBackgroundTexture;
 
   GameChrome( FString name, FVector2D size );
   void Select( set<AGameObject*> objects );

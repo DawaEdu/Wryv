@@ -37,13 +37,13 @@ void ItemBelt::Set( AUnit *unit )
       SetSlotTexture( i, item.Portrait );
 
       // Trigger the gameobject to consume i'th item.
-      GetSlot( i )->OnMouseDownLeft = [this,i,unit](FVector2D mouse){
+      GetSlot( i )->OnMouseDownLeft = [this,i,unit](FVector2D mouse) -> EventCode {
         unit->ConsumeItem( i );
         return Consumed;
       };
 
       ITextWidget* tooltip = Game->hud->ui->gameChrome->tooltip;
-      GetSlot(i)->OnHover = [slot,item,tooltip](FVector2D mouse)
+      GetSlot(i)->OnHover = [slot,item,tooltip](FVector2D mouse) -> EventCode
       {
         // display a tooltip describing the current item.
         // or could add as a child of the img widget

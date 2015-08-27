@@ -11,11 +11,11 @@ Minimap::Minimap( float borderSize, FLinearColor borderColor ) :
   FBox2DU box( FVector2D(0,0), Size );
   borders = new Border( "Minimap border", box, borderSize, borderColor );
   Add( borders );
-  OnMouseDownLeft = [this](FVector2D mouse){
+  OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     Game->flycam->SetCameraPosition( mouse / Size );
     return Consumed;
   };
-  OnMouseDragLeft = [this](FVector2D mouse){
+  OnMouseDragLeft = [this](FVector2D mouse) -> EventCode {
     Game->flycam->SetCameraPosition( mouse / Size );
     return Consumed;
   };

@@ -47,8 +47,7 @@ void ASpell::ProxSpell_Implementation( AActor* OtherActor,
   {
     go->Hp -= Stats.AttackDamage;
     // spawn the OnContact spell
-    Game->Make( OnContact.GetValue(), Pos, Stats.TeamId );
-    UGameplayStatics::SpawnEmitterAtLocation( GetWorld(), 0, Pos );
+    team->AddUnit( Game->Make<ASpell>( OnContact.GetValue(), Pos ) );
     Destroy();
   }
 }

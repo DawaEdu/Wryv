@@ -28,11 +28,6 @@ class FAssetRegistryModule;
 class UMediaTexture;
 class AWidget3D;
 
-enum SelectionParity
-{
-  NewSelection, Adds, Subtracts
-};
-
 UCLASS()
 class WRYV_API ATheHUD : public AHUD
 {
@@ -55,7 +50,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* BuildButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NullTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NoTextureTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
   UPROPERTY() TArray<UMaterialInstanceDynamic*> MaterialInstances; // Referenced collection of material instances.
   // Required to prevent auto-cleanup of instanced materials
@@ -66,8 +61,6 @@ public:
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
 
   // Because canvas has to be valid for box selection to work it seems
-  bool WillSelectNextFrame;
-  SelectionParity selectionParity;
   set<AGameObject*> Selected;
 
   // The buttons currently showing on the user interface.
@@ -105,7 +98,7 @@ public:
   HotSpot* MouseMoved( FVector2D mouse );
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
-  set<AGameObject*> Pick( FBox2DU box );
+  void Pick( FBox2DU box );
   void Select( set<AGameObject*> objects );
   void SelectAsFollow( AGameObject* object );
   void SelectAsAttack( AGameObject* object );

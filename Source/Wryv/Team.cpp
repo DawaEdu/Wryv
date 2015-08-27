@@ -22,6 +22,15 @@ Team::Team( int iTeamId, FString str )
   Name = str;
 }
 
+Team::Team( int iTeamId, FString str, Alliances iAlliance, FLinearColor color )
+{
+  Defaults();
+  teamId = iTeamId;
+  Name = str;
+  alliance = iAlliance;
+  Color = color;
+}
+
 void Team::Defaults()
 {
   Gold = 500;
@@ -30,6 +39,7 @@ void Team::Defaults()
   DamageRepairThreshold = 2.f/3.f;
   alliance = Neutral;
   researchLevelMeleeWeapons = researchLevelRangedWeapons = researchLevelArmor = 0;
+  Color = FLinearColor::Blue;
 }
 
 bool Team::isAllyTo( AGameObject* go )
@@ -66,6 +76,7 @@ void Team::AddUnit( AGameObject *go )
 {
   units.push_back( go );
   go->team = this;
+  go->BaseStats.TeamId = go->Stats.TeamId = teamId;
 }
 
 void Team::RemoveUnit( AGameObject *go )

@@ -9,7 +9,7 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   Align = TopRight;
   Pad = spacing;
 
-  Portraits = new FlowPanel( "FlowPanel", 0, 1, 1, FVector2D( size.X, size.Y / 4 ) );
+  Portraits = new FlowPanel( "FlowPanel", 0, 1, 1, FVector2D( size.X, size.X ) );
   StackBottom( Portraits, HFull );
 
   Stats = new StatsPanel();
@@ -33,15 +33,15 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   controls = new Controls();
   Add( controls );
 
-  OnMouseDownLeft = [this](FVector2D mouse){
+  OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     //LOG( "Sidepanel Absorbed click" );
     return Consumed;
   };
-  OnMouseUpLeft = [this](FVector2D mouse){
+  OnMouseUpLeft = [this](FVector2D mouse) -> EventCode {
     //LOG( "Sidepanel Absorbed mouse up" );
     return Consumed;
   };
-  OnMouseDragLeft = [this](FVector2D mouse){
+  OnMouseDragLeft = [this](FVector2D mouse) -> EventCode {
     //LOG( "Sidepanel Absorbed mouse drag" );
     return Consumed;
   };

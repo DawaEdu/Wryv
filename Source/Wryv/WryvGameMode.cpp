@@ -13,27 +13,26 @@ AWryvGameMode::AWryvGameMode(const FObjectInitializer& PCIP) : Super( PCIP )
   tick = 0;
 }
 
-Team* AWryvGameMode::GetTeam( int32 teamId )
-{
-  if( !teams[ teamId ] )
-    teams[ teamId ] = new Team( teamId, FS( "Team %d", teamId ) );
-  return teams[ teamId ];
-}
-
 void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage )
 {
   Super::InitGame( MapName, Options, ErrorMessage );
   LOG( "AWryvGameMode::InitGame(%s, %s, %s)", *MapName, *Options, *ErrorMessage );
   
+  // Push 3 alliances into teams collection
+  //teams.push_back( vector<Team*>() );  // teams[0]==teams[Alliances::Neutral]
+  //teams.push_back( vector<Team*>() );  // teams[1]==teams[Alliances::Friendly]
+  //teams.push_back( vector<Team*>() );  // teams[2]==teams[Alliances::Enemy]
+
   // Create Teams required for this map.
   // This happens before AActor::BeginPlay().
   Game->gm = this;
-  neutralTeam = teams[ 0 ] = new Team( 0, "Neutral" );
-  teams[ 0 ]->alliance = Alliances::Neutral;
-  playersTeam = teams[ 1 ] = new Team( 1, "Player" );
-  teams[ 1 ]->alliance = Alliances::Friendly;
-  enemyTeam = teams[ 2 ] = new Team( 2, "Opponent" );
-  teams[ 2 ]->alliance = Alliances::Enemy;
+  neutralTeam = new Team( 0, "Neutral", Alliances::Neutral, FLinearColor::White );
+  teams.push_back( neutralTeam ); 
+  playersTeam = new Team( 1, "Player", Alliances::Friendly, FLinearColor::Blue );
+  teams.push_back( playersTeam );
+  enemyTeam = new Team( 2, "Opponent", Alliances::Enemy, FLinearColor::Red );
+  teams.push_back( enemyTeam );
+
 }
 
 void AWryvGameMode::StartPlay()
@@ -117,7 +116,8 @@ AActor* AWryvGameMode::Find( FString name )
 
 void AWryvGameMode::BeginDestroy()
 {
-  for( pair< int, Team* > p : teams )  delete p.second;
-
+  for( Team* team : teams )
+    delete team;
+  teams.clear();
   Super::BeginDestroy();  // PUT THIS LAST or the object may become invalid
 }

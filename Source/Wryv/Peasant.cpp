@@ -24,10 +24,11 @@ void APeasant::BeginPlay()
 AGameObject* APeasant::Build( Types type, FVector location )
 {
   // Builds the building @ pos.
-  ABuilding* b = Cast<ABuilding>( Game->Make( type, location, team->teamId ) );
+  ABuilding* building = Game->Make<ABuilding>( type, location );
+  team->AddUnit( building );
 
   // Try and place the building can be placed @ position
-  if( PlaceBuilding( b, location ) )  return b;
+  if( PlaceBuilding( building, location ) )  return building;
   else  return NULL;
 }
 

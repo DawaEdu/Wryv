@@ -8,9 +8,5 @@
 #include "GlobalFunctions.h"
 
 TextWidget* HotSpot::TooltipWidget = 0;
-UTexture* ImageWidget::NullTexture = 0;
 
-UTexture* SlotPalette::SlotPaletteTexture = 0;
-UTexture* StackPanel::StackPanelTexture = 0;
-UTexture* AbilitiesPanel::BuildButtonTexture = 0;
 
