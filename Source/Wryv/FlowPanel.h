@@ -13,7 +13,6 @@ public:
 
   // re-flow after each add
   virtual void PostAdd();
-  void Set( set<AGameObject*> objects );
   virtual void render( FVector2D offset ) override;
 };
 

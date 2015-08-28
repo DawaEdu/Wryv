@@ -42,18 +42,6 @@ void FlowPanel::PostAdd()
   reflow();
 }
   
-void FlowPanel::Set( set<AGameObject*> objects )
-{
-  // Change rows/cols.
-  Cols = Rows = ceilf( sqrtf( objects.size() ) ) ;
-  Clear();
-  if( !Cols ) return; //empty
-
-  for( AGameObject* go : objects )
-    Add( new ImageWidget( go->Stats.Name, go->Stats.Portrait ) ) ;
-  if( Rows && Cols ) reflow();
-}
-
 void FlowPanel::render( FVector2D offset )
 {
   if( hidden ) return;

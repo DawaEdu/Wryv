@@ -80,7 +80,6 @@ public:
   void UnloadLevel();
   
   void SetCameraPosition( FVector2D perc );
-  FHitResult LOS( FVector p, FVector q, TArray<AActor*> ignoredActors );
   UMaterialInterface* GetMaterial( FLinearColor color );
   UMaterialInstanceConstant* CreateMaterial( FLinearColor color );
   // Series of points to visualize

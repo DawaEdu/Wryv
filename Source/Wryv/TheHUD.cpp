@@ -84,31 +84,25 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
   return 0;
 }
 
-void ATheHUD::Pick( FBox2DU box )
+void ATheHUD::Select( set<AGameObject*> objects )
 {
-  set<AGameObject*> selected = Game->pc->Pick( box );
-  
   if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
-    Selected += selected; //Add
+    Selected += objects; //Add
   else if( Game->pc->IsAnyKeyDown( { EKeys::LeftControl, EKeys::RightControl } ) )
-    Selected -= selected; //Subtract
+    Selected -= objects; //Subtract
   else
-    Selected = selected;  //Replace old selection
+    Selected = objects;  //Replace old selection
 
   for( AGameObject* obj : Selected )
     info( FS( "Now selecting: %s", *obj->Stats.Name ) );
-  Select( Selected );
-}
-
-void ATheHUD::Select( set<AGameObject*> objects )
-{
+  
   NextAction = NOTHING; // Unset next spell & building
   NextBuilding = NOTHING;
   DestroyAll( selectors );  // Destroy the old selectors
   DestroyAll( selFollowTargets );
   DestroyAll( selAttackTargets );
   // create & parent the selectors to all selected objects
-  for( AGameObject * go : objects )
+  for( AGameObject * go : Selected )
   {
     AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( Types::UISELECTOR ) );
     if( !sel )  error( "Couldn't create selector object" );
@@ -119,7 +113,7 @@ void ATheHUD::Select( set<AGameObject*> objects )
   }
 
   // Modify the UI to reflect selected gameobjects
-  ui->gameChrome->Select( objects );
+  ui->gameChrome->Select( Selected );
 }
 
 void ATheHUD::SelectAsFollow( AGameObject* object )

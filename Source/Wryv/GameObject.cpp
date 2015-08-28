@@ -27,7 +27,8 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   NextAction = Types::NOTHING; // no spell is queued
-  //BoundingShape = PCIP.CreateDefaultSubobject<UBoxComponent>( this, "Bounding Shape" );
+  bounds = 0;
+  MaxRepulsionForce = 1.f;
 }
 
 void AGameObject::PostInitializeComponents()
@@ -45,8 +46,7 @@ void AGameObject::PostInitializeComponents()
   {
     // Initialize position, but put object on the ground
     Pos = RootComponent->GetComponentLocation();
-    // Throw on a bounding volume
-    
+    bounds = GetComponentByType<UShapeComponent>( this );
   }
 
   UpdateStats( 0.f );
@@ -159,7 +159,7 @@ float AGameObject::distanceToAttackTarget()
   return centroidDistance( AttackTarget );
 }
 
-float AGameObject::hpPercent()
+float AGameObject::HpPercent()
 {
   if( ! Stats.HpMax ) {
     error( FS( "HpMax not set for %s", *Stats.Name ) );
@@ -168,7 +168,7 @@ float AGameObject::hpPercent()
   else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
 }
 
-float AGameObject::speedPercent()
+float AGameObject::SpeedPercent()
 {
   if( ! Stats.SpeedMax )
   {
@@ -362,38 +362,89 @@ void AGameObject::SetPosition( FVector v )
 void AGameObject::Walk( float t )
 {
   CheckWaypoint();
-  Dir = Dest - Pos;
 
+  // Alter destination based on locations of other units.
+  FVector ToDest = Dest - Pos;
+  
   // Clamp travel length so that we can't overshoot destination
-  if( float len = Dir.Size() )
+  if( float Len = ToDest.Size() )
   {
-    Dir /= len; // normalize
+    Dir = ToDest / Len; // normalize
     if( !Stats.SpeedMax )  error( FS("%s had 0 speed", *GetName()) );
     
     Speed = Stats.SpeedMax;
     Vel = Dir*Speed;
-    FVector disp = Vel*t;
+    FVector travel = Vel*t;
 
     // If travel exceeds destination, then jump to dest,
     // so we don't jitter over the final position.
-    if( len < disp.Size() )
+    if( Len < travel.Size() )
     {
       // snap to position & stop moving.
       Pos = Dest; // we are @ destination.
+      travel = ToDest; // This is the displacement we actually moved.
       Speed = 0;
       Vel = FVector( 0, 0, 0 );
     }
     else
     {
-      Pos += disp;
-      // Push UP from the ground plane, using the bounds on the actor.
+      Pos += travel;
       SetRot( Dir.Rotation() );
     }
 
+    // Push UP from the ground plane, using the bounds on the actor.
     Pos.Z += Game->flycam->floorBox.Max.Z;
     Pos = Game->flycam->SetOnGround( Pos );
+
+    // If I will collide with something in direction of destination,
+    // move destination back a bit so I don't collide.
+    TArray<FOverlapResult> overlaps;
+    FQuat Quat = Dir.Rotation().Quaternion();
+    FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+      FCollisionObjectQueryParams::InitType::AllObjects );
+    
+    FCollisionShape c1;
+    c1.ShapeType = ECollisionShape::Capsule;
+    GetSimpleCollisionCylinder( c1.Capsule.Radius, c1.Capsule.HalfHeight );
+    info( FS( "Capsule %f %f", c1.Capsule.Radius, c1.Capsule.HalfHeight ) );
+    FCollisionQueryParams fqp;
+    fqp.AddIgnoredActor( Game->flycam->floor );
+    fqp.AddIgnoredActor( this ); // Don't report collisions with self.
+    GetWorld()->OverlapMultiByObjectType( overlaps, Pos, Quat, objectTypes, c1, fqp ); // when physics is OFF c1 is interpreted as a single point it seems.
+
+    FVector forces( 0,0,0 );
+    for( int i = 0; i < overlaps.Num(); i++ )
+    {
+      AActor* a = overlaps[i].Actor.Get();
+
+      // The object will overlap in the future position, so don't move.
+      if( a )
+      {
+        // Get radius of other actor
+        float r2, h2;
+        GetSimpleCollisionCylinder( r2, h2 );
+        float r = c1.Capsule.Radius + r2; /// cannot collide from further than
+        FVector from = Pos - a->GetActorLocation();
+        if( float x = from.Size() )
+        {
+          from /= x;
+          if( x < 1 + r )
+          {
+            forces += MaxRepulsionForce * SpeedPercent()/100.f * log( 1 + r - x )/log( 1 + r ) * from;
+          }
+          else
+          {
+            LOG( "x is too large (%f) for radius r=%f", x, r );
+          }
+        }
+
+        LOG( "OverlapMultiByChannel: %s overlaps with %s, repel with force=%f",
+          *Stats.Name, *overlaps[i].Actor->GetName(), forces.Size() );
+      }
+    }
+    // Add in repulsion forces
+    Pos += forces;
   }
-  
 }
 
 void AGameObject::SetDestination( FVector d )
@@ -406,10 +457,8 @@ void AGameObject::SetDestination( FVector d )
 
   // Make sure the destination is grounded
   d = Game->flycam->SetOnGround( d );
-  
-  // find the path, then submit list of Waypoints
+  // Find the path, then submit list of Waypoints
   Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
-  
   // Fix Waypoints z value so they sit on ground plane
   for( int i = 0; i < Waypoints.size(); i++ )
   {
@@ -418,7 +467,6 @@ void AGameObject::SetDestination( FVector d )
     // of the bounding box.
     Waypoints[i] = Game->flycam->SetOnGround( Waypoints[i] ); // Then set on ground.
   }
-
   // Check that the 2nd point isn't more than 90
   // degrees away from the 1st point.
   if( Waypoints.size() >= 3 )
@@ -479,7 +527,7 @@ void AGameObject::Move( float t )
   UpdateStats( t );
   
   // Call the ai for this object type
-  ai( t );
+  //ai( t );
   
   // recompute path
   if( FollowTarget )  SetDestination( FollowTarget->Pos );
@@ -493,6 +541,7 @@ void AGameObject::Move( float t )
 
   // Flush the computed position to the root component
   RootComponent->SetWorldLocation( Pos );
+
 }
 
 void AGameObject::ai( float t )
@@ -654,15 +703,6 @@ AGameObject* AGameObject::GetClosestObjectOfType( Types type )
   }
 
   return closestObject;
-}
-
-bool AGameObject::LOS( FVector p )
-{
-  FHitResult hit;
-  FCollisionQueryParams fcqp( "Dest trace", true );
-  fcqp.AddIgnoredActor( this );
-  FCollisionObjectQueryParams fcoqp;
-  return GetWorld()->LineTraceSingleByObjectType( hit, Pos, p, fcoqp, fcqp );
 }
 
 void AGameObject::OnSelected()

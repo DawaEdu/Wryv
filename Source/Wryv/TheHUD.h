@@ -98,7 +98,6 @@ public:
   HotSpot* MouseMoved( FVector2D mouse );
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
-  void Pick( FBox2DU box );
   void Select( set<AGameObject*> objects );
   void SelectAsFollow( AGameObject* object );
   void SelectAsAttack( AGameObject* object );

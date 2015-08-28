@@ -115,8 +115,10 @@
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />
     <ClCompile Include="..\..\Source\Wryv\PlayerControl.cpp" />
     <ClInclude Include="..\..\Source\Wryv\PlayerControl.h" />
+    <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\ProgressBar.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Resource.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\PortraitsPanel.h" />
     <ClInclude Include="..\..\Source\Wryv\ProgressBar.h" />
     <ClInclude Include="..\..\Source\Wryv\Resource.h" />
     <ClCompile Include="..\..\Source\Wryv\ResourcesWidget.cpp" />

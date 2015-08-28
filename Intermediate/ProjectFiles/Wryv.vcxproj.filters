@@ -268,6 +268,9 @@
     <ClInclude Include="..\..\Source\Wryv\Tooltip.h">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\PortraitsPanel.h">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -436,6 +439,9 @@
       <Filter>Source\Wryv\UI\Widgets\Screens</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Tooltip.cpp">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClCompile>
   </ItemGroup>

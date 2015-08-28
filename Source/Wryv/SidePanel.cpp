@@ -9,7 +9,7 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   Align = TopRight;
   Pad = spacing;
 
-  Portraits = new FlowPanel( "FlowPanel", 0, 1, 1, FVector2D( size.X, size.X ) );
+  Portraits = new PortraitsPanel( FVector2D( size.X, size.X ) );
   StackBottom( Portraits, HFull );
 
   Stats = new StatsPanel();

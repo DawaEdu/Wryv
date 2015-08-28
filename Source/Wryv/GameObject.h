@@ -31,13 +31,14 @@ class WRYV_API AGameObject : public AActor
   Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
-  //UBoxComponent* BoundingShape;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float MaxRepulsionForce;
+  UShapeComponent*      bounds;
+
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
   float AttackCooldown; // Cooldown on this unit since last attack
   bool Repairing;       // If the building/unit is Repairing
-  
   vector< CooldownCounter > Abilities;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
@@ -84,8 +85,8 @@ class WRYV_API AGameObject : public AActor
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool isAttackTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float distanceToAttackTarget();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float hpPercent();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float speedPercent();
+  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float HpPercent();
+  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float SpeedPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
 
@@ -140,7 +141,6 @@ class WRYV_API AGameObject : public AActor
 
   // 
   // Utility
-  bool LOS( FVector p );
   void OnSelected();
   float GetBoundingRadius();
   void SetTeam( int32 teamId );

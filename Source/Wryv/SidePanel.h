@@ -8,6 +8,7 @@
 #include "StatsPanel.h"
 #include "Minimap.h"
 #include "Controls.h"
+#include "PortraitsPanel.h"
 
 // The right-side panel
 class SidePanel : public StackPanel
@@ -22,7 +23,7 @@ public:
   //     +-----------+
   //     | minimap   |
   //     +-----------+
-  FlowPanel* Portraits;   // pictoral representation of selected unit
+  PortraitsPanel* Portraits;   // pictoral representation of selected unit
   StatsPanel* Stats;      // The stats of the last selected unit
   ActionsPanel* actions;       // contains both the abilities & buildings pages
   Minimap* minimap;       // the minimap widget for displaying the world map

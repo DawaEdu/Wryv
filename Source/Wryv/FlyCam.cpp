@@ -282,16 +282,6 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   //GetViewFrustumBounds( frustum, this->camera->MarkRenderTransformDirty
 }
 
-FHitResult AFlyCam::LOS( FVector p, FVector q, TArray<AActor*> ignoredActors )
-{
-  FHitResult hit;
-  FCollisionQueryParams fcqp( "dest trace", true );
-  fcqp.AddIgnoredActors( ignoredActors );
-  FCollisionObjectQueryParams fcoqp;
-  GetWorld()->LineTraceSingleByObjectType( hit, p, q, fcoqp, fcqp );
-  return hit;
-}
-
 UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 {
   UMaterialInstanceDynamic* material = 0;
@@ -682,8 +672,8 @@ void AFlyCam::MouseDownRight()
   if( target && target != floor )
   {
     // An actor was hit by the click
-    for( AGameObject* go : Game->hud->Selected )
-      go->Attack( target );
+    //for( AGameObject* go : Game->hud->Selected )
+    //  go->Attack( target );
   }
   else
   {

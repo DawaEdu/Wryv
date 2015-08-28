@@ -173,7 +173,7 @@ void APeasant::Repair( float t )
     }
 
     // if it has completed repair, deselect for repair
-    if( repair->hpPercent() == 1.f ) {
+    if( repair->HpPercent() == 1.f ) {
       repair = 0;
     }
   }
@@ -265,7 +265,7 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
     AGameObject *g = team->units[ i ];
     if( g->isBuilding() )
     {
-      float hpPerc = g->hpPercent();
+      float hpPerc = g->HpPercent();
       if( hpPerc < threshold && hpPerc < lowestHpPerc )
       {
         lowestHpUnit = g;
