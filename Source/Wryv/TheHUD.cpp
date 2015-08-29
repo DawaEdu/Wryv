@@ -22,10 +22,12 @@
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
-  selectorShopPatron = 0;
   NextAction = NextBuilding = NOTHING;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
+  AttackTargetName = "AttackTarget";
+  FollowTargetName = "FollowTarget";
+  SelectedTargetName = "SelTarget";
 }
 
 void ATheHUD::BeginPlay()
@@ -86,6 +88,14 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
 
 void ATheHUD::Select( set<AGameObject*> objects )
 {
+  // Remove all selection markers (previous selection)
+  for( AGameObject* sel : Selected )
+  {
+    RemoveTagged( sel, SelectedTargetName );
+    RemoveTagged( sel, FollowTargetName );
+    RemoveTagged( sel, AttackTargetName );
+  }
+
   if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
     Selected += objects; //Add
   else if( Game->pc->IsAnyKeyDown( { EKeys::LeftControl, EKeys::RightControl } ) )
@@ -93,81 +103,56 @@ void ATheHUD::Select( set<AGameObject*> objects )
   else
     Selected = objects;  //Replace old selection
 
-  for( AGameObject* obj : Selected )
-    info( FS( "Now selecting: %s", *obj->Stats.Name ) );
-  
-  NextAction = NOTHING; // Unset next spell & building
+  NextAction = NOTHING;  //Unset next spell & building
   NextBuilding = NOTHING;
-  DestroyAll( selectors );  // Destroy the old selectors
-  DestroyAll( selFollowTargets );
-  DestroyAll( selAttackTargets );
+
   // create & parent the selectors to all selected objects
   for( AGameObject * go : Selected )
   {
-    AWidget3D* sel = Cast<AWidget3D>( go->MakeChild( Types::UISELECTOR ) );
-    if( !sel )  error( "Couldn't create selector object" );
-    selectors.push_back( sel );
     // make an attack target if there is an attack target for the gameobject
-    if( go->AttackTarget )  SelectAsAttack( go->AttackTarget );
-    if( go->FollowTarget )  SelectAsFollow( go->FollowTarget );
+    MarkAsSelected( go );
+    if( go->AttackTarget )  MarkAsAttack( go->AttackTarget );
+    if( go->FollowTarget )  MarkAsFollow( go->FollowTarget );
   }
 
   // Modify the UI to reflect selected gameobjects
   ui->gameChrome->Select( Selected );
 }
 
-void ATheHUD::SelectAsFollow( AGameObject* object )
+void ATheHUD::MarkAsSelected( AGameObject* object )
+{
+  if( HasChildWithTag( object, SelectedTargetName ) )  return;
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+  widget->Tags.Add( SelectedTargetName );
+  float r = object->GetBoundingRadius();
+  widget->SetActorScale3D( FVector(r,r,r) );
+  widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
+  object->AddChild( widget );
+}
+
+void ATheHUD::MarkAsFollow( AGameObject* object )
 {
   // only select as follow target if its not already an attack target of something
   // ( attack priorities over follow )
-  AWidget3D* widget = Game->Make<AWidget3D>( UIFOLLOWSELECTOR );
-  selFollowTargets.push_back( widget );
+  if( HasChildWithTag( object, FollowTargetName ) )  return; // already marked as an attack target
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+  widget->Tags.Add( FollowTargetName );
+  float r = object->GetBoundingRadius();
+  widget->SetActorScale3D( FVector(r,r,r) );
+  widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
+  object->AddChild( widget );
 }
 
-void ATheHUD::SelectAsAttack( AGameObject* object )
+void ATheHUD::MarkAsAttack( AGameObject* object )
 {
-  AWidget3D* widget = Game->Make<AWidget3D>( UIATTACKSELECTOR );
-  selAttackTargets.push_back( widget );
-}
-
-void ATheHUD::Unselect( set<AGameObject*> objects )
-{
-  // check if parent of any selector
-  for( AGameObject* go : objects )
-  {
-    for( int i = selectors.size()-1; i >= 0; i-- )
-    {
-      if( go->isParentOf( selectors[i] ) )
-      {
-        selectors[i]->Destroy();
-        removeIndex( selectors, i );
-      }
-    }
-  }
-}
-
-void ATheHUD::UnselectAsFollow( AGameObject* go )
-{
-  for( int i = selFollowTargets.size()-1; i >= 0; i-- )
-  {
-    if( go->isParentOf( selFollowTargets[i] ) )
-    {
-      selFollowTargets[i]->Destroy();
-      removeIndex( selFollowTargets, i );
-    }
-  }
-}
-
-void ATheHUD::UnselectAsAttack( AGameObject* go )
-{
-  for( int i = selAttackTargets.size()-1; i >= 0; i-- )
-  {
-    if( go->isParentOf( selAttackTargets[i] ) )
-    {
-      selAttackTargets[i]->Destroy();
-      removeIndex( selAttackTargets, i );
-    }
-  }
+  // Check that it doesn't already have a Selector-typed child
+  if( HasChildWithTag( object, AttackTargetName ) )  return; // already marked as an attack target
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+  widget->Tags.Add( AttackTargetName );
+  float r = object->GetBoundingRadius();
+  widget->SetActorScale3D( FVector( r,r,r ) );
+  widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
+  object->AddChild( widget );
 }
 
 void ATheHUD::InitWidgets()

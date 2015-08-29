@@ -32,12 +32,11 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float MaxRepulsionForce;
-  UShapeComponent*      bounds;
-
+  UShapeComponent* bounds;
+  
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
-  float AttackCooldown; // Cooldown on this unit since last attack
   bool Repairing;       // If the building/unit is Repairing
   vector< CooldownCounter > Abilities;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
@@ -76,7 +75,13 @@ class WRYV_API AGameObject : public AActor
   AGameObject* AddChild( AGameObject* newChild );
   bool isParentOf( AGameObject* go );
   bool isChildOf( AGameObject* parent );
-  AGameObject* MakeChild( Types type );
+  template <typename T> T* MakeChild( Types type )
+  {
+    T* child = Game->Make<T>( type );
+    AddChild( child );
+    return child;
+  }
+
   void SetSize( FVector size );
 
   // 
@@ -84,11 +89,13 @@ class WRYV_API AGameObject : public AActor
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool isAttackTargetWithinRange();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float distanceToAttackTarget();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float HpPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  float SpeedPercent();
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
+  // Called by blueprints (AttackAnimation) when attack is launched (for ranged weapons)
+  // or strikes (for melee weapons).
+  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool AttackCycle();
 
   // Invokes next queued action
   void Action();
@@ -107,10 +114,13 @@ class WRYV_API AGameObject : public AActor
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
   void SetPosition( FVector v );
+  void AddRepulsionForces();
   void Walk( float t );
+  void SetGroundPosition( FVector groundPos );
   void SetDestination( FVector d );
   void StopMoving();
   void Stop();
+  void Face( AGameObject* go );
   // time-stepped attack of current target (if any)
   virtual void Move( float t );
   virtual void ai( float t );
@@ -143,6 +153,7 @@ class WRYV_API AGameObject : public AActor
   // Utility
   void OnSelected();
   float GetBoundingRadius();
+  void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( int32 teamId );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }
   void SetMaterial( UMaterialInterface* mat );

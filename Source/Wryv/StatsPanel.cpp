@@ -63,7 +63,7 @@ void StatsPanel::Set( AGameObject* go )
   hpText -> Set( FS( "%.0f / %.0f", go->Hp, go->Stats.HpMax ) );
   hpText -> Color = FLinearColor::LerpUsingHSV( FLinearColor(0.639f, 0.f, 0.192f), 
     FLinearColor(0.f, 0.7f, 0.f), go->HpPercent() );
-  damage -> Set( FS( "Damage: %d", go->Stats.AttackDamage ) );
+  damage -> Set( FS( "Damage: %d", go->Stats.BaseAttackDamage ) );
   armor -> Set( FS( "Armor: %d", go->Stats.Armor ) );
   description -> Set( go->Stats.Description );
 

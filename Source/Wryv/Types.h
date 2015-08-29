@@ -53,9 +53,6 @@ enum Types
 
   // Some kind of widget or selector
   UISELECTOR            UMETA(DisplayName = "UI Selector"),
-  UIATTACKSELECTOR      UMETA(DisplayName = "UI Attack Selector"),
-  UIFOLLOWSELECTOR      UMETA(DisplayName = "UI Follow Selector"),
-  UISHOPPATRONSELECTOR  UMETA(DisplayName = "UI Shop Patron Selector"),
 
   WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
 

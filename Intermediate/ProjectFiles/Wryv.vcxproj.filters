@@ -130,9 +130,6 @@
     <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Weapon.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Wryv.h">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClInclude>
@@ -317,9 +314,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\UnitsData.cpp">
       <Filter>Source\Wryv\Structures</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Weapon.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Wryv.cpp">
       <Filter>Source\Wryv\Wryv</Filter>

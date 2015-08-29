@@ -289,6 +289,11 @@ inline float randFloat( int min, int max )
   return min + FMath::FRand()*( max - min );
 }
 
+inline float randFloat( int max )
+{
+  return FMath::FRand()*max;
+}
+
 template <typename T> inline T& Clamp( T& a, const T& min, const T& max )
 {
   if( a < min ) a = min;
@@ -354,6 +359,36 @@ template <typename T> static T* GetComponentByName( AActor* a, FString name )
       if( s->GetName() == name )
         return s;
   return 0;
+}
+
+inline bool HasChildWithTag( AActor* actor, FName tag )
+{
+  if( actor && actor->ActorHasTag( tag ) )
+    return 1;
+
+  for( int i = 0; i < actor->Children.Num(); i++ )
+  {
+    AActor* child = actor->Children[i];
+    if( child && HasChildWithTag( child, tag ) )
+      return 1;
+  }
+  return 0;
+}
+
+inline void GetChildrenTagged( AActor* actor, set<AActor*>& tagged, FName fname )
+{
+  if( actor && actor->ActorHasTag( fname ) )
+    tagged.insert( actor );
+  for( int i = 0; i < actor->Children.Num(); i++ )
+    GetChildrenTagged( actor->Children[i], tagged, fname );
+}
+
+inline void RemoveTagged( AActor* actor, FName fname )
+{
+  set<AActor*> tagged;
+  GetChildrenTagged( actor, tagged, fname );
+  for( AActor* a : tagged )
+    a->Destroy();
 }
 
 inline bool Intersects( FBox& box, FVector& pt )

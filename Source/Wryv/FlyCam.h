@@ -81,7 +81,6 @@ public:
   
   void SetCameraPosition( FVector2D perc );
   UMaterialInterface* GetMaterial( FLinearColor color );
-  UMaterialInstanceConstant* CreateMaterial( FLinearColor color );
   // Series of points to visualize
   void Visualize( Types type, FVector& v, float s, FLinearColor color );
   void Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );

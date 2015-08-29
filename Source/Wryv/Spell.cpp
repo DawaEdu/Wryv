@@ -14,16 +14,12 @@ ASpell::ASpell(const FObjectInitializer& PCIP) : AGameObject(PCIP)
 void ASpell::Init()
 {
   // Get the bounding volume and prox based on it
-  TArray<UActorComponent*> ps = GetComponents();
-  LOG( "ASpell::ASpell() %d", ps.Num() );
+  vector<UShapeComponent*> bounds = GetComponentsByType<UShapeComponent>();
   
-  for( int i = 0; i < ps.Num(); i++ )
+  for( int i = 0; i < bounds.size(); i++ )
   {
-    if( UShapeComponent* s = Cast<UShapeComponent>( ps[i] ) )
-    {
-      LOG( "Registering shape component %s", *s->GetName() );
-      s->OnComponentBeginOverlap.AddDynamic( this, &ASpell::ProxSpell );
-    }
+    // Attach function when spell comes near target.
+    bounds[i]->OnComponentBeginOverlap.AddDynamic( this, &ASpell::ProxSpell );
   }
 
   init = 1;
@@ -38,14 +34,12 @@ void ASpell::ProxSpell_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
-  LOG( "SPELL: %s collided with %s",
-    *Stats.Name, *OtherActor->GetName() );
-  
-  // deal damage to otheractor (which should be a GameObject
+  LOG( "SPELL: %s collided with %s", *Stats.Name, *OtherActor->GetName() );
+  // Deal damage to otheractor (which should be a GameObject)
   AGameObject* go = Cast<AGameObject>( OtherActor );
   if( go   &&   go != caster )
   {
-    go->Hp -= Stats.AttackDamage;
+    go->Hp -= Stats.BaseAttackDamage;
     // spawn the OnContact spell
     team->AddUnit( Game->Make<ASpell>( OnContact.GetValue(), Pos ) );
     Destroy();

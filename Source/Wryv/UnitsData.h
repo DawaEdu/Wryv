@@ -36,8 +36,13 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float HpMax;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float Armor;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SightRange;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackDamage;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackCooldown;
+  // The weapon's chance to miss
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float MissPercent;
+  // Attack damage is BaseAttackDamage + rand()%BonusAttackDamage
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BaseAttackDamage;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BonusAttackDamage;
+  // The weapon is a melee weapon or no
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool IsMeleeWeapon;
   // Range it can attack from (spells have attack range also)
   //   * For a Weapon instance, its range of the sword or spear
   //   * For a Spell, its the range of the spell itself.
@@ -58,6 +63,8 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
   // The abilities this unit has, including ability to build, etc.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
+  // Weapon the object has equipped
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > Weapon;
   // The blueprint from which class instance came from
   //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) 
   UClass* uClass;
@@ -78,8 +85,8 @@ public:
     HpMax = 100.f;
     Armor = 1.f;
     SightRange = 10000.f;
-    AttackDamage = 10.f;
-    AttackCooldown = 2.f;
+    BaseAttackDamage = 10.f;
+    BonusAttackDamage = 5.f;
     AttackRange = 100.f;
     PickupRange = 100.f;
     TeamId = 0;
@@ -100,8 +107,8 @@ public:
     r.HpMax += row.HpMax;
     r.Armor += row.Armor;
     r.SightRange += row.SightRange;
-    r.AttackDamage += row.AttackDamage;
-    r.AttackCooldown += row.AttackCooldown;
+    r.BaseAttackDamage += row.BaseAttackDamage;
+    r.BonusAttackDamage += row.BonusAttackDamage;
     r.AttackRange += row.AttackRange;
     return r;
   }

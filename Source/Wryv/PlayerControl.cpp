@@ -83,7 +83,18 @@ bool APlayerControl::TraceMulti( const FVector2D& ScreenPosition, vector<FHitRes
   return didHit;
 }
 
-set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
+set<AGameObject*> APlayerControl::PickWithType( const FBox2DU& box, set<Types> inTypes )
+{
+  return Pick( box, inTypes, {} );
+}
+
+set<AGameObject*> APlayerControl::PickButNotType( const FBox2DU& box, set<Types> notTypes )
+{
+  return Pick( box, {}, notTypes );
+}
+
+// If InTypes is EMPTY, then it picks any type
+set<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> inTypes, set<Types> notTypes )
 {
   set<AGameObject*> objects;
   if( box.Empty() ) return objects;
@@ -132,11 +143,15 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
   {
     for( AGameObject* go : team->units )
     {
-      FBox box = go->GetComponentsBoundingBox();
+      //FBox box = go->GetComponentsBoundingBox();
+      Types type = go->Stats.Type.GetValue();
       if( !go->IsPendingKill()   &&
            go != Game->flycam->floor   &&
-           v.IntersectSphere( go->Pos, go->GetBoundingRadius() )
-        // v.IntersectBox( box.GetCenter(), box.GetExtent() ) )
+           v.IntersectSphere( go->Pos, go->GetBoundingRadius() )  &&
+         //v.IntersectBox( box.GetCenter(), box.GetExtent() ) )  &&
+          // If the inTypes collection is specified, check it
+          (!(inTypes.size()) || in( inTypes, type )) &&
+          !in( notTypes, type )
        )
       {
         objects.insert( go );

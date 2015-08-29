@@ -24,7 +24,9 @@ public:
 	FSceneView* GetSceneView( FSceneViewFamilyContext& ViewFamily );
   bool Trace(const FVector2D& ScreenPosition, AActor* actor, FHitResult& hit);
   bool TraceMulti(const FVector2D& ScreenPosition, vector<FHitResult>& HitResult);
-  set<AGameObject*> Pick( const FBox2DU& box );
+  set<AGameObject*> PickWithType( const FBox2DU& box, set<Types> inTypes );
+  set<AGameObject*> PickButNotType( const FBox2DU& box, set<Types> notTypes );
+  set<AGameObject*> Pick( const FBox2DU& box, set<Types> inTypes, set<Types> notTypes );
   bool IsKeyDown( FKey key );
   bool IsAnyKeyDown( vector<FKey> key );
   virtual void Tick( float t ) override;

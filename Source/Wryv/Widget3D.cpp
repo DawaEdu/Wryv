@@ -16,8 +16,6 @@ void AWidget3D::Tick( float t )
 {
   //LOG( "%s::Tick()", *GetName() );
   USceneComponent* rc = GetRootComponent();
-  //Print( TEXT("GetComponentTransform().GetLocation()"), rc->GetComponentTransform().GetLocation() );
-  //Print( TEXT("GetRelativeTransform().GetLocation()"), rc->GetRelativeTransform().GetLocation() );
   // Zero the relative transform, because the engine automatically
   // maintains the original position
   rc->SetRelativeLocation( FVector(0,0,0) );

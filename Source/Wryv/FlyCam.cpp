@@ -188,7 +188,7 @@ void AFlyCam::InitializePathfinding()
       }
 
       pathfinder->updateGraphConnections( coord );
-      if( !VizGrid )  sphere->Destroy(); // Don't show the sphere visualization
+      sphere->Destroy(); // Don't show the sphere visualization
     }
   }
   
@@ -201,7 +201,8 @@ void AFlyCam::InitializePathfinding()
   for( int i = 0; i < pathfinder->nodes.size(); i++ )
   {
     GraphNode *node = pathfinder->nodes[i];
-    //if( node->terrain == Passible )  MakeSphere( node->point, radius, White );
+    if( node->terrain == Passible )
+      Game->Make<AGameObject>( UNITSPHERE, node->point, FVector(100.f) );
     // create a node and edge connections
     for( int j = 0; j < node->edges.size(); j++ )
       edges.insert( node->edges[j] );
@@ -570,7 +571,6 @@ void AFlyCam::Select( set<AGameObject*> objects )
   // Run its OnSelected function, playing sounds etc.
   for( AGameObject* go : objects )
     go->OnSelected();
-  
 }
 
 void AFlyCam::MouseUpLeft()
@@ -672,15 +672,32 @@ void AFlyCam::MouseDownRight()
   if( target && target != floor )
   {
     // An actor was hit by the click
-    //for( AGameObject* go : Game->hud->Selected )
-    //  go->Attack( target );
+    // Detect if friendly or not
+    for( AGameObject* go : Game->hud->Selected )
+    {
+      if( go->isEnemyTo( target ) )
+        go->Attack( target );
+      else
+        go->Follow( target );
+    }
   }
   else
   {
+    if( ! Game->hud->Selected.size() )
+    {
+      LOG( "Nothing was selected" );
+      return;
+    }
+
     FVector loc = getHitFloor();
+    // Calculate offsets with respect to first command unit
+    AGameObject* first = *Game->hud->Selected.begin();
+    FVector offset = loc - first->Pos; // Offset to apply to get to loc from first->Pos
+
     for( AGameObject * go : Game->hud->Selected ) {
-      LOG( "%s to %f %f %f", *go->GetName(), loc.X, loc.Y, loc.Z  );
-      go->SetDestination( loc );
+      //LOG( "%s to %f %f %f", *go->GetName(), loc.X, loc.Y, loc.Z  );
+      // When setting ground position lose old targets
+      go->SetGroundPosition( go->Pos + offset );
     }
   }
 }

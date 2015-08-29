@@ -159,9 +159,7 @@
     <ClInclude Include="..\..\Source\Wryv\UnitsData.h" />
     <ClInclude Include="..\..\Source\Wryv\UnitTypeUClassPair.h" />
     <ClCompile Include="..\..\Source\Wryv\UserInterface.cpp" />
-    <ClCompile Include="..\..\Source\Wryv\Weapon.cpp" />
     <ClInclude Include="..\..\Source\Wryv\UserInterface.h" />
-    <ClInclude Include="..\..\Source\Wryv\Weapon.h" />
     <ClCompile Include="..\..\Source\Wryv\Widget.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Widget.h" />
     <None Include="..\..\Source\Wryv\Wryv.Build.cs" />

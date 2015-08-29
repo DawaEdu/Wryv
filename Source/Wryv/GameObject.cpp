@@ -10,6 +10,8 @@
 #include "GlobalFunctions.h"
 #include "PlayerControl.h"
 #include "Widget3D.h"
+#include "Explosion.h"
+#include "Weapon.h"
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -21,7 +23,6 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
   //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
-  AttackCooldown = 0;
   Repairing = 0;
   team = 0;
   Pos = Vel = FVector(0, 0, 0);
@@ -81,10 +82,16 @@ AGameObject* AGameObject::SetParent( AGameObject* newParent )
   USceneComponent *pc = 0;
   if( newParent )  pc = newParent->GetRootComponent();
   SetOwner( newParent );
+
+  // Keep original scale & reset
+  FVector s = GetRootComponent()->GetComponentScale();
+  LOG( "Scaling %f %f %f", s.X, s.Y, s.Z );
   // Set the world position to being that of parent, then keep world position on attachment
   GetRootComponent()->SetWorldScale3D( FVector(1,1,1) ); // reset the scale off
   GetRootComponent()->SetRelativeScale3D( FVector(1,1,1) ); 
   GetRootComponent()->SnapTo( pc );
+
+  GetRootComponent()->SetWorldScale3D( s ); // don't set scaling relative to parent.. set it absolute in world size coords
   return this;
 }
 
@@ -103,13 +110,6 @@ bool AGameObject::isParentOf( AGameObject* child )
 bool AGameObject::isChildOf( AGameObject* parent )
 {
   return IsAttachedTo( parent );
-}
-
-AGameObject* AGameObject::MakeChild( Types type )
-{
-  AGameObject* child = Game->Make<AGameObject>( type );
-  AddChild( child );
-  return child;
 }
 
 void AGameObject::SetSize( FVector size )
@@ -139,24 +139,19 @@ float AGameObject::outsideDistance( AGameObject *go )
     LOG( "outsideDistance( 0 ): null" );
     return FLT_MAX;
   }
-  float r1, h1, r2, h2;
-  GetComponentsBoundingCylinder( r1, h1, 1 );
-  go->GetComponentsBoundingCylinder( r2, h2, 1 );
-  float dist = centroidDistance( go );
-  dist -= r1 + r2;
-  return dist;
+  float r1 = GetBoundingRadius();
+  float r2 = go->GetBoundingRadius();
+  return centroidDistance( go ) - (r1 + r2);
 }
 
 bool AGameObject::isAttackTargetWithinRange()
 {
-  if( AttackTarget )  return distanceToAttackTarget() < Stats.AttackRange;
-  return 0;
-}
+  if( AttackTarget )
+  {
+    return centroidDistance( AttackTarget ) < Stats.AttackRange;
+  }
 
-float AGameObject::distanceToAttackTarget()
-{
-  if( !AttackTarget )  return FLT_MAX;
-  return centroidDistance( AttackTarget );
+  return 0;
 }
 
 float AGameObject::HpPercent()
@@ -176,6 +171,23 @@ float AGameObject::SpeedPercent()
     return 100.f;
   }
   return 100.f * Speed / Stats.SpeedMax;
+}
+
+bool AGameObject::AttackCycle()
+{
+  info( FS( "%s is attacking", *Stats.Name ));
+  if( Stats.Weapon )
+  {
+    float damage = Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage )
+      - AttackTarget->Stats.Armor;
+    info( FS( "%s attacking %s for %f damage", *Stats.Name, *AttackTarget->Stats.Name, damage ) );
+    AttackTarget->Hp -= damage;
+  }
+  else
+  {
+    // Make a projectile of type and send towards attack target
+    NextAction = Stats.Weapon;
+  }
 }
 
 void AGameObject::Action()
@@ -359,6 +371,53 @@ void AGameObject::SetPosition( FVector v )
   
 }
 
+// Adds repulsion forces from any adjacent gameobjects (to avoid collisions)
+void AGameObject::AddRepulsionForces()
+{
+  // If I will collide with something in direction of destination,
+  // move destination back a bit so I don't collide.
+  TArray<FOverlapResult> overlaps;
+  FQuat Quat = Dir.Rotation().Quaternion();
+  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+    FCollisionObjectQueryParams::InitType::AllObjects );
+    
+  FCollisionShape c1;
+  c1.ShapeType = ECollisionShape::Capsule;
+  GetSimpleCollisionCylinder( c1.Capsule.Radius, c1.Capsule.HalfHeight );
+  FCollisionQueryParams fqp;
+  fqp.AddIgnoredActor( Game->flycam->floor );
+  fqp.AddIgnoredActor( this ); // Don't report collisions with self.
+  GetWorld()->OverlapMultiByObjectType( overlaps, Pos, Quat, objectTypes, c1, fqp ); // when physics is OFF c1 is interpreted as a single point it seems.
+
+  FVector forces( 0,0,0 );
+  for( int i = 0; i < overlaps.Num(); i++ )
+  {
+    AActor* a = overlaps[i].Actor.Get();
+    if( !a )  skip;
+
+    // The object will overlap in the future position, so don't move.
+    // Get radius of other actor
+    float r2 = a->GetSimpleCollisionRadius();
+    float r = c1.Capsule.Radius + r2;
+    FVector from = Pos - a->GetActorLocation();
+    if( float x = from.Size() )
+    {
+      from /= x;
+      if( x < 1 + r )
+      {
+        forces += MaxRepulsionForce * SpeedPercent()/100.f * log( 1 + r - x )/log( 1 + r ) * from;
+      }
+      else
+      {
+        LOG( "x is too large (%f) for radius r=%f", x, r );
+      }
+    }
+  }
+  
+  // Add in repulsion forces to the position.
+  Pos += forces;
+}
+
 void AGameObject::Walk( float t )
 {
   CheckWaypoint();
@@ -396,55 +455,15 @@ void AGameObject::Walk( float t )
     Pos.Z += Game->flycam->floorBox.Max.Z;
     Pos = Game->flycam->SetOnGround( Pos );
 
-    // If I will collide with something in direction of destination,
-    // move destination back a bit so I don't collide.
-    TArray<FOverlapResult> overlaps;
-    FQuat Quat = Dir.Rotation().Quaternion();
-    FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-      FCollisionObjectQueryParams::InitType::AllObjects );
-    
-    FCollisionShape c1;
-    c1.ShapeType = ECollisionShape::Capsule;
-    GetSimpleCollisionCylinder( c1.Capsule.Radius, c1.Capsule.HalfHeight );
-    info( FS( "Capsule %f %f", c1.Capsule.Radius, c1.Capsule.HalfHeight ) );
-    FCollisionQueryParams fqp;
-    fqp.AddIgnoredActor( Game->flycam->floor );
-    fqp.AddIgnoredActor( this ); // Don't report collisions with self.
-    GetWorld()->OverlapMultiByObjectType( overlaps, Pos, Quat, objectTypes, c1, fqp ); // when physics is OFF c1 is interpreted as a single point it seems.
-
-    FVector forces( 0,0,0 );
-    for( int i = 0; i < overlaps.Num(); i++ )
-    {
-      AActor* a = overlaps[i].Actor.Get();
-
-      // The object will overlap in the future position, so don't move.
-      if( a )
-      {
-        // Get radius of other actor
-        float r2, h2;
-        GetSimpleCollisionCylinder( r2, h2 );
-        float r = c1.Capsule.Radius + r2; /// cannot collide from further than
-        FVector from = Pos - a->GetActorLocation();
-        if( float x = from.Size() )
-        {
-          from /= x;
-          if( x < 1 + r )
-          {
-            forces += MaxRepulsionForce * SpeedPercent()/100.f * log( 1 + r - x )/log( 1 + r ) * from;
-          }
-          else
-          {
-            LOG( "x is too large (%f) for radius r=%f", x, r );
-          }
-        }
-
-        LOG( "OverlapMultiByChannel: %s overlaps with %s, repel with force=%f",
-          *Stats.Name, *overlaps[i].Actor->GetName(), forces.Size() );
-      }
-    }
-    // Add in repulsion forces
-    Pos += forces;
+    AddRepulsionForces();
   }
+}
+
+void AGameObject::SetGroundPosition( FVector groundPos )
+{
+  Follow( 0 );
+  Attack( 0 );
+  SetDestination( groundPos );
 }
 
 void AGameObject::SetDestination( FVector d )
@@ -521,6 +540,16 @@ void AGameObject::Stop()
   Attack( 0 );
 }
 
+void AGameObject::Face( AGameObject* go )
+{
+  FVector to = go->Pos - Pos;
+  if( float len = to.Size() )
+  {
+    to /= len;
+    SetRot( to.Rotation() );
+  }
+}
+
 void AGameObject::Move( float t )
 {
   // Update & Cache Unit's stats this frame.
@@ -530,12 +559,38 @@ void AGameObject::Move( float t )
   //ai( t );
   
   // recompute path
-  if( FollowTarget )  SetDestination( FollowTarget->Pos );
-  if( AttackTarget )  SetDestination( AttackTarget->Pos );
-
+  if( Stats.SpeedMax )
+  {
+    if( FollowTarget )
+    {
+      // Take position near FollowTarget
+      FVector dir = Pos - FollowTarget->Pos;
+      if( float len = dir.Size() )
+      {
+        dir /= len;
+        // set the fallback distance to being size of bounding radius of other unit
+        SetDestination( FollowTarget->Pos + dir*FollowTarget->GetBoundingRadius() );
+      }
+    }
+    if( AttackTarget )
+    {
+      FVector dir = Pos - AttackTarget->Pos;
+      float len = dir.Size();
+      // If we're outside the attack range.. move in.
+      if( len > Stats.AttackRange )
+      {
+        dir /= len;
+        // set the fallback distance to being size of bounding radius of other unit
+        SetDestination( AttackTarget->Pos + dir*Stats.AttackRange );
+      }
+      else
+      {
+        // You are within attack range, so face the attack target
+        Face( AttackTarget );
+      }
+    }
+  }
   Walk( t );   // Walk towards destination
-  
-  DoAttack( t );
   
   Action();
 
@@ -547,24 +602,6 @@ void AGameObject::Move( float t )
 void AGameObject::ai( float t )
 {
   // Base GameObject doesn't have AI for it.
-}
-
-void AGameObject::DoAttack( float t )
-{
-  // If we have an AttackTarget and we are close enough to it,
-  // and the cooldown is over, we attack it
-  if( AttackTarget   &&   AttackCooldown <= 0.f   &&
-      outsideDistance( AttackTarget ) < Stats.AttackRange )
-  {
-    // calculate the damage done to the target by the attack
-    float damage = Stats.AttackDamage - AttackTarget->Stats.Armor;
-
-    // reset the AttackCooldown to being full amount
-    AttackCooldown = Stats.AttackCooldown;
-  }
-
-  // cooldown a little bit
-  AttackCooldown -= t;
 }
 
 bool AGameObject::isAllyTo( AGameObject* go )
@@ -586,8 +623,7 @@ void AGameObject::Follow( AGameObject* go )
   if( go )
   {
     go->Followers.push_back( this );
-    SetDestination( go->Pos );
-    Game->hud->SelectAsFollow( go );
+    Game->hud->MarkAsFollow( go );
   }
 }
 
@@ -602,11 +638,11 @@ void AGameObject::StopFollowing()
 void AGameObject::LoseFollower( AGameObject* formerFollower )
 {
   if( !formerFollower ) error( "Cannot lose null follower" );
-  formerFollower->Follow( 0 );
+  //formerFollower->Follow( 0 ); // Doesn't ask follower to lose its follow again..
   removeElement( Followers, formerFollower );
   // if I lost all followers, update the hud
   if( !Followers.size() )
-    Game->hud->UnselectAsFollow( this );
+    RemoveTagged( this, Game->hud->FollowTargetName );
 }
 
 void AGameObject::LoseAllFollowers()
@@ -624,8 +660,7 @@ void AGameObject::Attack( AGameObject* go )
   if( go )
   {
     go->Attackers.push_back( this );
-    SetDestination( go->Pos );
-    Game->hud->SelectAsAttack( go );
+    Game->hud->MarkAsAttack( go );
   }
 }
 
@@ -642,7 +677,7 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
   removeElement( Attackers, formerAttacker );
   // If there are no more attackers, unselect in ui
   if( !Attackers.size() )
-    Game->hud->UnselectAsAttack( this );
+    RemoveTagged( this, Game->hud->AttackTargetName );
 }
 
 void AGameObject::LoseAllAttackers()
@@ -718,6 +753,36 @@ float AGameObject::GetBoundingRadius()
   return size.GetMax();
 }
 
+void AGameObject::SetMaterialColors( FName parameterName, FLinearColor color )
+{
+  // Grab all meshes with material parameters & set color of each
+  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
+  for( UMeshComponent* mesh : meshes )
+  {
+    for( int i = 0; i < mesh->GetNumMaterials(); i++ )
+    {
+      UMaterialInterface *mi = mesh->GetMaterial( i );
+      if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
+      {
+        info( "The MID was created " );
+        mid->SetVectorParameterValue( FName( parameterName ), color );
+      }
+      else
+      {
+        info( "The MID wasn't created " );
+        mid = UMaterialInstanceDynamic::Create( mi, this );
+        FLinearColor defaultColor;
+        if( mid->GetVectorParameterValue( parameterName, defaultColor ) )
+        {
+          mid->SetVectorParameterValue( parameterName, color );
+          mesh->SetMaterial( i, mid );
+          info( FS( "Setting mid param %s", *(parameterName.ToString()) ) );
+        }
+      }
+    }
+  }
+}
+
 void AGameObject::SetTeam( int32 teamId )
 {
   // If the old team this unit was on is set, remove it from that team.
@@ -735,19 +800,19 @@ void AGameObject::SetTeam( int32 teamId )
       UMaterialInterface *mi = mesh->GetMaterial( i );
       if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
       {
-        info( "the mID was created " );
+        info( "The MID was created " );
         mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
       }
       else
       {
-        info( "the mID wasn't created " );
+        info( "The MID wasn't created " );
         mid = UMaterialInstanceDynamic::Create( mi, this );
         FLinearColor defaultColor;
         if( mid->GetVectorParameterValue( FName( "TeamColor" ), defaultColor ) )
         {
           mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
           mesh->SetMaterial( i, mid );
-          info( "setting mnid param" );
+          info( "Setting mid param" );
         }
       }
     }
@@ -760,7 +825,6 @@ void AGameObject::SetMaterial( UMaterialInterface* mat )
     for( int i = 0; i < meshes.size(); i++ )
       for( int j = 0; j < meshes[i]->GetNumMaterials(); j++ )
         meshes[i]->SetMaterial( j, mat );
-
 }
 
 void AGameObject::SetColor( FLinearColor color )
@@ -773,7 +837,7 @@ void AGameObject::Die()
   // Don't call DESTROY for a few frames.
 
   // Spawn explosion animation (particle emitter).
-  MakeChild( (Types)(EXPLOSION1 + randInt(0,3)) );
+  MakeChild<AExplosion>( (Types)(EXPLOSION1 + randInt(0,3)) );
 
   // Turn off collisions.
 

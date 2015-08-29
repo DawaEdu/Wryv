@@ -62,6 +62,7 @@ public:
 
   // Because canvas has to be valid for box selection to work it seems
   set<AGameObject*> Selected;
+  FName AttackTargetName, FollowTargetName, SelectedTargetName;
 
   // The buttons currently showing on the user interface.
   UserInterface* ui;  // The root UI widget. It doesn't have a viz, but it parents all other display containers.
@@ -83,10 +84,6 @@ public:
   Types NextAction;     // The next action to be taken by the UI, 0 if no spell is queued & ready
   Types NextBuilding;   // NULL if no building is trying to be placed.
 
-  // This is the ring shaped selector that gets attached to the currently selected unit(s)
-  vector<AWidget3D*> selectors, selAttackTargets, selFollowTargets;
-  AWidget3D *selectorShopPatron;
-
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
   float displayedGold, displayedLumber, displayedStone;
@@ -99,11 +96,9 @@ public:
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
   void Select( set<AGameObject*> objects );
-  void SelectAsFollow( AGameObject* object );
-  void SelectAsAttack( AGameObject* object );
-  void Unselect( set<AGameObject*> objects );
-  void UnselectAsFollow( AGameObject* object );
-  void UnselectAsAttack( AGameObject* object );
+  void MarkAsSelected( AGameObject* object );
+  void MarkAsFollow( AGameObject* object );
+  void MarkAsAttack( AGameObject* object );
   
   void InitWidgets();
   void Setup();
