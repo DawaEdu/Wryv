@@ -90,9 +90,11 @@
     <ClInclude Include="..\..\Source\Wryv\GameObject.h" />
     <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h" />
     <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\GroundPlane.cpp" />
     <ClCompile Include="..\..\Source\Wryv\HotSpot.cpp" />
     <ClCompile Include="..\..\Source\Wryv\ImageWidget.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Item.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\GroundPlane.h" />
     <ClInclude Include="..\..\Source\Wryv\HotSpot.h" />
     <ClInclude Include="..\..\Source\Wryv\ImageWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\Item.h" />
@@ -130,7 +132,7 @@
     <ClCompile Include="..\..\Source\Wryv\SidePanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\SlotPalette.cpp" />
     <ClCompile Include="..\..\Source\Wryv\SolidWidget.cpp" />
-    <ClCompile Include="..\..\Source\Wryv\Spell.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\Projectile.cpp" />
     <ClInclude Include="..\..\Source\Wryv\SidePanel.h" />
     <ClInclude Include="..\..\Source\Wryv\SlotPalette.h" />
     <ClInclude Include="..\..\Source\Wryv\SolidWidget.h" />
@@ -141,8 +143,9 @@
     <ClInclude Include="..\..\Source\Wryv\TextWidget.h" />
     <ClInclude Include="..\..\Source\Wryv\TitleScreen.h" />
     <ClInclude Include="..\..\Source\Wryv\Tooltip.h" />
+    <ClInclude Include="..\..\Source\Wryv\Tree.h" />
     <ClInclude Include="..\..\Source\Wryv\UISounds.h" />
-    <ClInclude Include="..\..\Source\Wryv\Spell.h" />
+    <ClInclude Include="..\..\Source\Wryv\Projectile.h" />
     <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h" />
     <ClCompile Include="..\..\Source\Wryv\StackPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\StatsPanel.cpp" />
@@ -153,6 +156,7 @@
     <ClInclude Include="..\..\Source\Wryv\TheHUD.h" />
     <ClInclude Include="..\..\Source\Wryv\Types.h" />
     <ClCompile Include="..\..\Source\Wryv\Tooltip.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\Tree.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Unit.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Unit.h" />
     <ClCompile Include="..\..\Source\Wryv\UnitsData.cpp" />

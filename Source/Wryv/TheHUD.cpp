@@ -9,7 +9,7 @@
 #include "UnitsData.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "Spell.h"
+#include "Projectile.h"
 #include "GlobalFunctions.h"
 #include "Widget.h"
 #include "DrawDebugHelpers.h"
@@ -22,7 +22,7 @@
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
-  NextAction = NextBuilding = NOTHING;
+  NextAction = NOTHING;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
   AttackTargetName = "AttackTarget";
@@ -93,7 +93,10 @@ void ATheHUD::Select( set<AGameObject*> objects )
   {
     RemoveTagged( sel, SelectedTargetName );
     RemoveTagged( sel, FollowTargetName );
+    if( sel->FollowTarget )  RemoveTagged( sel->FollowTarget, FollowTargetName );
     RemoveTagged( sel, AttackTargetName );
+    if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, AttackTargetName );
+
   }
 
   if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
@@ -104,7 +107,6 @@ void ATheHUD::Select( set<AGameObject*> objects )
     Selected = objects;  //Replace old selection
 
   NextAction = NOTHING;  //Unset next spell & building
-  NextBuilding = NOTHING;
 
   // create & parent the selectors to all selected objects
   for( AGameObject * go : Selected )
@@ -134,7 +136,10 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
 {
   // only select as follow target if its not already an attack target of something
   // ( attack priorities over follow )
-  if( HasChildWithTag( object, FollowTargetName ) )  return; // already marked as an attack target
+  if( HasChildWithTag( object, FollowTargetName ) ) {
+    LOG( "%s already marked as follow", *object->Stats.Name );
+    return; // already marked as an attack target
+  }
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
   widget->Tags.Add( FollowTargetName );
   float r = object->GetBoundingRadius();
@@ -146,7 +151,10 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
 void ATheHUD::MarkAsAttack( AGameObject* object )
 {
   // Check that it doesn't already have a Selector-typed child
-  if( HasChildWithTag( object, AttackTargetName ) )  return; // already marked as an attack target
+  if( HasChildWithTag( object, AttackTargetName ) ) {
+    LOG( "%s already marked as attack", *object->Stats.Name );
+    return; // already marked as an attack target
+  }
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
   widget->Tags.Add( AttackTargetName );
   float r = object->GetBoundingRadius();

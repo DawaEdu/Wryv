@@ -18,6 +18,7 @@ struct GraphNode;
 struct Edge;
 class Pathfinder;
 class ALandscape;
+class AGroundPlane;
 
 inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
 {
@@ -29,7 +30,7 @@ class WRYV_API AFlyCam : public APawn
 {
 	GENERATED_BODY()
 public:
-  AActor* floor; // Every level must have a Landscape object called the floor.
+  AGroundPlane* floor; // Every level must have a Landscape object called the floor.
   ALandscape* landscape;
   FBox floorBox; // we only find the floor's box once (at level start).
   AGameObject* ghost; // ghost of the building being set for placement
@@ -92,14 +93,7 @@ public:
   void setGhost( Types ut );
   
   FVector2D getMousePos();
-  FHitResult getHitGeometry();
-  vector<FHitResult> getAllHitGeometry();
-  FVector getHitFloor( FVector eye, FVector look );
-  FVector getHitFloor();
   FVector SetOnGround( FVector v );
-  bool intersectsAny( AActor* actor );
-  bool intersectsAny( AActor* actor, vector<AActor*>& except );
-  bool intersectsAnyOfType( AActor* actor, vector<Types>& types );
   
   void FindFloor();
   void Select( set<AGameObject*> objects );

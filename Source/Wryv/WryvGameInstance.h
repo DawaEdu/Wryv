@@ -39,6 +39,7 @@ public:
   UWryvGameInstance(const FObjectInitializer& PCIP);
   bool IsReady();
   virtual void Init() override;
+  void AssertIntegrity();
   void LoadUClasses();
   virtual ULocalPlayer*	CreateInitialPlayer(FString& OutError) override;
   virtual void StartGameInstance() override;

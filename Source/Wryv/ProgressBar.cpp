@@ -7,7 +7,7 @@ ProgressBar::ProgressBar( FString name, float height, FLinearColor backgroundCol
   progress = new SolidWidget( "foreground progress", foregroundColor );
   Add( progress );
   Align = HFull | VCenter;
-  progress->Align = HFull | VFull;
+  progress->Align = Left | VFull;
 
   Set( 0.f );
 }

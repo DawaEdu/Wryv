@@ -91,9 +91,6 @@
     <ClInclude Include="..\..\Source\Wryv\Resource.h">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Spell.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Team.h">
       <Filter>Source\Wryv\AI</Filter>
     </ClInclude>
@@ -268,6 +265,15 @@
     <ClInclude Include="..\..\Source\Wryv\PortraitsPanel.h">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Projectile.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Tree.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GroundPlane.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -289,9 +295,6 @@
       <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Resource.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Spell.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Team.cpp">
@@ -437,6 +440,15 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp">
       <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Projectile.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Tree.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GroundPlane.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

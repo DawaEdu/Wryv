@@ -10,6 +10,8 @@
 #include "WryvGameMode.h"
 #include "Pathfinder.h"
 #include "Peasant.h"
+#include "Projectile.h"
+#include "GroundPlane.h"
 #include "Types.h"
 #include "UISounds.h"
 #include "GameFramework/PlayerInput.h"
@@ -127,6 +129,17 @@ void AFlyCam::OnLevelLoaded()
   RetrievePointers();
   InitializePathfinding();
 
+  TTransArray<AActor*> actors = GetWorld()->GetLevel(0)->Actors;
+  // Set all resources on ground.
+  for( int i = 0; i < actors.Num(); i++ )
+  {
+    AActor* a = actors[i];
+    if( AResource* res = Cast<AResource>( a ) )
+    {
+      res->SetPosition( SetOnGround( res->Pos ) ); // + FVector(0, 0, -25.f);
+    }
+  }
+
   // Construct the fog of war.
   setupLevel = 1;
 }
@@ -146,10 +159,10 @@ void AFlyCam::InitializePathfinding()
   if( pathfinder )  delete pathfinder;
   pathfinder = new Pathfinder( Rows, Cols );
 
-  vector<Types> intTypes;
-  intTypes.push_back( Types::RESTREE );
-  intTypes.push_back( Types::RESSTONE );
-  intTypes.push_back( Types::RESGOLDMINE );
+  set<Types> intTypes;
+  intTypes.insert( Types::RESTREE );
+  intTypes.insert( Types::RESSTONE );
+  intTypes.insert( Types::RESGOLDMINE );
   
   // get the actual spacing between nodes, then divide by 2
   // use 95% prox to ensure that
@@ -178,13 +191,13 @@ void AFlyCam::InitializePathfinding()
       
       // if the actor intersects any other bodies inside the game
       // then don't use it
-      if( !intersectsAnyOfType( sphere, intTypes ) ) {
-        pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
-        sphere->SetColor( FLinearColor::White );
-      }
-      else {
+      if( Game->pc->IntersectsAny( sphere, intTypes ) ) {
         pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
         sphere->SetColor( FLinearColor::Red );
+      }
+      else {
+        pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
+        sphere->SetColor( FLinearColor::White );
       }
 
       pathfinder->updateGraphConnections( coord );
@@ -247,14 +260,13 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   
   FVector P = GetActorLocation(); // restore the z value after movement
   FVector fwd = MainCamera->GetForwardVector();
-  FBox box = floor->GetComponentsBoundingBox();
 
   // Find coordinates of click on ground plane
   // X & Y are reversed because Y goes right, X goes fwd.
   // Extents are HALF extents
 
   // Normal object (with centered origin)
-  FVector G = box.Min + box.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
+  FVector G = floorBox.Min + floorBox.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
   
   //FVector ext = box.GetExtent();
   //ext.Z = 0; // no z-measure
@@ -393,174 +405,53 @@ FVector2D AFlyCam::getMousePos()
   return mouse;
 }
 
-FHitResult AFlyCam::getHitGeometry()
-{
-  FHitResult hit;
-  FVector2D mouse = getMousePos();
-  // Trace into the scene and check what got hit.
-  Game->pc->GetHitResultAtScreenPosition( mouse,
-    ECollisionChannel::ECC_GameTraceChannel9, true, hit );
-  return hit;
-}
-
-vector<FHitResult> AFlyCam::getAllHitGeometry()
-{
-  FVector2D mouse = getMousePos();
-  vector<FHitResult> hits;
-  Game->pc->TraceMulti( mouse, hits );
-  return hits;
-}
-
-FVector AFlyCam::getHitFloor(FVector eye, FVector look)
-{
-  FHitResult hit;
-  FCollisionQueryParams fcqp( "floor trace", true );
-  FVector endPt = eye + look*1e6f;
-  bool intersects = floor->ActorLineTraceSingle( hit, eye, endPt, ECollisionChannel::ECC_GameTraceChannel9, fcqp );
-  if( ! intersects )
-  {
-    //!! BUG: Sometimes the ground doesn't intersect
-    // Impact point would then be the origin.
-    //warning( FS( "Ray (%f %f %f) -> (%f %f %f) didn't hit ground plane",
-    //  eye.X, eye.Y, eye.Z,   endPt.X, endPt.Y, endPt.Z ) );
-    return eye;
-  }
-  else
-    return hit.ImpactPoint;
-}
-
 FVector AFlyCam::SetOnGround( FVector v )
 {
-  FVector floorPos = getHitFloor( v, FVector( 0, 0, -1 ) );
-  return floorPos;
-}
-
-FVector AFlyCam::getHitFloor()
-{
-  if( !floor )
-  {
-    LOG( "No floor");
-    return FVector(0.f);
-  }
-  FVector2D mouse = getMousePos();
-  FHitResult hit;
-  bool didHit = Game->pc->Trace( mouse, floor, hit );
-  if( !didHit )
-  {
-    warning( FS( "Ray cast from camera eye didn't hit ground plane, (%f %f %f)",
-      hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
-  }
-  return hit.ImpactPoint;
-}
-
-bool AFlyCam::intersectsAny( AActor* actor )
-{
-  vector<AActor*> except;
-  return intersectsAny( actor, except );
-}
-
-bool AFlyCam::intersectsAny( AActor* actor, vector<AActor*>& except )
-{
-  // Check all actors in the level.
-  ULevel* level = GetWorld()->GetLevel(0);
-  TTransArray<AActor*> *actors = &level->Actors;
-  for( int i = 0; i < actors->Num(); i++ )
-  {
-    // This is the actor we're checking for intersections with:
-    AActor* a = (*actors)[i];
-    if( a == nullptr || a == actor )
-    {
-      LOG( "null object found in Actors array");
-      continue;
-    }
-
-    bool inExcept = 0;
-
-    // Don't check actors in the except array.
-    for( int j = 0; j < except.size() && !inExcept; j++ )
-    {
-      if( a == except[j] )
-      {
-        //LOG( "object %s excepted", *a->GetName() );
-        inExcept = 1;
-      }
-    }
-    if( inExcept )  continue;
-
-    // Get the bounding box of the other actor.
-    FBox box = a->GetComponentsBoundingBox();
-    if( actor->GetComponentsBoundingBox().Intersect( box ) )
-    {
-      // candidate actor `a` and `actor` intersected.
-      //LOG( "candidate actor %s intersected with %s",
-      //  *a->GetName(), *actor->GetName() );
-      return 1;
-    }
-  }
-  
-  //LOG( "didn't intersect any");
-  return 0;
-}
-
-bool AFlyCam::intersectsAnyOfType( AActor* actor, vector<Types>& types )
-{
-  ULevel* level = GetWorld()->GetLevel(0);
-  TTransArray<AActor*> *actors = &level->Actors;
-  for( int i = 0; i < actors->Num(); i++ )
-  {
-    // This is the actor we're checking for intersections with:
-    AGameObject* go = Cast<AGameObject>( (*actors)[i] );
-    if( !go || go == actor )  continue;
-
-    bool ok = 0;
-    // Don't check actors in the except array.
-    for( int j = 0; j < types.size() && !ok; j++ )
-      if( go->Stats.Type == types[j] )
-        ok = 1;
-    if( !ok )  continue;
-
-    // Get the bounding box of the other actor.
-    FBox box = go->GetComponentsBoundingBox();
-    if( actor->GetComponentsBoundingBox().Intersect( box ) )
-      return 1;
-  }
-  
-  return 0;
+  // Get ray hit with ground
+  v.Z += floorBox.Max.Z;
+  return Game->pc->TraceAgainst( floor, v, FVector( 0, 0, -1 ) ).ImpactPoint;
 }
 
 void AFlyCam::FindFloor()
 {
   floor = 0;
   ULevel* level = GetWorld()->GetLevel(0);
-  TTransArray<AActor*> *actors = &level->Actors;
+  TTransArray<AActor*>& actors = level->Actors;
 
   // First try and find a Landscape object representing the floor.
-  for( int i = 0; i < actors->Num() && !floor; i++ )
-  {
-    AActor* a = (*actors)[i];
-    if( !a )  continue;
-    ALandscape* landscape = Cast< ALandscape >( a );
-    if( landscape )  floor = a;
-  }
+  //for( int i = 0; i < actors.Num() && !floor; i++ )
+  //{
+  //  AActor* a = actors[i];
+  //  if( !a )  continue;
+  //  ALandscape* landscape = Cast< ALandscape >( a );
+  //  if( landscape )  floor = a;
+  //}
   
   // Here, the floor wasn't found above, so search by name.
   if( !floor )
   {
-    for( int i = 0; i < actors->Num() && !floor; i++ )
+    for( int i = 0; i < actors.Num() && !floor; i++ )
     {
-      AActor* a = (*actors)[i];
-      if( !a )  continue;
-      if( a->GetName() == "floor" )  floor = a;
+      AActor* a = actors[i];
+      if( !a )  skip;
+      LOG( "A: %s", *a->GetName() );
+      if( AGroundPlane* gp = Cast<AGroundPlane>( a ) )
+      {
+        floor = gp;
+      }
     }
   }
 
-  if( !floor )  fatal( "Floor not found" ); // must crash because need floor for game to work
-  floorBox = floor->GetComponentsBoundingBox();
+  if( !floor ) {
+    error( "Floor not found" );
+  }
+  else {
+    floorBox = floor->GetComponentsBoundingBox();
+  }
 
   // create the fog of war now
   fogOfWar = GetWorld()->SpawnActor<AFogOfWar>( AFogOfWar::StaticClass() );
   fogOfWar->Init( floorBox );
-  
 }
 
 void AFlyCam::Select( set<AGameObject*> objects )
@@ -587,75 +478,67 @@ void AFlyCam::MouseDownLeft()
   // we don't let the click pass through to the 3d surface below it.
   if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
 
+  // Check the HUD for what we're doing with the mouse click.
   FUnitsDataRow NextAction = Game->GetData( Game->hud->NextAction );
   
-  // If a spell queued to be cast, a left click casts it
+  // if the spell requires a target, check that we got one
+  FHitResult hitResult = Game->pc->PickClosest( getMousePos() );
+
+  // If we're doing something with the mouse click, do it here.
   if( NextAction.Type != NOTHING )
   {
     if( !Game->hud->Selected.size() ) return;  // can't cast the spell with no caster.
-
-    // Cast the spell.
-    // if the spell requires a target, check that we got one
-    FHitResult hitResult = getHitGeometry();
     AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
-    if( hit ) { // Spell target
-      // These cast on next turn, they can't cast from UI click directly
-      // since engine needs to record cast event 
-      for( AGameObject *se : Game->hud->Selected )
-        se->Action( NextAction.Type, hit );
-    }
-    else if( NextAction.GroundAttack )
+    if( hit == floor )
     {
-      // Cast the spell on the ground 
-      for( AGameObject *se : Game->hud->Selected )
-        se->Action( NextAction.Type, getHitFloor() );
+      // HUD-quesome attack onto the floor.
+      if( NextAction.AttacksGround )
+      {
+        // would be queued 
+        // Make projectile of type that launches @ point on ground
+        AProjectile* p = Game->Make<AProjectile>( NextAction.Type );
+        for( AGameObject *go : Game->hud->Selected )
+        {
+          p->SetDestinationArc( go->Pos, hitResult.ImpactPoint, NextAction.CurveHeight );
+        }
+      }
+      else // Commit the action
+        for( AGameObject *se : Game->hud->Selected )
+          se->Action( NextAction.Type, hit );
     }
-    else
+    else if( IsBuilding( NextAction.Type ) )
     {
-      // Its not an AOE spell, and no target was hit by the click then error
-      LOG( "Target was not selected" );
-    }
-  }
-  else if( Game->hud->NextBuilding )
-  {
-    FUnitsDataRow NextBuilding = Game->GetData( Game->hud->NextBuilding );
-
-    // Build the building. If ghost doesn't intersect any existing buildings then place it.
-    vector<AActor*> except;
-    except.push_back( ghost );
-    except.push_back( floor );
-    if( !intersectsAny( ghost, except ) )
-    {
+      // Build the building. If ghost doesn't intersect any existing buildings then place it.
       // Otherwise, the building can be placed here spawn a copy
       // of the building, if the person has enough gold, lumber, stone to build it
-      if( Game->gm->playersTeam->CanAfford( NextBuilding.Type ) )
-      {
-        Game->gm->playersTeam->Spend( Game->hud->NextBuilding );
-        PlaySound( UISounds::BuildingPlaced );
-
-        // It goes down as a little turf thing
-        AGameObject* building = Game->Make<AGameObject>( NextBuilding.Type, ghost->Pos );
-        building->SetTeam( ghost->team->teamId );
-        
-        // Selected objects will go build it
-        for( AGameObject* se : Game->hud->Selected )
-        {
-          // let the selected lastObject build the building
-          if( APeasant* peasant = Cast<APeasant>( se ) )
-          {
-            // Send the peasant to build the building
-            peasant->Build( Game->hud->NextBuilding, ghost->Pos );
-          }
-        }
-
-        // Null last clicked widget so building can't be placed again unless selected
-        Game->hud->NextBuilding = NOTHING;
-
-        // leave the ghost where it was delete the ghost
-        ghost->Destroy();
-        ghost = 0;
-      }
+      ////if( Game->gm->playersTeam->CanAfford( NextAction.Type ) )
+      ////{
+      ////  Game->gm->playersTeam->Spend( Game->hud->NextAction );
+      ////  PlaySound( UISounds::BuildingPlaced );
+      ////
+      ////  // It goes down as a little turf thing
+      ////  AGameObject* building = Game->Make<AGameObject>( NextAction.Type, ghost->Pos );
+      ////  building->SetTeam( ghost->team->teamId );
+      ////  
+      ////  // Selected objects will go build it
+      ////  for( AGameObject* se : Game->hud->Selected )
+      ////  {
+      ////    // let the selected lastObject build the building
+      ////    if( APeasant* peasant = Cast<APeasant>( se ) )
+      ////    {
+      ////      // Send the peasant to build the building
+      ////      peasant->Build( Game->hud->NextAction, ghost->Pos );
+      ////    }
+      ////  }
+      ////
+      ////  // leave the ghost where it was delete the ghost
+      ////  ghost->Destroy();
+      ////  ghost = 0;
+      ////}
     }
+
+    // We have performed the nextaction.
+    Game->hud->NextAction = NOTHING;
   }
 }
 
@@ -666,13 +549,33 @@ void AFlyCam::MouseUpRight()
 
 void AFlyCam::MouseDownRight()
 {
-  FHitResult hit = getHitGeometry();
-  AGameObject* target = Cast<AGameObject>( hit.GetActor() );
-  // There's a GameObject target
-  if( target && target != floor )
+  if( !Game->hud->Selected.size() )
   {
-    // An actor was hit by the click
-    // Detect if friendly or not
+    info( "Nothing to command" );
+    return;
+  }
+
+  FHitResult hit = Game->pc->PickClosest( getMousePos() );
+  AGameObject* target = Cast<AGameObject>( hit.GetActor() );
+  if( !target )
+  {
+    info( FS( "Right clicked on nothing" ) );
+    return;
+  }
+
+  // Hit the floor target, which means send units to ground position
+  if( target == floor )
+  {
+    // Calculate offsets with respect to first command unit
+    AGameObject* first = *Game->hud->Selected.begin();
+    FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to loc from first->Pos
+    for( AGameObject * go : Game->hud->Selected ) {
+      go->SetGroundPosition( go->Pos + offset );
+    }
+  }
+  else // Some object was right-clicked.
+  {
+    // An actor was hit by the click. Detect if friendly or not.
     for( AGameObject* go : Game->hud->Selected )
     {
       if( go->isEnemyTo( target ) )
@@ -681,31 +584,12 @@ void AFlyCam::MouseDownRight()
         go->Follow( target );
     }
   }
-  else
-  {
-    if( ! Game->hud->Selected.size() )
-    {
-      LOG( "Nothing was selected" );
-      return;
-    }
-
-    FVector loc = getHitFloor();
-    // Calculate offsets with respect to first command unit
-    AGameObject* first = *Game->hud->Selected.begin();
-    FVector offset = loc - first->Pos; // Offset to apply to get to loc from first->Pos
-
-    for( AGameObject * go : Game->hud->Selected ) {
-      //LOG( "%s to %f %f %f", *go->GetName(), loc.X, loc.Y, loc.Z  );
-      // When setting ground position lose old targets
-      go->SetGroundPosition( go->Pos + offset );
-    }
-  }
 }
 
 void AFlyCam::MouseMoved()
 {
-  //LOG( "AFlyCam::MouseMoved() frame %lld", Game->gm->tick );
   RetrievePointers();
+  FVector2D mouse = getMousePos();
 
   if( !setupLevel )
   {
@@ -713,9 +597,9 @@ void AFlyCam::MouseMoved()
     OnLevelLoaded(); // This is here because it runs first for some reason (before ::Tick())
   }
 
-  HotSpot* hitElt = Game->hud->MouseMoved( getMousePos() );
+  HotSpot* hitElt = Game->hud->MouseMoved( mouse );
 
-  // if the mouse button is down, then its a drag event, elsee its a hover event
+  // if the mouse button is down, then its a drag event, else its a hover event
   if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
   {
     // 3D drag event, would be used for multiple object placement, or brushes.
@@ -723,10 +607,10 @@ void AFlyCam::MouseMoved()
   else
   {
     // hover event. move the building ghost around etc.
-    FHitResult hit = getHitGeometry();
-  
+    FHitResult hit = Game->pc->TraceAgainst( floor, mouse );
+    
     // If you're sliding the mouse along the floor,
-    if( ghost && hit.Actor == floor )
+    if( ghost && hit.GetActor() == floor )
     {
       ghost->SetActorLocation( hit.ImpactPoint );
     }

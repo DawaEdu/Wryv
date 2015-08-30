@@ -115,7 +115,7 @@ AGameObject* APeasant::aiPlaceBuildingAtRandomLocation( Types type )
       building->Pos = p;
 
       // If the building can be placed here, we place it.
-      if( !Game->flycam->intersectsAny( building ) )
+      if( !building->Overlaps.size() )
       {
         placed = 1;
       }

@@ -31,7 +31,8 @@ class WRYV_API AGameObject : public AActor
   Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float MaxRepulsionForce;
+  // The amount that this object multiplies incoming repulsion forces by.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float RepelMultiplier;
   UShapeComponent* bounds;
   
   vector< PowerUpTimeOut > BonusTraits;
@@ -56,9 +57,8 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
-  vector<AGameObject*> Followers, Attackers;
+  vector<AGameObject*> Followers, Attackers, Overlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
-  Types NextAction;
 
   // 
   // UE4 & Utility
@@ -88,17 +88,17 @@ class WRYV_API AGameObject : public AActor
   // Gameplay.
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool isAttackTargetWithinRange();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float HpPercent();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  float SpeedPercent();
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasAttackTarget() { return AttackTarget != 0; }
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool hasFollowTarget() { return FollowTarget != 0; }
+  UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float HpPercent();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasAttackTarget() { return AttackTarget != 0; }
+  UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasFollowTarget() { return FollowTarget != 0; }
   // Called by blueprints (AttackAnimation) when attack is launched (for ranged weapons)
   // or strikes (for melee weapons).
-  UFUNCTION(BlueprintCallable, Category = UnitProperties)  bool AttackCycle();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  void AttackCycle();
+  inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
+  void SendDamageTo( AGameObject* other );
 
-  // Invokes next queued action
-  void Action();
   // Sets object to use indexed action
   void Action( Types type, AGameObject *target );
   void Action( Types type, FVector where );
@@ -114,7 +114,12 @@ class WRYV_API AGameObject : public AActor
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
   void SetPosition( FVector v );
-  void AddRepulsionForces();
+  FVector Repel( AGameObject* go );
+  UFUNCTION(BlueprintNativeEvent, Category = Collision)
+  void OnContactBegin( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
+  UFUNCTION(BlueprintNativeEvent, Category = Collision)
+  void OnContactEnd( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex );
+  void AddRepulsionForcesFromOverlappedUnits();
   void Walk( float t );
   void SetGroundPosition( FVector groundPos );
   void SetDestination( FVector d );
@@ -136,6 +141,7 @@ class WRYV_API AGameObject : public AActor
   void StopFollowing();
   void LoseFollower( AGameObject* formerFollower );
   void LoseAllFollowers();
+  void ClearAttackAndFollow();
 
   // sets an object as the attack target
   void Attack( AGameObject* go );
@@ -153,6 +159,7 @@ class WRYV_API AGameObject : public AActor
   // Utility
   void OnSelected();
   float GetBoundingRadius();
+  FCollisionShape GetBoundingCylinder();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( int32 teamId );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }

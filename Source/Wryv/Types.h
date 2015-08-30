@@ -56,9 +56,9 @@ enum Types
 
   WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
 
-  EXPLOSION1            UMETA(DisplayName = "Explosion 1"),
-  EXPLOSION2            UMETA(DisplayName = "Explosion 2"),
-  EXPLOSION3            UMETA(DisplayName = "Explosion 3"),
+  EXPLOSIONWHITE        UMETA(DisplayName = "Explosion White"),
+  EXPLOSIONYELLOW       UMETA(DisplayName = "Explosion Yellow"),
+  EXPLOSIONARROWDUST    UMETA(DisplayName = "Explosion Arrow Dust"),
 
   MAX                   UMETA(DisplayName = "Max"),
 };

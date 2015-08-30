@@ -22,8 +22,23 @@ public:
   
   ULocalPlayer* GetLocalPlayer();
 	FSceneView* GetSceneView( FSceneViewFamilyContext& ViewFamily );
-  bool Trace(const FVector2D& ScreenPosition, AActor* actor, FHitResult& hit);
-  bool TraceMulti(const FVector2D& ScreenPosition, vector<FHitResult>& HitResult);
+
+  // Traces against particular actor from a screen pos
+  FHitResult TraceAgainst( AActor* actor, const FVector2D& ScreenPosition );
+  // Gets the ray-hit location on a particular actor (used for ground plane/landscape)
+  FHitResult TraceAgainst( AActor* actor, const FVector& eye, const FVector& lookDir );
+
+  // Searches for closest actor based on screen pos
+  FHitResult PickClosest( const FVector2D& ScreenPosition );
+  FHitResult PickClosest( const FVector& eye, const FVector& lookDir );
+
+  // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
+  bool IntersectsAny( AGameObject* object, set<Types> inTypes );
+
+  // Gets all objects that are traced thru by vector
+  set<AGameObject*> Pick( const FVector2D& ScreenPosition );
+  set<AGameObject*> Pick( const FVector& eye, const FVector& lookDir );
+
   set<AGameObject*> PickWithType( const FBox2DU& box, set<Types> inTypes );
   set<AGameObject*> PickButNotType( const FBox2DU& box, set<Types> notTypes );
   set<AGameObject*> Pick( const FBox2DU& box, set<Types> inTypes, set<Types> notTypes );

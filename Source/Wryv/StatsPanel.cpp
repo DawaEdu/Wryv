@@ -8,8 +8,8 @@ StatsPanel::StatsPanel() :
 { 
   unitName = new TextWidget( "|" );
   hpBar = new ProgressBar( "HpBar", 25.f,
-    FLinearColor(0.655, 0.000, 0.125,1.f), //Purplish-red
-    FLinearColor(0.169, 0.796, 0.278,1.f) );
+    FLinearColor(0.655, 0.000, 0.125, 1.f), //Purplish-red
+    FLinearColor(0.169, 0.796, 0.278, 1.f) );
   hpText = new TextWidget( "|" );
   damage = new TextWidget( "|" );
   armor = new TextWidget( "|" );

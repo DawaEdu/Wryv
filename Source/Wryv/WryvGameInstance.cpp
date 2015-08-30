@@ -65,6 +65,21 @@ void UWryvGameInstance::Init()
   }
 }
 
+void UWryvGameInstance::AssertIntegrity()
+{
+  // Assert integrity of base stats of each unit type.
+  for( pair<Types,FUnitsDataRow> p : unitsData )
+  {
+    FUnitsDataRow ud = p.second;
+    // Check contact object not same
+    if( ud.OnContact != Types::NOTHING   &&   ud.Type == ud.OnContact )
+    {
+      error( FS( "OBJECT TYPE %s spawns same as self (%s) on Contact",
+        *GetTypesName( ud.Type ), *GetTypesName( ud.OnContact ) ) );
+    }
+  }
+}
+
 void UWryvGameInstance::LoadUClasses()
 {
   // Connect Widgets & Stats with mappings from Types
@@ -81,7 +96,7 @@ void UWryvGameInstance::LoadUClasses()
     AGameObject* unit = Make<AGameObject>( type );
     if( !unit )
     {
-      fatal( FS( "Couldn't load: %s", *GetTypesName( type ) ) );
+      error( FS( "Couldn't load: %s", *GetTypesName( type ) ) );
       continue;
     }
 
@@ -89,6 +104,8 @@ void UWryvGameInstance::LoadUClasses()
     Game->unitsData[ type ] = unit->BaseStats;    // 
     unit->Destroy();                              // destroy the sample unit
   }
+
+  AssertIntegrity();
 }
 
 ULocalPlayer*	UWryvGameInstance::CreateInitialPlayer(FString& OutError)

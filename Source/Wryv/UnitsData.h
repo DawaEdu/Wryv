@@ -18,9 +18,6 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 LumberCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 StoneCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 ManaCost;
-  // If this is a ground attack spell/property, then it doesn't require a gameobject target
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool GroundAttack;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AOERadius;
   // Repair costs a fraction of GoldCost, LumberCost, StoneCost per HP recovered.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float RepairHPFractionCost;
   // How many seconds per HP recovered, when Repairing
@@ -36,13 +33,23 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float HpMax;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float Armor;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SightRange;
-  // The weapon's chance to miss
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float MissPercent;
+  
+  // Weapon properties
+  // If attacks send a projectile, set object here.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > ReleasedProjectileWeapon;
+  // Which object type is spawned on contact (explosion). Must be specified for object types
+  // that are projectiles
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > OnContact;
+  // If this is a ground attack spell/property, then it doesn't require a gameobject target
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AttacksGround;
+  // For projectiles with a height, how high does it curve
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float CurveHeight;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AOERadius;
   // Attack damage is BaseAttackDamage + rand()%BonusAttackDamage
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BaseAttackDamage;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BonusAttackDamage;
-  // The weapon is a melee weapon or no
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool IsMeleeWeapon;
+  // The weapon's chance to miss
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float MissPercent;
   // Range it can attack from (spells have attack range also)
   //   * For a Weapon instance, its range of the sword or spear
   //   * For a Spell, its the range of the spell itself.
@@ -63,8 +70,6 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
   // The abilities this unit has, including ability to build, etc.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
-  // Weapon the object has equipped
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > Weapon;
   // The blueprint from which class instance came from
   //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) 
   UClass* uClass;
@@ -76,7 +81,7 @@ public:
     Description = "Description";
     Quantity = 1;
     GoldCost = LumberCost = StoneCost = ManaCost = 0;
-    GroundAttack = 0;
+    AttacksGround = 0;
     AOERadius = 0.f;
     RepairHPFractionCost = 0.f;
     RepairRate = 0.f;

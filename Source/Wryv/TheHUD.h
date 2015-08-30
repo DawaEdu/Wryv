@@ -81,9 +81,8 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
-  Types NextAction;     // The next action to be taken by the UI, 0 if no spell is queued & ready
-  Types NextBuilding;   // NULL if no building is trying to be placed.
-
+  Types NextAction;     // The next action to be taken by the UI, build building, move etc.
+  
   // This is the currently displayed amount of gold,lumber,stone
   // These are state variables since they are refreshed each frame.
   float displayedGold, displayedLumber, displayedStone;
