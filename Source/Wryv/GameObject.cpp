@@ -28,6 +28,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   FollowTarget = AttackTarget = 0;
   bounds = 0;
   RepelMultiplier = 1.f;
+  Dead = 0;
 }
 
 void AGameObject::PostInitializeComponents()
@@ -411,10 +412,8 @@ void AGameObject::OnContactBegin_Implementation( AActor* OtherActor,
       {
         // Damage the attack target with impact-damage
         SendDamageTo( go );
-        // create the on-contact explosion object etc
         AGameObject* expl = Game->Make<AGameObject>( Stats.OnContact, SweepResult.ImpactPoint );
-        team->AddUnit( expl );
-        Destroy();
+        Die();
       }
     }
   }
@@ -586,8 +585,16 @@ void AGameObject::Face( AGameObject* go )
 
 void AGameObject::Move( float t )
 {
-  // Update & Cache Unit's stats this frame.
-  UpdateStats( t );
+  if( Hp <= 0 )
+  {
+    Dead = 1;
+    return;
+  }
+  else
+  {
+    // Update & Cache Unit's stats this frame, including HP recovery
+    UpdateStats( t );
+  }
   
   // Call the ai for this object type
   //ai( t );
@@ -888,14 +895,14 @@ void AGameObject::SetTeam( int32 teamId )
       }
       else
       {
-        info( "The MID wasn't created " );
+        //info( "The MID wasn't created " );
         mid = UMaterialInstanceDynamic::Create( mi, this );
         FLinearColor defaultColor;
         if( mid->GetVectorParameterValue( FName( "TeamColor" ), defaultColor ) )
         {
           mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
           mesh->SetMaterial( i, mid );
-          info( "Setting mid param" );
+          //info( "Setting mid param" );
         }
       }
     }
@@ -917,24 +924,26 @@ void AGameObject::SetColor( FLinearColor color )
 
 void AGameObject::Die()
 {
+  // create the on-contact explosion object etc
   // Don't call DESTROY for a few frames.
-
-  // Spawn explosion animation (particle emitter).
-  MakeChild<AExplosion>( (Types)(EXPLOSIONWHITE + randInt(0,3)) );
-
-  // Turn off collisions.
-
+  if( IsBuilding( Stats.Type ) )
+  {
+    // Spawn explosion animation (particle emitter).
+    MakeChild<AExplosion>( (Types)(EXPLOSIONWHITE + randInt(0,3)) );
+  }
+  
+  // Remove it from the global collections.
+  LoseAllFollowers();
+  LoseAllAttackers();
+  if( team )  team->RemoveUnit( this );
+  
+  Dead = 1 ; // updates the blueprint.
 }
 
 void AGameObject::BeginDestroy()
 {
-	// Remove it from the global collections.
-  if( Game->IsReady() )
-  {
-    LoseAllFollowers();
-    LoseAllAttackers();
-    if( team )  team->RemoveUnit( this );
-  }
+  // Remove from team.
+  if( team )  team->RemoveUnit( this );
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }
 

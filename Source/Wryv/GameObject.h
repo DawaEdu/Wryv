@@ -39,6 +39,7 @@ class WRYV_API AGameObject : public AActor
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
   bool Repairing;       // If the building/unit is Repairing
+  UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UnitProperties)  bool Dead;            // Whether unit is dead or not.
   vector< CooldownCounter > Abilities;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;

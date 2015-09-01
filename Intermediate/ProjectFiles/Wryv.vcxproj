@@ -54,6 +54,8 @@
     <ClCompile Include="..\..\Source\Wryv\ActionsPanel.cpp" />
     <ClCompile Include="..\..\Source\Wryv\AI.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ActionsPanel.h" />
+    <ClInclude Include="..\..\Source\Wryv\AttackProperties.h" />
+    <ClInclude Include="..\..\Source\Wryv\BuildingProperties.h" />
     <ClInclude Include="..\..\Source\Wryv\CooldownCounter.h" />
     <ClInclude Include="..\..\Source\Wryv\AI.h" />
     <ClCompile Include="..\..\Source\Wryv\Border.cpp" />
@@ -112,6 +114,7 @@
     <ClInclude Include="..\..\Source\Wryv\Minimap.h" />
     <ClInclude Include="..\..\Source\Wryv\MissionObjectivesScreen.h" />
     <ClInclude Include="..\..\Source\Wryv\GameCanvas.h" />
+    <ClInclude Include="..\..\Source\Wryv\MovementProperties.h" />
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />

@@ -68,6 +68,9 @@
     <Filter Include="Source\Wryv\UI\Widgets\Screens">
       <UniqueIdentifier>{19059970-602b-49d3-979c-c6ac7e43569b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\Structures\UnitProperties">
+      <UniqueIdentifier>{4f4ec167-147b-4457-af58-fb0e8e01d35b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\AI.h">
@@ -119,9 +122,6 @@
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Types.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
@@ -273,6 +273,18 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\GroundPlane.h">
       <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
+      <Filter>Source\Wryv\Structures\UnitProperties</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\MovementProperties.h">
+      <Filter>Source\Wryv\Structures\UnitProperties</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\BuildingProperties.h">
+      <Filter>Source\Wryv\Structures\UnitProperties</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\AttackProperties.h">
+      <Filter>Source\Wryv\Structures\UnitProperties</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

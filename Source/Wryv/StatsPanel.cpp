@@ -60,6 +60,7 @@ void StatsPanel::Set( AGameObject* go )
   {
     hpBar->Set( go->HpPercent() );
   }
+
   hpText -> Set( FS( "%.0f / %.0f", go->Hp, go->Stats.HpMax ) );
   hpText -> Color = FLinearColor::LerpUsingHSV( FLinearColor(0.639f, 0.f, 0.192f), 
     FLinearColor(0.f, 0.7f, 0.f), go->HpPercent() );
