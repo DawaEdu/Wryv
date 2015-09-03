@@ -43,7 +43,6 @@ struct Team
   APeasant* GetNextAvailablePeasant();
   vector<ACombatUnit*> GetWarriors();
 
-  void AddUnit( AGameObject *go );
   void RemoveUnit( AGameObject *go );
   void OnMapLoaded();
 

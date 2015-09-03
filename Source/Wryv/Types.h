@@ -30,6 +30,8 @@ enum Types
   BLDGTOWNHALL          UMETA(DisplayName = "Building Townhall"),
   BLDGITEMSHOP          UMETA(DisplayName = "Building Itemshop"),
 
+  GROUNDPLANE           UMETA(DisplayName = "GroundPlane"),
+
   // Spells.
   SPELLFIRE             UMETA(DisplayName = "Spell Fire"),
   SPELLICE              UMETA(DisplayName = "Spell Ice"),
@@ -55,6 +57,7 @@ enum Types
   UISELECTOR            UMETA(DisplayName = "UI Selector"),
 
   WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
+  WEAPONICEATTACK       UMETA(DisplayName = "Weapon Ice Attack"),
 
   EXPLOSIONWHITE        UMETA(DisplayName = "Explosion White"),
   EXPLOSIONYELLOW       UMETA(DisplayName = "Explosion Yellow"),

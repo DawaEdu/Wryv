@@ -23,9 +23,14 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   IsDestroyStarted = 0;
 }
 
+// A check function. You should avoid using this function whenever possible
 bool UWryvGameInstance::IsReady()
 {
-  return !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder;
+  if( !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder )
+    return 1;
+  else
+    error( "GAME NOT READY" );
+  return 0;
 }
 
 void UWryvGameInstance::Init()
@@ -83,24 +88,62 @@ void UWryvGameInstance::AssertIntegrity()
 void UWryvGameInstance::LoadUClasses()
 {
   // Connect Widgets & Stats with mappings from Types
+  map<Types,UClass*> classes;
+  for( int i = 0; i < UnitTypeUClasses.Num(); i++ )
+  {
+    if( !UnitTypeUClasses[i].uClass )
+    {
+      LOG( "entry %d wasn't set in UnitTypeUClasses", i );
+      skip;
+    }
+    LOG( "entry %d => class (%s)", (int)UnitTypeUClasses[i].Type, *UnitTypeUClasses[i].uClass->GetName() );
+    classes[ UnitTypeUClasses[i].Type ] = UnitTypeUClasses[i].uClass;
+  }
+
+  // Fix the array so we're sure it is in order
+  UnitTypeUClasses.SetNum( Types::MAX );
+  // Init all with the NOTHING object
+  for( int i = 0; i < UnitTypeUClasses.Num(); i++ )
+  {
+    UnitTypeUClasses[i].Type = NOTHING;
+    UnitTypeUClasses[i].uClass = classes[ NOTHING ];
+  }
+
+  for( pair<Types,UClass*> p : classes )
+  {
+    UnitTypeUClasses[ (int)p.first ].Type = p.first;
+    UnitTypeUClasses[ (int)p.first ].uClass = p.second;
+  }
+
   vector< Types > types;
   for( int i = 0; i < Types::MAX; i++ )
     types.push_back( (Types)i );
   
   // Pull all the UCLASS names from the Blueprints we created.
-  for( int i = 0; i < UnitTypeUClasses.Num(); i++ )
+  for( pair<Types,UClass*> p : classes )
   {
-    Types type = UnitTypeUClasses[i].Type;
     // create a unit of that type from the blueprint to extract the properties
     // that were entered inside blueprints
-    AGameObject* unit = Make<AGameObject>( type );
-    if( !unit )
-    {
-      error( FS( "Couldn't load: %s", *GetTypesName( type ) ) );
-      continue;
+    
+    Types type = p.first;
+    UClass* uClass = p.second;
+
+    if( type < 0 || type >= Types::MAX ) {
+      error( FS( "Type %d is OOB defined types", (int)type ) );
+      type = NOTHING;
     }
 
-    unit->BaseStats.uClass = GetUClass( type );   // Write the uclass associated with the type here
+    // Cannot call Make here since Teams are not ready. We don't want a version of Make
+    // that doesn't assign a team since team assignment is vital and easy to forget.
+    AGameObject* unit = GetWorld()->SpawnActor<AGameObject>( uClass, FVector(0.f), FRotator(0.f) );
+    if( !unit )
+    {
+      error( FS( "No blueprint class for type `%s` was specified", *GetTypesName( type ) ) );
+      skip;
+    }
+
+    LOG( "Type %s => Blueprint (%s)", *GetTypesName( type ), *p.second->GetName() );
+    unit->BaseStats.uClass = GetUClass( type );   // Write the uClass associated with the type here
     Game->unitsData[ type ] = unit->BaseStats;    // 
     unit->Destroy();                              // destroy the sample unit
   }

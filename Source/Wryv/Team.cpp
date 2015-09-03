@@ -72,13 +72,6 @@ vector<ACombatUnit*> Team::GetWarriors()
   return combatUnits;
 }
 
-void Team::AddUnit( AGameObject *go )
-{
-  units.push_back( go );
-  go->team = this;
-  go->BaseStats.TeamId = go->Stats.TeamId = teamId;
-}
-
 void Team::RemoveUnit( AGameObject *go )
 {
   removeElement( units, go );

@@ -33,7 +33,9 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
   // The amount that this object multiplies incoming repulsion forces by.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float RepelMultiplier;
-  UShapeComponent* bounds;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USceneComponent* DummyRoot;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* hitBounds;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USphereComponent* repulsionBounds;
   
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
@@ -52,6 +54,7 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UnitProperties)  bool GroundTraveller;
   FVector Dest;
   vector<FVector> Waypoints;
 
@@ -78,7 +81,7 @@ class WRYV_API AGameObject : public AActor
   bool isChildOf( AGameObject* parent );
   template <typename T> T* MakeChild( Types type )
   {
-    T* child = Game->Make<T>( type );
+    T* child = Game->Make<T>( type, team );
     AddChild( child );
     return child;
   }
@@ -87,6 +90,7 @@ class WRYV_API AGameObject : public AActor
 
   // 
   // Gameplay.
+  FVector GetCentroid();
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
@@ -98,11 +102,10 @@ class WRYV_API AGameObject : public AActor
   // or strikes (for melee weapons).
   UFUNCTION(BlueprintCallable, Category = Fighting)  void AttackCycle();
   inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
+  void Shoot();
   void SendDamageTo( AGameObject* other );
 
   // Sets object to use indexed action
-  void Action( Types type, AGameObject *target );
-  void Action( Types type, FVector where );
   void ApplyEffect( FUnitsDataRow item );
   void AddBuff( Types item );
   void UpdateStats( float t );
@@ -116,18 +119,24 @@ class WRYV_API AGameObject : public AActor
   void CheckWaypoint();
   void SetPosition( FVector v );
   FVector Repel( AGameObject* go );
+
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
-  void OnContactBegin( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
+  void OnHitContactBegin( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
+  
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
-  void OnContactEnd( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex );
+  void OnRepulsionContactBegin( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
+  UFUNCTION(BlueprintNativeEvent, Category = Collision)
+  void OnRepulsionContactEnd( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex );
+  
   void AddRepulsionForcesFromOverlappedUnits();
   void Walk( float t );
   void SetGroundPosition( FVector groundPos );
   void SetDestination( FVector d );
   void StopMoving();
   void Stop();
-  void Face( AGameObject* go );
+  void Face( FVector point );
   // time-stepped attack of current target (if any)
+  void MoveWithinDistanceOf( AGameObject* target, float distance );
   virtual void Move( float t );
   virtual void ai( float t );
   void DoAttack( float t );
@@ -138,18 +147,15 @@ class WRYV_API AGameObject : public AActor
   bool isEnemyTo( AGameObject* go );
 
   void Follow( AGameObject* go );
-  // Stops following my target
-  void StopFollowing();
-  void LoseFollower( AGameObject* formerFollower );
-  void LoseAllFollowers();
-  void ClearAttackAndFollow();
-
   // sets an object as the attack target
   void Attack( AGameObject* go );
-  void StopAttacking();
+  // Stops following my target
+  void StopAttackAndFollow();
+
+  void LoseFollower( AGameObject* formerFollower );
   void LoseAttacker( AGameObject* formerAttacker );
-  void LoseAllAttackers();
-  
+  void LoseAttackersAndFollowers();
+
   // 
   // AI
   AGameObject* GetClosestEnemyUnit();
@@ -160,9 +166,10 @@ class WRYV_API AGameObject : public AActor
   // Utility
   void OnSelected();
   float GetBoundingRadius();
+  FBox GetBoundingBox();
   FCollisionShape GetBoundingCylinder();
   void SetMaterialColors( FName parameterName, FLinearColor color );
-  void SetTeam( int32 teamId );
+  void SetTeam( Team* newTeam );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }
   void SetMaterial( UMaterialInterface* mat );
   void SetColor( FLinearColor color );
@@ -170,6 +177,7 @@ class WRYV_API AGameObject : public AActor
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]
+  bool isProjectile() { return Stats.OnContact != NOTHING; }
   bool isPeasant() { return Stats.Type == Types::UNITPEASANT; }
   bool isUnit(){ return IsUnit( Stats.Type ); }
   bool isBuilding(){ return IsBuilding( Stats.Type ); }

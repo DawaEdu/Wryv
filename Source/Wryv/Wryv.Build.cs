@@ -8,7 +8,7 @@ public class Wryv : ModuleRules
 	{
     PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
     //PublicDependencyModuleNames.Add( "UMG" );
-    PublicDependencyModuleNames.Add("Landscape");
+    //PublicDependencyModuleNames.Add("Landscape");
     //PublicDependencyModuleNames.Add("Networking");
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

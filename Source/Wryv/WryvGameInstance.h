@@ -55,30 +55,29 @@ public:
     }
     return UnitTypeUClasses[ t ].uClass;
   }
-  template <typename T> T* Make( Types type, FVector v ) {
-    if( type < 0 || type >= Types::MAX ) {
+  // T Must be a AGameObject class derivative.
+  template <typename T> T* Make( Types type, FVector v, Team* team ) {
+    if( !team )
+    {
+      LOG( "Make(): team was null!" );
+      return 0;
+    }
+
+    if( type < 0 || type >= Types::MAX )
+    {
       error( FS( "Type %d is OOB defined types", (int)type ) );
       type = NOTHING;
     }
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    
     if( !obj ) error( FS( "Object of type %s could not be spawned (check cast?)", *GetTypesName( type ) ) );
+    obj->SetTeam( team );
+    
     return obj;
   }
-  template <typename T> T* Make( Types type ) {
-    return Make<T>( type, FVector( 0.f ) );
+  template <typename T> T* Make( Types type, Team* team ) {
+    return Make<T>( type, FVector( 0.f ), team );
   }
-  template <typename T> T* Make( Types type, FVector pos, FVector scale ) {
-    T* obj = Make<T>( type, pos );
-    obj->SetActorScale3D( scale );
-    return obj;
-  }
-  //template <typename T> T* Make( Types type, FVector pos, int32 teamId ) {
-  //  T* obj = Make<T>( type, pos );
-  //  if( !obj )  error( "Making gameobject" );
-  //  obj->SetTeam( teamId ); // must be AGameObject derivative
-  //  return obj;
-  //}
-  //AGameObject* Make( Types type, FVector v, int teamId );
   FUnitsDataRow GetData( Types type ) { return unitsData[ type ]; }
   UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
   virtual void BeginDestroy() override;

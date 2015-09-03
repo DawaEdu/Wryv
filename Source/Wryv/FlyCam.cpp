@@ -15,7 +15,6 @@
 #include "Types.h"
 #include "UISounds.h"
 #include "GameFramework/PlayerInput.h"
-#include "Runtime/Landscape/Classes/Landscape.h"
 
 // Sets default values
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
@@ -30,6 +29,8 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   floor = 0;
   pathfinder = 0;
   setupLevel = 0;
+  FloorBoxTraceFraction = 1.f;
+  CheckerSphereRadius = 1.f;
 
   // Make the fog of war instance.
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>( this, ADefaultPawn::MovementComponentName );
@@ -41,7 +42,7 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   MainCamera->AttachTo( DummyRoot );
   OrthoCam = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "OrthoCam" );
   OrthoCam->AttachTo( DummyRoot );
-
+  
   CameraMovementSpeed = 1000.f;
 }
 
@@ -136,7 +137,15 @@ void AFlyCam::OnLevelLoaded()
     AActor* a = actors[i];
     if( AResource* res = Cast<AResource>( a ) )
     {
-      res->SetPosition( SetOnGround( res->Pos ) ); // + FVector(0, 0, -25.f);
+      if( SetOnGround( res->Pos ) )
+      {
+        res->SetPosition( res->Pos ); // + FVector(0, 0, -25.f);
+      }
+      else
+      {
+        // The resource can't hit the ground
+        LOG( "Resource %s cannot hit the ground plane", *res->Stats.Name );
+      }
     }
   }
 
@@ -150,10 +159,9 @@ void AFlyCam::InitializePathfinding()
   FindFloor();
   if( !floor ) {
     LOG( "InitializePathfinding(): No floor!" );
-    return ; // means there's no floor! level cannot be played
+    return; // means there's no floor! level cannot be played
   }
-  // (or a floorplane can be constructed as a failsafe.
-
+  // (or a floorplane can be constructed as a failsafe).
   // Initialize a bunch of bounding spheres
   if( !Rows )  Rows = Cols = 20;
   if( pathfinder )  delete pathfinder;
@@ -166,8 +174,8 @@ void AFlyCam::InitializePathfinding()
   
   // get the actual spacing between nodes, then divide by 2
   // use 95% prox to ensure that
-  FVector scale = 0.45 * floorBox.GetSize() / FVector( Rows, Cols, 1.f );
-  scale.Z = scale.X; // Keep it rounder
+  FVector radiusScale = 0.5f * CheckerSphereRadius * floorBox.GetSize() / FVector( Rows, Cols, 1.f );
+  radiusScale.Z = radiusScale.X; // Keep it rounder
 
   // adjacent spheres don't overlap
   for( int row = 0; row < Rows; row++ )
@@ -179,29 +187,43 @@ void AFlyCam::InitializePathfinding()
 
       // For the landscape, the lower left is actually box.Min + ext.XY0.
       FVector p = FMath::Lerp( floorBox.Min, floorBox.Max, fraction );
-      p = SetOnGround( p );
-
       Coord coord( row, col );
       int idx = coord.index();
       pathfinder->nodes[ idx ]->index = idx;
-      pathfinder->nodes[ idx ]->point = p;
       
-      AGameObject* sphere = Game->Make<AGameObject>( UNITSPHERE, p );
-      sphere->SetSize( scale );
-      
-      // if the actor intersects any other bodies inside the game
-      // then don't use it
-      if( Game->pc->IntersectsAny( sphere, intTypes ) ) {
+      if( !SetOnGround( p ) )
+      {
+        // The point P is not on the ground, so it's outside the floorbox.
         pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
-        sphere->SetColor( FLinearColor::Red );
+        pathfinder->nodes[ idx ]->point = p;
       }
-      else {
-        pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
-        sphere->SetColor( FLinearColor::White );
-      }
+      else
+      {
+        pathfinder->nodes[ idx ]->point = p;
+        AGameObject* sphere = Game->Make<AGameObject>( UNITSPHERE, p, Game->gm->neutralTeam );
+        sphere->SetSize( radiusScale );
+        
+        // Pick objects intersecting with the sphere. If anything intersects, then
+        // the node is regarded as impassible.
+        set<AGameObject*> forbidden = { floor };
+        set<AGameObject*> intns = Game->pc->Pick( sphere ) | forbidden;
+        for( AGameObject* go : intns )
+        {
+          LOG( "%s intersects with %s", *sphere->Stats.Name, *go->Stats.Name );
+        }
+        
+        if( intns.size() ) {
+          pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
+          sphere->SetColor( FLinearColor::Red );
+        }
+        else {
+          pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
+          sphere->SetColor( FLinearColor::White );
+        }
 
+        sphere->Destroy(); // Don't show the sphere visualization
+      }
       pathfinder->updateGraphConnections( coord );
-      sphere->Destroy(); // Don't show the sphere visualization
     }
   }
   
@@ -215,7 +237,10 @@ void AFlyCam::InitializePathfinding()
   {
     GraphNode *node = pathfinder->nodes[i];
     if( node->terrain == Passible )
-      Game->Make<AGameObject>( UNITSPHERE, node->point, FVector(100.f) );
+    {
+      AGameObject *vizSphere = Game->Make<AGameObject>( UNITSPHERE, node->point, Game->gm->neutralTeam );
+      vizSphere->SetSize( radiusScale );
+    }
     // create a node and edge connections
     for( int j = 0; j < node->edges.size(); j++ )
       edges.insert( node->edges[j] );
@@ -315,7 +340,8 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 
 void AFlyCam::Visualize( Types type, FVector& v, float s, FLinearColor color )
 {
-  AGameObject* go = Game->Make<AGameObject>( type, v, FVector(s) );
+  AGameObject* go = Game->Make<AGameObject>( type, v, Game->gm->neutralTeam );
+  go->SetSize( FVector(s) );
   go->SetColor( color );
   viz.push_back( go );
 }
@@ -350,7 +376,8 @@ AGameObject* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
   }
   dir /= len;
 
-  AGameObject *line = Game->Make<AGameObject>( Types::UNITEDGE, a, FVector(len) );
+  AGameObject *line = Game->Make<AGameObject>( Types::UNITEDGE, a, Game->gm->neutralTeam );
+  line->SetSize( FVector(len) );
   line->SetColor( color );
   line->SetActorRotation( dir.Rotation() );
   return line;
@@ -390,7 +417,7 @@ void AFlyCam::setGhost( Types ut )
   if( IsBuilding( ut ) )
   {
     // Remakes the ghost each frame a ghost is present.
-    ghost = Game->Make<AGameObject>( ut, vec );
+    ghost = Game->Make<AGameObject>( ut, vec, Game->gm->neutralTeam );
   }
   else
   {
@@ -405,11 +432,19 @@ FVector2D AFlyCam::getMousePos()
   return mouse;
 }
 
-FVector AFlyCam::SetOnGround( FVector v )
+bool AFlyCam::SetOnGround( FVector& v )
 {
   // Get ray hit with ground
-  v.Z += floorBox.Max.Z;
-  return Game->pc->TraceAgainst( floor, v, FVector( 0, 0, -1 ) ).ImpactPoint;
+  FVector v2 = v + FVector(0,0,floorBox.Max.Z);
+  FHitResult hit = Game->pc->TraceAgainst( floor, v2, FVector( 0, 0, -1 ) );
+  if( hit.GetActor() )
+  {
+    v = hit.ImpactPoint;
+    return 1;
+  }
+  // no hit, no change
+  warning( FS( "Point %f %f %f cannot hit the ground", v.X, v.Y, v.Z ) );
+  return 0;
 }
 
 void AFlyCam::FindFloor()
@@ -432,10 +467,7 @@ void AFlyCam::FindFloor()
   {
     for( int i = 0; i < actors.Num() && !floor; i++ )
     {
-      AActor* a = actors[i];
-      if( !a )  skip;
-      LOG( "A: %s", *a->GetName() );
-      if( AGroundPlane* gp = Cast<AGroundPlane>( a ) )
+      if( AGroundPlane* gp = Cast<AGroundPlane>( actors[i] ) )
       {
         floor = gp;
       }
@@ -446,7 +478,11 @@ void AFlyCam::FindFloor()
     error( "Floor not found" );
   }
   else {
+    // trace on edges doesn't have issues
     floorBox = floor->GetComponentsBoundingBox();
+    FloorBoxTraceFraction = FMath::Clamp( FloorBoxTraceFraction, 0.25f, 0.85f );
+    floorBox.Min *= FloorBoxTraceFraction;
+    floorBox.Max *= FloorBoxTraceFraction;
   }
 
   // create the fog of war now
@@ -494,17 +530,16 @@ void AFlyCam::MouseDownLeft()
       // HUD-quesome attack onto the floor.
       if( NextAction.AttacksGround )
       {
-        // would be queued 
-        // Make projectile of type that launches @ point on ground
-        AProjectile* p = Game->Make<AProjectile>( NextAction.Type );
         for( AGameObject *go : Game->hud->Selected )
         {
-          p->SetDestinationArc( go->Pos, hitResult.ImpactPoint, NextAction.CurveHeight );
+          /// Launch projectile @ ground
+          AProjectile* p = Game->Make<AProjectile>( NextAction.Type, go->Pos, go->team );
+          p->SetDestinationArc( go->Pos, hitResult.ImpactPoint );
         }
       }
-      else // Commit the action
-        for( AGameObject *se : Game->hud->Selected )
-          se->Action( NextAction.Type, hit );
+      //else // Commit the action
+      //  for( AGameObject *se : Game->hud->Selected )
+      //    se->Action( NextAction.Type, hit );
     }
     else if( IsBuilding( NextAction.Type ) )
     {
@@ -518,7 +553,7 @@ void AFlyCam::MouseDownLeft()
       ////
       ////  // It goes down as a little turf thing
       ////  AGameObject* building = Game->Make<AGameObject>( NextAction.Type, ghost->Pos );
-      ////  building->SetTeam( ghost->team->teamId );
+      ////  building->SetTeam( ghost->team );
       ////  
       ////  // Selected objects will go build it
       ////  for( AGameObject* se : Game->hud->Selected )

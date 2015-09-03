@@ -17,7 +17,6 @@ class AGameObject;
 struct GraphNode;
 struct Edge;
 class Pathfinder;
-class ALandscape;
 class AGroundPlane;
 
 inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
@@ -30,10 +29,9 @@ class WRYV_API AFlyCam : public APawn
 {
 	GENERATED_BODY()
 public:
-  AGroundPlane* floor; // Every level must have a Landscape object called the floor.
-  ALandscape* landscape;
-  FBox floorBox; // we only find the floor's box once (at level start).
-  AGameObject* ghost; // ghost of the building being set for placement
+  AGroundPlane* floor; // Every level must have an object called the floor.
+  FBox floorBox;       // we only find the floor's box once (at level start).
+  AGameObject* ghost;  // ghost of the building being set for placement
   Pathfinder* pathfinder;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  USceneComponent* DummyRoot;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
@@ -43,7 +41,9 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
-  
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float FloorBoxTraceFraction;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CheckerSphereRadius;
+
   // Use a TARRAY to keep sfx organized, includes music & effects
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterialInterface* BaseWhiteInterface;
@@ -62,7 +62,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  float CameraMovementSpeed;
   UFloatingPawnMovement *MovementComponent;
   UInputComponent* InputComponent;
-  vector<AActor*> viz;
+  vector<AGameObject*> viz;
   
   // Sets default values for this pawn's properties
 	AFlyCam( const FObjectInitializer& PCIP );
@@ -93,7 +93,8 @@ public:
   void setGhost( Types ut );
   
   FVector2D getMousePos();
-  FVector SetOnGround( FVector v );
+  // Modifies vector if can hit ground. If not, it just stays floating.
+  bool SetOnGround( FVector& v );
   
   void FindFloor();
   void Select( set<AGameObject*> objects );

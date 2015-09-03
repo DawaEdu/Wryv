@@ -25,7 +25,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     return Consumed;
   };
   OnMouseUpLeft = [this]( FVector2D mouse ) {
-    Game->hud->Select( Game->pc->PickButNotType( selectBox->Box, {UNITSPHERE,UNITEDGE,UNITCUBE} ) );
+    Game->hud->Select( Game->pc->Pick( selectBox->Box ) );
     SelectEnd();
     return Consumed;
   };

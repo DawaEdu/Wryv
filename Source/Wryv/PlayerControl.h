@@ -33,15 +33,13 @@ public:
   FHitResult PickClosest( const FVector& eye, const FVector& lookDir );
 
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
-  bool IntersectsAny( AGameObject* object, set<Types> inTypes );
+  set<AGameObject*> PickByCylinder( AGameObject* object );
+  set<AGameObject*> Pick( AGameObject* object );
 
   // Gets all objects that are traced thru by vector
   set<AGameObject*> Pick( const FVector2D& ScreenPosition );
   set<AGameObject*> Pick( const FVector& eye, const FVector& lookDir );
-
-  set<AGameObject*> PickWithType( const FBox2DU& box, set<Types> inTypes );
-  set<AGameObject*> PickButNotType( const FBox2DU& box, set<Types> notTypes );
-  set<AGameObject*> Pick( const FBox2DU& box, set<Types> inTypes, set<Types> notTypes );
+  set<AGameObject*> Pick( const FBox2DU& box );
   bool IsKeyDown( FKey key );
   bool IsAnyKeyDown( vector<FKey> key );
   virtual void Tick( float t ) override;

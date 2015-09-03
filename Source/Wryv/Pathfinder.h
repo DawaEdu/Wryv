@@ -148,6 +148,7 @@ struct GraphNode
     index = Coord( iindex );
     terrain = iterrain;
     costToGetHere = 0;
+    point = FVector( index.row, index.col, 0.f );
   }
 
   // priority.

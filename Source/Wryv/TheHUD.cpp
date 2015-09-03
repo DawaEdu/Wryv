@@ -96,8 +96,15 @@ void ATheHUD::Select( set<AGameObject*> objects )
     if( sel->FollowTarget )  RemoveTagged( sel->FollowTarget, FollowTargetName );
     RemoveTagged( sel, AttackTargetName );
     if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, AttackTargetName );
-
   }
+
+  // Cannot select objects of these types
+  set<Types> forbidden = { Types::GROUNDPLANE, Types::UISELECTOR };
+  function< bool (AGameObject*) > filter = [forbidden]( AGameObject *g ) -> bool {
+    // remove objects of forbidden types.
+    return in( forbidden, g->Stats.Type.GetValue() );
+  };
+  objects |= filter;
 
   if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
     Selected += objects; //Add
@@ -124,7 +131,8 @@ void ATheHUD::Select( set<AGameObject*> objects )
 void ATheHUD::MarkAsSelected( AGameObject* object )
 {
   if( HasChildWithTag( object, SelectedTargetName ) )  return;
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
   widget->Tags.Add( SelectedTargetName );
   float r = object->GetBoundingRadius();
   widget->SetActorScale3D( FVector(r,r,r) );
@@ -140,7 +148,8 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
     LOG( "%s already marked as follow", *object->Stats.Name );
     return; // already marked as an attack target
   }
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
   widget->Tags.Add( FollowTargetName );
   float r = object->GetBoundingRadius();
   widget->SetActorScale3D( FVector(r,r,r) );
@@ -155,7 +164,8 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
     LOG( "%s already marked as attack", *object->Stats.Name );
     return; // already marked as an attack target
   }
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR );
+
+  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
   widget->Tags.Add( AttackTargetName );
   float r = object->GetBoundingRadius();
   widget->SetActorScale3D( FVector( r,r,r ) );

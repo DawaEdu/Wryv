@@ -10,9 +10,13 @@ struct WRYV_API FUnitTypeUClassPair
   GENERATED_USTRUCT_BODY()
 public:
   // The UnitTYPE (strict set of types)
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
-  TEnumAsByte<Types> Type;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)  TEnumAsByte<Types> Type;
   // The UClass that should be instantiated for that Types
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
-  UClass *uClass;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)  UClass *uClass;
+
+  FUnitTypeUClassPair()
+  {
+    Type = Types::NOTHING;
+    uClass = 0;
+  }
 };

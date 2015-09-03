@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <set>
+#include <functional>
 #include <map>
 #include <stdarg.h>
 
@@ -120,24 +121,24 @@ template <typename T> inline T* first( vector<T*>& v )
   else return 0;
 }
 
-template <typename T> inline bool in( set<T*>& s, T* elt )
+template <typename T> inline bool in( const set<T*>& s, const T* elt )
 {
   return s.find( elt ) != s.end();
 }
 
-template <typename T> inline bool in( set<T>& s, T& elt )
+template <typename T> inline bool in( const set<T>& s, const T& elt )
 {
   return s.find( elt ) != s.end();
 }
 
-template <typename T> inline int in( vector<T>& s, T& elt )
+template <typename T> inline int in( const vector<T>& s, const T& elt )
 {
   for( int i = 0; i < s.size(); i++ )
     if( s[i] == elt )
       return i;
   return -1;
 }
-template <typename T> inline int in( vector<T*>& s, T* elt )
+template <typename T> inline int in( const vector<T*>& s, const T* elt )
 {
   for( int i = 0; i < s.size(); i++ )
     if( s[i] == elt )
@@ -208,6 +209,79 @@ template <typename T> set<T*>& operator+=( set<T*>& A, const set<T*>& B )
   for( T* b : B )
     A.insert( b );
   return A;
+}
+
+// Filters by removing elts from set 2 from set 1
+template <typename T> set<T> operator|( set<T> src, const set<T>& forbidden )
+{
+  // Filter objects from the set
+  for( set<T>::iterator it = src.begin(); it != src.end(); )
+  {
+    if( in( forbidden, *it ) ) // then must remove
+    {
+      set<T>::iterator it2 = it;
+      ++it2;
+      src.erase( it );
+      it = it2;
+    }
+    else ++it;
+  }
+
+  return src;
+}
+
+// Filters by removing elts from set 2 from set 1
+template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
+{
+  // Filter objects from the set
+  for( set<T*>::iterator it = src.begin(); it != src.end(); )
+  {
+    if( in( forbidden, *it ) ) // then must remove
+    {
+      set<T*>::iterator it2 = it;
+      ++it2;
+      src.erase( it );
+      it = it2;
+    }
+    else ++it;
+  }
+
+  return src;
+}
+
+template <typename T> set<T*> operator|( set<T*> src, function< bool (T*) > doFilterFunction )
+{
+  // Filter objects from the set
+  for( set<T*>::iterator it = src.begin(); it != src.end(); )
+  {
+    if( doFilterFunction( *it ) ) // then must remove
+    {
+      set<T*>::iterator it2 = it;
+      ++it2;
+      src.erase( it );
+      it = it2;
+    }
+    else ++it;
+  }
+
+  return src;
+}
+
+template <typename T> set<T*>& operator|=( set<T*>& src, function< bool (T*) > doFilterFunction )
+{
+  for( set<T*>::iterator it = src.begin(); it != src.end(); )
+  {
+    if( doFilterFunction( *it ) ) // then must remove
+    {
+      set<T*>::iterator it2 = it;
+      ++it2;
+      src.erase( it );
+      it = it2;
+    }
+    else ++it;
+  }
+
+  return src;
 }
 
 template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
