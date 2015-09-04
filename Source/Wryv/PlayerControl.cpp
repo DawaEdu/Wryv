@@ -250,10 +250,18 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
     {
       //FBox box = go->GetComponentsBoundingBox();
       Types type = go->Stats.Type.GetValue();
-      if( !go->IsPendingKill()   &&   !go->Dead   &&
-           v.IntersectSphere( go->Pos, go->GetBoundingRadius() ) )
+      if( !go->IsPendingKill()   &&   !go->Dead )
       {
-        objects.insert( go );
+        // Selection by mesh's bounding box is best.
+        vector<UMeshComponent*> meshes = go->GetComponentsByType<UMeshComponent>();
+        for( UMeshComponent* mesh : meshes )
+        {
+          FBox box = mesh->Bounds.GetBox();
+          if( v.IntersectBox( box.GetCenter(), box.GetExtent() ) )
+          {
+            objects.insert( go );
+          }
+        }
       }
     }
   }

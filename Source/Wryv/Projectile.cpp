@@ -1,6 +1,7 @@
 #include "Wryv.h"
 #include "Projectile.h"
 #include "WryvGameInstance.h"
+#include "WryvGameMode.h"
 #include "GlobalFunctions.h"
 #include "FlyCam.h"
 
@@ -9,12 +10,7 @@ AProjectile::AProjectile(const FObjectInitializer& PCIP) : AGameObject(PCIP)
   PrimaryActorTick.bCanEverTick = true;
   Shooter = 0;
   GroundTraveller = 0;
-  Gravity = 50.f;
-}
-
-void AProjectile::BeginPlay()
-{
-  Super::BeginPlay();
+  Gravity = -10.f;
 }
 
 void AProjectile::ai( float t )
@@ -26,8 +22,8 @@ void AProjectile::ai( float t )
 void AProjectile::Move( float t )
 {
   //////AGameObject::Move( t ); // OVERRIDES BASE
-  Vel.Z += -Gravity * t;
-  Pos += Vel * t;
+  Vel.Z += Gravity * t;
+  Pos += Vel*t;
 
   Vel.Rotation();
   SetRot( Vel.GetSafeNormal().Rotation() );
@@ -38,34 +34,32 @@ void AProjectile::Move( float t )
   //LOG( "@ Vel=%f %f %f", Vel.X, Vel.Y, Vel.Z );
 }
 
-void AProjectile::SetDestinationArc( FVector start, FVector end )
+void AProjectile::SetDestinationArc( FVector start, FVector end, float speed, float h )
 {
   FVector dir = end - start;
   float len = dir.Size();
   Vel = dir;
   Vel.Z = 0.f;
   Vel.Normalize();
-  Vel *= BaseStats.SpeedMax; // XY Velocity
+  Vel *= speed; // XY Velocity
 
-  // Time to reach: horizontal speed
-  float t = len / BaseStats.SpeedMax;
-  // Initial vertical velocity is solution of d = v1t + .5*t*t, where v1 = d/t - .5*t
-  float h = BaseStats.MaxTravelHeight;
-  float v1 = (h - .5f*(-Gravity)*t*t)/t;
+  // TravelTime
+  float travelTime = len / speed;
+  float t = travelTime/2.f; // Time to reach full height.
 
-  //float v2 = sqrtf( 2 * Gravity * h );
-  //LOG( "1: %f 2: %f", v1, v2 ); // V1 & V2 are very similar.
-  Vel.Z = v1;
-  Game->flycam->ClearViz();
-  Game->flycam->Visualize( Types::UNITSPHERE, start, 50.f, FLinearColor::White );
-  Game->flycam->Visualize( Types::UNITSPHERE, end, 50.f, FLinearColor::Black );
-  FVector d = start;
-  for( float i = 0; i <= t; i += t/15.f )
+  //LOG( "Reaches full height in %f seconds", t );
+  Vel.Z = 2*h/t;
+  Gravity = -Vel.Z*Vel.Z / (2.f*h); // Acceleration for a velocity of 0 @ len/2.
+
+  //Game->flycam->ClearViz();
+  FVector simVel = Vel;
+  FVector pos = start;
+  for( float accumTime = 0; accumTime <= travelTime; accumTime += Game->gm->T )
   {
-    FVector pt = start + Vel*t;
-    LOG( "Point %f %f %f", pt.X, pt.Y, pt.Z );
-    Game->flycam->Visualize( Types::UNITSPHERE, pt, 45.f, FLinearColor::Red );
+    pos += simVel*Game->gm->T; // 
+    simVel.Z += Gravity * Game->gm->T;
+    //Game->flycam->Visualize( Types::UNITSPHERE, pos, 12.f, FLinearColor::Red );
   }
-
+  
   SetPosition( start );
 }

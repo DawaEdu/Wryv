@@ -56,6 +56,7 @@ void AGameObject::PostInitializeComponents()
 
     // Attach contact function to all bounding components.
     hitBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnHitContactBegin );
+    hitBounds->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnHitContactEnd );
 
     repulsionBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactBegin );
     repulsionBounds->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactEnd );
@@ -95,8 +96,8 @@ AGameObject* AGameObject::SetParent( AGameObject* newParent )
   SetOwner( newParent );
 
   // Keep original scale & reset
-  FVector s = GetRootComponent()->GetComponentScale();
-  LOG( "Scaling %f %f %f", s.X, s.Y, s.Z );
+  FVector s = FVector( hitBounds->GetScaledCapsuleRadius() * 1.5f );
+  //LOG( "Scaling %f %f %f", s.X, s.Y, s.Z );
   // Set the world position to being that of parent, then keep world position on attachment
   GetRootComponent()->SetWorldScale3D( FVector(1,1,1) ); // reset the scale off
   GetRootComponent()->SetRelativeScale3D( FVector(1,1,1) ); 
@@ -219,16 +220,17 @@ void AGameObject::AttackCycle()
 
 void AGameObject::Shoot()
 {
-  info( FS( "%s is shooting a %s to %s", *Stats.Name, *GetTypesName(Stats.ReleasedProjectileWeapon),
-    *AttackTarget->Stats.Name ) );
+  //info( FS( "%s is shooting a %s to %s", *Stats.Name, *GetTypesName(Stats.ReleasedProjectileWeapon),
+  //  *AttackTarget->Stats.Name ) );
   AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, GetCentroid(), team );
 
-  projectile->BaseStats = Stats;
   projectile->Shooter = this;
   projectile->Attack( AttackTarget );
   projectile->AttackTargetOffset = AttackTargetOffset;
 
-  projectile->SetDestinationArc( GetCentroid(), AttackTarget->GetCentroid() );
+  projectile->SetDestinationArc( GetCentroid(), AttackTarget->GetCentroid(),
+    projectile->BaseStats.SpeedMax,
+    projectile->BaseStats.MaxTravelHeight );
   // Send the projectile weapon
   // Make a projectile of type and send towards attack target
 
@@ -412,6 +414,8 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
+  ///LOG( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() );
+
   if( OtherActor == this )
   {
     // Don't do anything with reports of collision with self.
@@ -440,10 +444,17 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   }
 }
 
+void AGameObject::OnHitContactEnd_Implementation( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex )
+{
+  //LOG( "OnRepulsionContactEnd" );
+}
+
 void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
+  //LOG( "OnRepulsionContactBegin" );
+
   if( OtherActor == this )
   {
     // Don't do anything with reports of collision with self.
@@ -459,6 +470,8 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
 
 void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex )
 {
+  //LOG( "OnRepulsionContactEnd" );
+  
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
     removeElement( Overlaps, go );
@@ -953,7 +966,7 @@ void AGameObject::BeginDestroy()
   // For odd-time created objects (esp in PIE) they get put into the team without ever actually
   // being played with, so they don't die properly.
   if( team ) {
-    warning( FS( "Unit %s was removed from team in BeginDestroy()", *Stats.Name ) );
+    //warning( FS( "Unit %s was removed from team in BeginDestroy()", *Stats.Name ) );
     team->RemoveUnit( this );
   }
 
@@ -963,7 +976,7 @@ void AGameObject::BeginDestroy()
     // Filter THIS from collection if exists
     removeElement( Game->hud->Selected, this );
   }
-  info( FS( "%s was destroyed", *Stats.Name ) );
+  //info( FS( "%s was destroyed", *Stats.Name ) );
   
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }

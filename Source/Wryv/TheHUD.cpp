@@ -145,7 +145,7 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
   // only select as follow target if its not already an attack target of something
   // ( attack priorities over follow )
   if( HasChildWithTag( object, FollowTargetName ) ) {
-    LOG( "%s already marked as follow", *object->Stats.Name );
+    //LOG( "%s already marked as follow", *object->Stats.Name );
     return; // already marked as an attack target
   }
 
@@ -161,7 +161,7 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
 {
   // Check that it doesn't already have a Selector-typed child
   if( HasChildWithTag( object, AttackTargetName ) ) {
-    LOG( "%s already marked as attack", *object->Stats.Name );
+    //LOG( "%s already marked as attack", *object->Stats.Name );
     return; // already marked as an attack target
   }
 

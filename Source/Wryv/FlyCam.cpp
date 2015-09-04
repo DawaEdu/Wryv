@@ -534,7 +534,7 @@ void AFlyCam::MouseDownLeft()
         {
           /// Launch projectile @ ground
           AProjectile* p = Game->Make<AProjectile>( NextAction.Type, go->Pos, go->team );
-          p->SetDestinationArc( go->Pos, hitResult.ImpactPoint );
+          p->SetDestinationArc( go->Pos, hitResult.ImpactPoint, p->BaseStats.SpeedMax, p->BaseStats.MaxTravelHeight );
         }
       }
       //else // Commit the action

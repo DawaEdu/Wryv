@@ -28,8 +28,7 @@ bool UWryvGameInstance::IsReady()
 {
   if( !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder )
     return 1;
-  else
-    error( "GAME NOT READY" );
+  //else  error( "GAME NOT READY" );
   return 0;
 }
 
