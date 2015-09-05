@@ -30,16 +30,7 @@ enum Types
   BLDGTOWNHALL          UMETA(DisplayName = "Building Townhall"),
   BLDGITEMSHOP          UMETA(DisplayName = "Building Itemshop"),
 
-  GROUNDPLANE           UMETA(DisplayName = "GroundPlane"),
-
-  // Spells.
-  SPELLFIRE             UMETA(DisplayName = "Spell Fire"),
-  SPELLICE              UMETA(DisplayName = "Spell Ice"),
-  SPELLLIGHTNING        UMETA(DisplayName = "Spell Lightning"),
-
-  SPELLFIRESPLASH       UMETA(DisplayName = "Spell Fire Splash"),
-  SPELLICESPLASH        UMETA(DisplayName = "Spell Ice Splash"),
-  SPELLLIGHTNINGSPLASH  UMETA(DisplayName = "Spell Lightning Splash"),
+  GROUNDPLANE           UMETA(DisplayName = "Ground Plane"),
 
   // ACTION to boost own speed
   ACTIONMOVE            UMETA(DisplayName = "Action Move"),
@@ -56,12 +47,18 @@ enum Types
   // Some kind of widget or selector
   UISELECTOR            UMETA(DisplayName = "UI Selector"),
 
+  // Weapons.
   WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
-  WEAPONICEATTACK       UMETA(DisplayName = "Weapon Ice Attack"),
+  SPELLFIRE             UMETA(DisplayName = "Spell Fire"),
+  SPELLICE              UMETA(DisplayName = "Spell Ice"),
+  SPELLLIGHTNING        UMETA(DisplayName = "Spell Lightning"),
 
   EXPLOSIONWHITE        UMETA(DisplayName = "Explosion White"),
   EXPLOSIONYELLOW       UMETA(DisplayName = "Explosion Yellow"),
   EXPLOSIONARROWDUST    UMETA(DisplayName = "Explosion Arrow Dust"),
+  SPELLFIRESPLASH       UMETA(DisplayName = "Spell Fire Splash"),
+  SPELLICESPLASH        UMETA(DisplayName = "Spell Ice Splash"),
+  SPELLLIGHTNINGSPLASH  UMETA(DisplayName = "Spell Lightning Splash"),
 
   MAX                   UMETA(DisplayName = "Max"),
 };

@@ -11,4 +11,5 @@ class WRYV_API ABuilding : public AGameObject
   float TimeBuilding;    // When a unit is building, this is the % progress it is to completion.
   virtual void Move( float t ) override;
   float percentBuilt(){ return TimeBuilding / Stats.TimeLength; }
+  virtual void Die();
 };

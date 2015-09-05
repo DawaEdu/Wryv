@@ -48,6 +48,21 @@ void AUnit::ConsumeItem( int i )
 void AUnit::Move( float t )
 {
   AGameObject::Move( t );
+  
+  // recompute path
+  if( Stats.SpeedMax )
+  {
+    if( FollowTarget )
+      MoveWithinDistanceOf( FollowTarget, FollowTarget->GetBoundingRadius() );
+    else if( AttackTarget )
+      MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
+  }
+
+  Walk( t );   // Walk towards destination
+  
+  // Flush the computed position to the root component
+  RootComponent->SetWorldLocation( Pos );
+
 }
 
 

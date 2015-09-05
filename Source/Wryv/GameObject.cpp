@@ -27,7 +27,6 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   RepelMultiplier = 1.f;
-  GroundTraveller = 1;
   Dead = 0;
 
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
@@ -36,18 +35,13 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
+
 }
 
 void AGameObject::PostInitializeComponents()
 {
   //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
   Super::PostInitializeComponents();
-  //if( !Game->IsReady() )
-  //{
-  //  warning( FS( "%s: GameInstance not initialized", *Stats.Name ) );
-  //  Pos = Rand();
-  //  return;
-  //}
 
   if( RootComponent )
   {
@@ -136,6 +130,11 @@ void AGameObject::SetSize( FVector size )
     SetActorScale3D( size/maxDimen );
 }
 
+FVector AGameObject::GetTip()
+{
+  return Pos + FVector( 0,0, hitBounds->GetScaledCapsuleHalfHeight()*2.f );
+}
+
 FVector AGameObject::GetCentroid()
 {
   return hitBounds->GetComponentLocation();
@@ -222,18 +221,34 @@ void AGameObject::Shoot()
 {
   //info( FS( "%s is shooting a %s to %s", *Stats.Name, *GetTypesName(Stats.ReleasedProjectileWeapon),
   //  *AttackTarget->Stats.Name ) );
-  AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, GetCentroid(), team );
+  FVector launchPos = GetTip();
+  
+  // Try and get the launch socket of the mesh. if it doesn't have one, use the top of the object.
+  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
+  // Check all the meshes for a mesh with socket named "Weapon"
+  for( UMeshComponent* mesh : meshes )
+  {
+    if( mesh->DoesSocketExist( "Weapon" ) )
+    {
+      launchPos = mesh->GetSocketLocation( "Weapon" );
+      info( FS( "Launch socket @ %f %f %f", launchPos.X, launchPos.Y, launchPos.Z ) );
+    }
+  }
 
-  projectile->Shooter = this;
-  projectile->Attack( AttackTarget );
-  projectile->AttackTargetOffset = AttackTargetOffset;
-
-  projectile->SetDestinationArc( GetCentroid(), AttackTarget->GetCentroid(),
-    projectile->BaseStats.SpeedMax,
-    projectile->BaseStats.MaxTravelHeight );
-  // Send the projectile weapon
-  // Make a projectile of type and send towards attack target
-
+  AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, launchPos, team );
+  if( !projectile )
+  {
+    error( FS( "Projectile couldn't be launched from %s", *Stats.Name ) );
+  }
+  else
+  {
+    projectile->Shooter = this;
+    projectile->Attack( AttackTarget );
+    projectile->AttackTargetOffset = AttackTargetOffset;
+    
+    projectile->SetDestinationArc( launchPos, AttackTarget->GetCentroid(),
+      projectile->BaseStats.SpeedMax, projectile->BaseStats.MaxTravelHeight );
+  }
 }
 
 void AGameObject::SendDamageTo( AGameObject* go )
@@ -298,8 +313,9 @@ void AGameObject::UpdateStats( float t )
       BonusTraits.erase( BonusTraits.begin() + i );
   }
 
-  // tick builds
-  for( int i = BuildQueueCounters.size() - 1; i >= 0; i-- ) {
+  // tick builds, and remove finished counters
+  for( int i = BuildQueueCounters.size() - 1; i >= 0; i-- )
+  {
     BuildQueueCounters[i].Time += t;
     // update the viz of the build queue counter, ith clock
     if( BuildQueueCounters[i].Done() )
@@ -355,7 +371,10 @@ bool AGameObject::Make( Types type )
 
 void AGameObject::SetRot( const FRotator & ro )
 {
-  if( RootComponent ) RootComponent->SetWorldRotation( ro );
+  if( RootComponent )
+  {
+    RootComponent->SetWorldRotation( ro );
+  }
   else error( "No root component" );
 }
 
@@ -414,7 +433,7 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
-  ///LOG( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() );
+  //LOG( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() );
 
   if( OtherActor == this )
   {
@@ -422,12 +441,14 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
     return;
   }
 
+  AProjectile *p = Cast<AProjectile>( this );
+  AGameObject *other = Cast<AGameObject>( OtherActor );
   // Make sure other component with defined overlap is AGameObject derivative.
-  if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
+  if( other && p )
   {
     // If this object type detonates on contact, then its a projectile.
     // make it explode when it hits its attack target
-    if( Stats.OnContact && (AttackTarget == go || go == Game->flycam->floor) )
+    if( AttackTarget == other || other == Game->flycam->floor )
     {
       // This means the object is a projectile.
       if( AttackTarget && !AttackTarget->Dead )
@@ -437,7 +458,11 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
         SendDamageTo( AttackTarget );
       }
       
-      AGameObject* expl = Game->Make<AGameObject>( Stats.OnContact, SweepResult.ImpactPoint, team );
+      if( Stats.OnContact )
+      {
+        AGameObject* expl = Game->Make<AGameObject>( Stats.OnContact, GetTip(), team );
+      }
+
       Die();
       Destroy();
     }
@@ -446,7 +471,7 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
 
 void AGameObject::OnHitContactEnd_Implementation( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex )
 {
-  //LOG( "OnRepulsionContactEnd" );
+  //LOG( "OnHitContactEnd" );
 }
 
 void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
@@ -526,12 +551,9 @@ void AGameObject::Walk( float t )
     }
 
     // Push UP from the ground plane, using the bounds on the actor.
-    if( GroundTraveller )
+    if( !Game->flycam->SetOnGround( Pos ) )
     {
-      if( !Game->flycam->SetOnGround( Pos ) )
-      {
-        LOG( "object %s has left the ground plane", *Stats.Name );
-      }
+      LOG( "object %s has left the ground plane", *Stats.Name );
     }
 
     if( !AttackTarget )
@@ -671,26 +693,6 @@ void AGameObject::Move( float t )
   // Call the ai for this object type
   //ai( t );
   
-  // recompute path
-  if( Stats.SpeedMax )
-  {
-    if( FollowTarget )
-      MoveWithinDistanceOf( FollowTarget, FollowTarget->GetBoundingRadius() );
-    else if( AttackTarget )
-    {
-      // Only replot for non-projectiles
-      if( !isProjectile() )
-      {
-        MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
-      }
-    }
-  }
-
-  Walk( t );   // Walk towards destination
-  
-  // Flush the computed position to the root component
-  RootComponent->SetWorldLocation( Pos );
-
 }
 
 void AGameObject::ai( float t )
@@ -943,17 +945,8 @@ void AGameObject::SetColor( FLinearColor color )
 
 void AGameObject::Die()
 {
-  // create the on-contact explosion object etc
-  // Don't call DESTROY for a few frames.
-  if( IsBuilding( Stats.Type ) )
-  {
-    // Spawn explosion animation (particle emitter).
-    MakeChild<AExplosion>( (Types)(EXPLOSIONWHITE + randInt(0,3)) );
-  }
-  
   StopAttackAndFollow(); // Remove its attack and follow
   LoseAttackersAndFollowers(); // Attackers and followers stop detecting
-
 
   Dead = 1 ; // updates the blueprint.
 

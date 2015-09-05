@@ -207,10 +207,6 @@ void AFlyCam::InitializePathfinding()
         // the node is regarded as impassible.
         set<AGameObject*> forbidden = { floor };
         set<AGameObject*> intns = Game->pc->Pick( sphere ) | forbidden;
-        for( AGameObject* go : intns )
-        {
-          LOG( "%s intersects with %s", *sphere->Stats.Name, *go->Stats.Name );
-        }
         
         if( intns.size() ) {
           pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;

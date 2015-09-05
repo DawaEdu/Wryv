@@ -1,6 +1,8 @@
 #include "Wryv.h"
 #include "Building.h"
 #include "GlobalFunctions.h"
+#include "WryvGameInstance.h"
+#include "Explosion.h"
 
 ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
@@ -24,6 +26,15 @@ void ABuilding::Move( float t )
     // Building complete.
 
   }
+}
+
+
+void ABuilding::Die()
+{
+  // Create the on-contact explosion object etc
+  // Don't call DESTROY for a few frames.
+  // Spawn explosion animation (particle emitter).
+  MakeChild<AExplosion>( (Types)(EXPLOSIONWHITE + randInt(0,3)) );
 }
 
 

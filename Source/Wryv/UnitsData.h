@@ -55,6 +55,8 @@ public:
   // Attack damage is BaseAttackDamage + rand()%BonusAttackDamage
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BaseAttackDamage;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 BonusAttackDamage;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackSpeedMultiplier;
+  
   // The weapon's chance to miss
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float MissPercent;
   // Range it can attack from (spells have attack range also)
@@ -89,16 +91,19 @@ public:
     Quantity = 1;
     GoldCost = LumberCost = StoneCost = ManaCost = 0;
     AttacksGround = 0;
+    MaxTravelHeight = 100.f;
     AOERadius = 0.f;
     RepairHPFractionCost = 0.f;
     RepairRate = 0.f;
     TimeLength = 0.f;
     SpeedMax = 100.f;
+
     HpMax = 100.f;
     Armor = 1.f;
     SightRange = 10000.f;
     BaseAttackDamage = 10.f;
     BonusAttackDamage = 5.f;
+    AttackSpeedMultiplier = 1.f;
     AttackRange = 100.f;
     PickupRange = 100.f;
     TeamId = 0;

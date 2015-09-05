@@ -70,8 +70,14 @@ public:
     }
     T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
     
-    if( !obj ) error( FS( "Object of type %s could not be spawned (check cast?)", *GetTypesName( type ) ) );
-    obj->SetTeam( team );
+    if( obj )
+    {
+      obj->SetTeam( team );
+    }
+    else
+    {
+      error( FS( "Object of type %s could not be spawned (check cast?)", *GetTypesName( type ) ) );
+    }
     
     return obj;
   }

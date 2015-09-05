@@ -54,7 +54,6 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UnitProperties)  bool GroundTraveller;
   FVector Dest;
   vector<FVector> Waypoints;
 
@@ -90,12 +89,15 @@ class WRYV_API AGameObject : public AActor
 
   // 
   // Gameplay.
+  FVector GetTip();
   FVector GetCentroid();
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float HpPercent();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
+  // Pass thru to stats structure property
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiplier; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasFollowTarget() { return FollowTarget != 0; }
   // Called by blueprints (AttackAnimation) when attack is launched (for ranged weapons)
@@ -141,7 +143,6 @@ class WRYV_API AGameObject : public AActor
   void MoveWithinDistanceOf( AGameObject* target, float distance );
   virtual void Move( float t );
   virtual void ai( float t );
-  void DoAttack( float t );
 
   // 
   // Unit relationship functions
@@ -149,9 +150,7 @@ class WRYV_API AGameObject : public AActor
   bool isEnemyTo( AGameObject* go );
 
   void Follow( AGameObject* go );
-  // sets an object as the attack target
   void Attack( AGameObject* go );
-  // Stops following my target
   void StopAttackAndFollow();
 
   void LoseFollower( AGameObject* formerFollower );
@@ -179,7 +178,6 @@ class WRYV_API AGameObject : public AActor
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]
-  bool isProjectile() { return Stats.OnContact != NOTHING; }
   bool isPeasant() { return Stats.Type == Types::UNITPEASANT; }
   bool isUnit(){ return IsUnit( Stats.Type ); }
   bool isBuilding(){ return IsBuilding( Stats.Type ); }
