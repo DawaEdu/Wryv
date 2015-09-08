@@ -10,7 +10,9 @@
 #include "GlobalFunctions.h"
 #include "PlayerControl.h"
 #include "Widget3D.h"
+#include "Building.h"
 #include "Explosion.h"
+
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -35,7 +37,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
-
+  OnReachDestination = function< void () >();
 }
 
 void AGameObject::PostInitializeComponents()
@@ -75,7 +77,7 @@ void AGameObject::BeginPlay()
 
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
-    Abilities.push_back( CooldownCounter( Stats.Abilities[i] ) );
+    AbilityCooldowns.push_back( CooldownCounter( Stats.Abilities[i] ) );
 }
 
 void AGameObject::OnMapLoaded()
@@ -138,6 +140,11 @@ FVector AGameObject::GetTip()
 FVector AGameObject::GetCentroid()
 {
   return hitBounds->GetComponentLocation();
+}
+
+float AGameObject::GetHeight()
+{
+  return hitBounds->GetScaledCapsuleHalfHeight() * 2.f;
 }
 
 float AGameObject::centroidDistance( AGameObject *go )
@@ -235,6 +242,7 @@ void AGameObject::Shoot()
     }
   }
 
+  LOG( "%s launching a projectile of type %d", *Stats.Name, (int)Stats.ReleasedProjectileWeapon.GetValue() );
   AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, launchPos, team );
   if( !projectile )
   {
@@ -349,6 +357,9 @@ bool AGameObject::UseAbility( int index )
   else if( IsBuilding( type ) )
   {
     info( FS( "Building a %s", *GetTypesName( type ) ));
+    // Set placement object with instance of type
+    Game->flycam->ghost = Game->Make< ABuilding >( type, team );
+
   }
   else if( IsUnit( type ) )
   {
@@ -401,7 +412,17 @@ void AGameObject::CheckWaypoint()
 
 void AGameObject::SetPosition( FVector v )
 {
+  // Check if there's something there.
+  //set<AGameObject*> objs = Game->pc->Pick( 
+
+  // While encountering objects, keep searching adjacent to the picked objects until finding empty place.
   Pos = Dest = v;
+}
+
+void AGameObject::FlushPosition()
+{
+  // Flush the computed position to the root component
+  RootComponent->SetWorldLocation( Pos );
 }
 
 // Other gameobject is too close, so a repulsion force is added
@@ -456,6 +477,10 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
         LOG( "%s is detonating", *Stats.Name );
         // Damage the attack target with impact-damage
         SendDamageTo( AttackTarget );
+      }
+      else if( other == Game->flycam->floor )
+      {
+        LOG( "%s is contacting the floor", *Stats.Name );
       }
       
       if( Stats.OnContact )
@@ -543,6 +568,10 @@ void AGameObject::Walk( float t )
       travel = ToDest; // This is the displacement we actually moved.
       Speed = 0;
       Vel = FVector( 0, 0, 0 );
+      if( OnReachDestination ) {
+        OnReachDestination(); // Execute destination reached function
+        OnReachDestination = function< void () >();
+      }
     }
     else
     {
@@ -678,7 +707,7 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float distance )
 void AGameObject::Move( float t )
 {
   if( Dead ) {
-    error( FS( "Dead Unit %s had Move called for it", *Stats.Name ) );
+    //error( FS( "Dead Unit %s had Move called for it", *Stats.Name ) );
     return; // Cannot move if dead
   }
   if( Hp <= 0 ) {
@@ -692,7 +721,7 @@ void AGameObject::Move( float t )
   
   // Call the ai for this object type
   //ai( t );
-  
+  FlushPosition();
 }
 
 void AGameObject::ai( float t )
@@ -948,7 +977,10 @@ void AGameObject::Die()
   StopAttackAndFollow(); // Remove its attack and follow
   LoseAttackersAndFollowers(); // Attackers and followers stop detecting
 
-  Dead = 1 ; // updates the blueprint.
+  Dead = 1; // updates the blueprint animation,
+
+  // Filter THIS from collection if exists
+  removeElement( Game->hud->Selected, this );
 
   // Remove from team. This finally removes its game-tick counter.
   if( team )  team->RemoveUnit( this );
@@ -964,11 +996,6 @@ void AGameObject::BeginDestroy()
   }
 
   // Check if object is selected, only possible game launched/ready
-  if( Game->IsReady() )
-  {
-    // Filter THIS from collection if exists
-    removeElement( Game->hud->Selected, this );
-  }
   //info( FS( "%s was destroyed", *Stats.Name ) );
   
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid

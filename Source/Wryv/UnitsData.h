@@ -45,8 +45,10 @@ public:
   // 
   // Weapon properties: If attacks send a projectile, set object here.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > ReleasedProjectileWeapon;
-  // Which object type is spawned on contact (explosion). Must be specified for object types that are projectiles
+  
+  // The object that gets spawned when the unit explodes (eg a building)
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > OnContact;
+  
   // If this is a ground attack spell/property, then it doesn't require a gameobject target
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AttacksGround;
   // For projectiles with a height, how high does it curve

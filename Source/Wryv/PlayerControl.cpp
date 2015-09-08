@@ -92,6 +92,21 @@ FHitResult APlayerControl::PickClosest( const FVector& eye, const FVector& lookD
   return res;
 }
 
+set<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
+{
+  FCollisionQueryParams fqp;
+  TArray<FOverlapResult> overlaps;
+  FQuat quat( 0.f, 0.f, 0.f, 0.f );
+  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+    FCollisionObjectQueryParams::InitType::AllObjects );
+  GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fqp );
+  set<AGameObject*> intersections;
+  for( int i = 0; i < overlaps.Num(); i++ )
+    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
+      intersections.insert( go );
+  return intersections;
+} 
+
 set<AGameObject*> APlayerControl::PickByCylinder( AGameObject* object )
 {
   FCollisionShape c1 = object->GetBoundingCylinder();
@@ -108,7 +123,6 @@ set<AGameObject*> APlayerControl::PickByCylinder( AGameObject* object )
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
       intersections.insert( go );
 
-  // Non-empty means intns exists
   return intersections;
 }
 

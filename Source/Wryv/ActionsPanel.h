@@ -9,7 +9,7 @@ class ActionsPanel : public HotSpot
 {
 public:
   // the group of abilities this unit is capable of
-  AbilitiesPanel* abilities;
+  AbilitiesPanel* abilitiesPanel;
   // the group of buildPanel this unit can build
   BuildPanel* buildPanel;
 

@@ -396,31 +396,6 @@ void AFlyCam::debug( int slot, FColor color, FString mess )
 	}
 }
 
-void AFlyCam::setGhost( Types ut )
-{
-  FVector vec( 0. );
-  
-  // Delete the old ghost
-  if( ghost )
-  {
-    // remove the old ghost and replace with a new one
-    vec = ghost->Pos;
-    ghost->Destroy();
-    ghost = 0;
-  }
-  
-  // If the buildingWidget was not set, then the ghost doesn't get created
-  if( IsBuilding( ut ) )
-  {
-    // Remakes the ghost each frame a ghost is present.
-    ghost = Game->Make<AGameObject>( ut, vec, Game->gm->neutralTeam );
-  }
-  else
-  {
-    LOG( "Cannot setGhost() to Nothing" );
-  }
-}
-
 FVector2D AFlyCam::getMousePos()
 {
   FVector2D mouse;
@@ -515,12 +490,49 @@ void AFlyCam::MouseDownLeft()
   
   // if the spell requires a target, check that we got one
   FHitResult hitResult = Game->pc->PickClosest( getMousePos() );
+  // if there's a building in hand, place it.
+  if( ghost )
+  {
+    if( ghost->CanBePlaced )
+    {
+      // Build the building. If ghost doesn't intersect any existing buildings then place it.
+      if( ghost->team->CanAfford( ghost->Stats.Type ) )
+      {
+        ghost->team->Spend( ghost->Stats.Type );
+        ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,1,1,1 ) );
+        ghost->TimeBuilding = 0; // Reset the build counter.
+        // move the selected peasant to work with the building.
+        //PlaySound( UISounds::BuildingPlaced );
+        // Selected objects will go build it
+        for( AGameObject* se : Game->hud->Selected )
+        {
+          if( APeasant* peasant = Cast<APeasant>( se ) )
+          {
+            // Send the peasant to build the building
+            ghost->SetPeasant( peasant );
+          }
+        }
+        ghost = 0; // stop moving the ghost.
+      }
+      else
+      {
+        
+      }
+    }
+    else
+    {
+      // Ghost cannot be placed
+      LOG( "Cannot place building here" );
+    }
+  }
 
   // If we're doing something with the mouse click, do it here.
   if( NextAction.Type != NOTHING )
   {
     if( !Game->hud->Selected.size() ) return;  // can't cast the spell with no caster.
+    
     AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+    
     if( hit == floor )
     {
       // HUD-quesome attack onto the floor.
@@ -537,37 +549,7 @@ void AFlyCam::MouseDownLeft()
       //  for( AGameObject *se : Game->hud->Selected )
       //    se->Action( NextAction.Type, hit );
     }
-    else if( IsBuilding( NextAction.Type ) )
-    {
-      // Build the building. If ghost doesn't intersect any existing buildings then place it.
-      // Otherwise, the building can be placed here spawn a copy
-      // of the building, if the person has enough gold, lumber, stone to build it
-      ////if( Game->gm->playersTeam->CanAfford( NextAction.Type ) )
-      ////{
-      ////  Game->gm->playersTeam->Spend( Game->hud->NextAction );
-      ////  PlaySound( UISounds::BuildingPlaced );
-      ////
-      ////  // It goes down as a little turf thing
-      ////  AGameObject* building = Game->Make<AGameObject>( NextAction.Type, ghost->Pos );
-      ////  building->SetTeam( ghost->team );
-      ////  
-      ////  // Selected objects will go build it
-      ////  for( AGameObject* se : Game->hud->Selected )
-      ////  {
-      ////    // let the selected lastObject build the building
-      ////    if( APeasant* peasant = Cast<APeasant>( se ) )
-      ////    {
-      ////      // Send the peasant to build the building
-      ////      peasant->Build( Game->hud->NextAction, ghost->Pos );
-      ////    }
-      ////  }
-      ////
-      ////  // leave the ghost where it was delete the ghost
-      ////  ghost->Destroy();
-      ////  ghost = 0;
-      ////}
-    }
-
+    
     // We have performed the nextaction.
     Game->hud->NextAction = NOTHING;
   }
@@ -640,10 +622,30 @@ void AFlyCam::MouseMoved()
     // hover event. move the building ghost around etc.
     FHitResult hit = Game->pc->TraceAgainst( floor, mouse );
     
-    // If you're sliding the mouse along the floor,
-    if( ghost && hit.GetActor() == floor )
+    // If you're sliding the mouse along the floor, move the building along with if its set
+    if( ghost )
     {
-      ghost->SetActorLocation( hit.ImpactPoint );
+      if( hit.GetActor() == floor )
+      {
+        ghost->Pos = hit.ImpactPoint;
+        // Check the position is not blocked
+        set<AGameObject*> objs = Game->pc->Pick( ghost );
+        for( AGameObject* o : objs )
+        {
+          LOG( "Ghost %s intersects %s", *ghost->Stats.Name, *o->Stats.Name );
+        }
+
+        ghost->CanBePlaced = !objs.size();
+        
+        if( ghost->CanBePlaced )
+        {
+          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,0,0,.5 ) );
+        }
+        else
+        {
+          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,1,1,.5 ) );
+        }
+      }
     }
   }
 }

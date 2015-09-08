@@ -15,7 +15,7 @@ struct CooldownCounter
   CooldownCounter();
   CooldownCounter( Types type );
   CooldownCounter( Types type, AGameObject* object );
-  float Percent();
+  float Fraction();
   bool Done() { return Time >= TotalTime; }
   void Reset() { Time = 0.f; }
 };

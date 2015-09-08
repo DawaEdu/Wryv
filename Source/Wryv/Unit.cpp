@@ -47,8 +47,6 @@ void AUnit::ConsumeItem( int i )
 
 void AUnit::Move( float t )
 {
-  AGameObject::Move( t );
-  
   // recompute path
   if( Stats.SpeedMax )
   {
@@ -59,10 +57,7 @@ void AUnit::Move( float t )
   }
 
   Walk( t );   // Walk towards destination
-  
-  // Flush the computed position to the root component
-  RootComponent->SetWorldLocation( Pos );
-
+  AGameObject::Move( t );
 }
 
 

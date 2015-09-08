@@ -32,6 +32,8 @@ public:
   FHitResult PickClosest( const FVector2D& ScreenPosition );
   FHitResult PickClosest( const FVector& eye, const FVector& lookDir );
 
+  set<AGameObject*> Pick( FVector pos, FCollisionShape shape );
+
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
   set<AGameObject*> PickByCylinder( AGameObject* object );
   set<AGameObject*> Pick( AGameObject* object );

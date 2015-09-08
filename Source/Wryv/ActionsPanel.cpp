@@ -10,9 +10,9 @@ ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name 
 {
   Align = TopCenter;
 
-  abilities = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
+  abilitiesPanel = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
     entrySize, FVector2D(8,8) );
-  Add( abilities );
+  Add( abilitiesPanel );
 
   buildPanel = new BuildPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
     entrySize, FVector2D(8,8) );
@@ -24,19 +24,19 @@ ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name 
 
 void ActionsPanel::ShowAbilitiesPanel()
 {
-  abilities->Show();
+  abilitiesPanel->Show();
   buildPanel->Hide();
 }
 
 void ActionsPanel::ShowBuildingsPanel()
 {
   buildPanel->Show();
-  abilities->Hide();
+  abilitiesPanel->Hide();
 }
 
 void ActionsPanel::Set( AGameObject* go )
 {
-  abilities->Set( go );
+  abilitiesPanel->Set( go );
   buildPanel->Set( go );
 }
 
@@ -64,7 +64,7 @@ void AbilitiesPanel::Set( AGameObject *go )
   HideChildren();
   if( !go ) return;
 
-  vector<Clock*> abilitiesClocks = Populate( go->Stats.Abilities );
+  vector<Clock*> abilitiesClocks = Populate( go->AbilityCooldowns );
 
   for( int i = 0; i < abilitiesClocks.size(); i++ )
   {

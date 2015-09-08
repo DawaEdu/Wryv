@@ -126,18 +126,19 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   return slots;
 }
 
-vector<Clock*> SlotPalette::Populate( TArray< TEnumAsByte<Types> > elts )
+vector<Clock*> SlotPalette::Populate( vector< CooldownCounter > elts )
 {
   vector<Clock*> clocks;
-  for( int i = 0; i < elts.Num()   && 
+  for( int i = 0; i < elts.size()   && 
                   i < GetNumSlots(); i++ )
   {
-    Types e = elts[i];
+    Types e = elts[i].Type;
     // Construct buttons that run abilities of the object.
     SetSlotTexture( i, Game->GetPortrait( e ) );
-    Clock* button = GetSlot( i );
-    button->Show();
-    clocks.push_back( button );
+    Clock* clock = GetSlot( i );
+    clock->Set( elts[i].Fraction() );
+    clock->Show();
+    clocks.push_back( clock );
   }
 
   // Turn off the rest of the slots

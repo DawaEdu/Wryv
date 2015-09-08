@@ -27,7 +27,7 @@ CooldownCounter::CooldownCounter( Types type, AGameObject* object )
   go = object;
 }
 
-float CooldownCounter::Percent()
+float CooldownCounter::Fraction()
 {
   if( TotalTime )
     return Time / TotalTime;

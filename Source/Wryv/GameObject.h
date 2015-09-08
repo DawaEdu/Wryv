@@ -42,7 +42,7 @@ class WRYV_API AGameObject : public AActor
   float Mana;           // Current Mana.
   bool Repairing;       // If the building/unit is Repairing
   UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UnitProperties)  bool Dead;            // Whether unit is dead or not.
-  vector< CooldownCounter > Abilities;
+  vector< CooldownCounter > AbilityCooldowns;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
@@ -56,6 +56,7 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
+  function <void ()> OnReachDestination; // Something to do when reach destination.
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
@@ -91,6 +92,7 @@ class WRYV_API AGameObject : public AActor
   // Gameplay.
   FVector GetTip();
   FVector GetCentroid();
+  float GetHeight();
   float centroidDistance( AGameObject *go );
   float outsideDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
@@ -120,6 +122,7 @@ class WRYV_API AGameObject : public AActor
   bool Reached( FVector& v, float dist );
   void CheckWaypoint();
   void SetPosition( FVector v );
+  void FlushPosition();
   FVector Repel( AGameObject* go );
 
   UFUNCTION(BlueprintNativeEvent, Category = Collision)

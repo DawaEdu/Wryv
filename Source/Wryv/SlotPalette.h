@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ImageWidget.h"
+#include "CooldownCounter.h"
 
 class Clock;
 
@@ -23,6 +24,6 @@ public:
   void AdjustPosition( int i );
   Clock* SetSlotTexture( int i, UTexture* tex );
   vector<Clock*> SetNumSlots( int rows, int cols );
-  vector<Clock*> Populate( TArray< TEnumAsByte<Types> > elts );
+  vector<Clock*> Populate( vector< CooldownCounter > elts );
 };
 

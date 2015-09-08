@@ -295,8 +295,6 @@ void APeasant::ai( float t )
 
 void APeasant::Move( float t )
 {
-  Super::Move( t );
-
   // Moves the Peasant object 
   // Work on the current building.
   Build( t );
@@ -312,6 +310,8 @@ void APeasant::Move( float t )
     // Start mining, if we aren't Repairing or building something
     Mine( t );
   }
+
+  AUnit::Move( t ); // Calls flush, so we put it last
 }
 
 

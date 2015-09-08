@@ -51,15 +51,7 @@ void StatsPanel::Set( AGameObject* go )
   
   // set the text inside with gameobject
   unitName->Set( go->Stats.Name );
-  if( go->isBuilding() )
-  {
-    ABuilding* building = Cast<ABuilding>( go );
-    hpBar->Set( building->percentBuilt() );
-  }
-  else
-  {
-    hpBar->Set( go->HpPercent() );
-  }
+  hpBar->Set( go->HpPercent() );
 
   hpText -> Set( FS( "%.0f / %.0f", go->Hp, go->Stats.HpMax ) );
   hpText -> Color = FLinearColor::LerpUsingHSV( FLinearColor(0.639f, 0.f, 0.192f), 

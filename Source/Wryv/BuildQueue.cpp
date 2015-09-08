@@ -75,7 +75,7 @@ void BuildQueue::Move( float t )
       }
       else
       {
-        clocks[i]->Set( Selected->BuildQueueCounters[i].Percent() );
+        clocks[i]->Set( Selected->BuildQueueCounters[i].Fraction() );
       }
     }
   }

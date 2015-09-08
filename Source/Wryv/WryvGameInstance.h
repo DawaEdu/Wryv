@@ -68,7 +68,15 @@ public:
       error( FS( "Type %d is OOB defined types", (int)type ) );
       type = NOTHING;
     }
-    T* obj = GetWorld()->SpawnActor<T>( GetUClass(type), v, FRotator(0.f) );
+    UClass *uClass = GetUClass( type );
+
+    if( !uClass )
+    {
+      error( FS( "Couldn't find UCLASS belonging to type %d", (int)type ) );
+      return 0;
+    }
+
+    T* obj = GetWorld()->SpawnActor<T>( uClass, v, FRotator(0.f) );
     
     if( obj )
     {
@@ -76,7 +84,7 @@ public:
     }
     else
     {
-      error( FS( "Object of type %s could not be spawned (check cast?)", *GetTypesName( type ) ) );
+      error( FS( "Object of type %s could not be spawned (did it die on spawn by colliding with another actor?)", *GetTypesName( type ) ) );
     }
     
     return obj;

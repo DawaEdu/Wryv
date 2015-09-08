@@ -7,7 +7,9 @@ UCLASS()
 class WRYV_API AExplosion : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UParticleSystemComponent* explosion;
+  virtual void PostInitializeComponents();
   //AExplosion(const FObjectInitializer& PCIP);
-  virtual void Move( float t ) override;
-  
+  UFUNCTION(BlueprintNativeEvent, Category = Collision)
+  void OnEmitterFinished( UParticleSystemComponent* PSystem );
 };

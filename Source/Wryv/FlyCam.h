@@ -11,12 +11,13 @@ using namespace std;
 #include "SoundEffect.h"
 #include "FlyCam.generated.h"
 
-class ATheHUD;
-class APlayerControl;
-class AGameObject;
 struct GraphNode;
 struct Edge;
 class Pathfinder;
+class ATheHUD;
+class APlayerControl;
+class AGameObject;
+class ABuilding;
 class AGroundPlane;
 
 inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
@@ -31,7 +32,7 @@ class WRYV_API AFlyCam : public APawn
 public:
   AGroundPlane* floor; // Every level must have an object called the floor.
   FBox floorBox;       // we only find the floor's box once (at level start).
-  AGameObject* ghost;  // ghost of the building being set for placement
+  ABuilding* ghost;  // ghost of the building being set for placement
   Pathfinder* pathfinder;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  USceneComponent* DummyRoot;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
@@ -90,7 +91,6 @@ public:
   AGameObject* MakeLine( FVector a, FVector b, FLinearColor color );
   void RetrievePointers();
   void debug( int slot, FColor color, FString mess );
-  void setGhost( Types ut );
   
   FVector2D getMousePos();
   // Modifies vector if can hit ground. If not, it just stays floating.
