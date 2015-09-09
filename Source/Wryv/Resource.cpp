@@ -6,7 +6,8 @@
 
 AResource::AResource( const FObjectInitializer& PCIP ) : AGameObject( PCIP )
 {
-  
+  StaticMesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "staticmesh1" );
+  StaticMesh->AttachTo( RootComponent );
 }
 
 void AResource::BeginPlay()

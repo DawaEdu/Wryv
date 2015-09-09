@@ -37,7 +37,8 @@ public:
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
   set<AGameObject*> PickByCylinder( AGameObject* object );
   set<AGameObject*> Pick( AGameObject* object );
-
+  set<AGameObject*> PickExcept( AGameObject* object, set<AGameObject*> except );
+  
   // Gets all objects that are traced thru by vector
   set<AGameObject*> Pick( const FVector2D& ScreenPosition );
   set<AGameObject*> Pick( const FVector& eye, const FVector& lookDir );

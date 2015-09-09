@@ -287,7 +287,7 @@ public:
     FBox2DU bounds ;
     if( !children.size() || hidden )
     {
-      LOG(  "Widget %s had NO CHILDREN || hidden!", *Name );
+      warning( FS( "Widget %s had NO CHILDREN || hidden!", *Name ) );
       // return the bounds of the container instead
       //bounds += GetAbsBounds();
       // give 0 size box @ POS

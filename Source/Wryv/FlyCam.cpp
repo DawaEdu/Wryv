@@ -101,7 +101,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   // Start the background music. Since we don't want attenuation,
   // we play the sound attached to the RootComponent of the Camera object,
   // and supply no further arguments.
-  //music = UGameplayStatics::PlaySoundAttached( bkgMusic, RootComponent );
+  //music = UGameplayStatics::SpawnSoundAttached( bkgMusic, RootComponent );
   sfxVolume = 1.f;
 }
 
@@ -483,48 +483,15 @@ void AFlyCam::MouseDownLeft()
   // we must pass off the call to the HUD.
   // If the mouse click intersected a HUD element,
   // we don't let the click pass through to the 3d surface below it.
-  if( Game->hud->MouseDownLeft( getMousePos() ) )  return;
+  if( Game->hud->MouseDownLeft( getMousePos() ) ) {
+    return;
+  }
 
   // Check the HUD for what we're doing with the mouse click.
   FUnitsDataRow NextAction = Game->GetData( Game->hud->NextAction );
   
   // if the spell requires a target, check that we got one
   FHitResult hitResult = Game->pc->PickClosest( getMousePos() );
-  // if there's a building in hand, place it.
-  if( ghost )
-  {
-    if( ghost->CanBePlaced )
-    {
-      // Build the building. If ghost doesn't intersect any existing buildings then place it.
-      if( ghost->team->CanAfford( ghost->Stats.Type ) )
-      {
-        ghost->team->Spend( ghost->Stats.Type );
-        ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,1,1,1 ) );
-        ghost->TimeBuilding = 0; // Reset the build counter.
-        // move the selected peasant to work with the building.
-        //PlaySound( UISounds::BuildingPlaced );
-        // Selected objects will go build it
-        for( AGameObject* se : Game->hud->Selected )
-        {
-          if( APeasant* peasant = Cast<APeasant>( se ) )
-          {
-            // Send the peasant to build the building
-            ghost->SetPeasant( peasant );
-          }
-        }
-        ghost = 0; // stop moving the ghost.
-      }
-      else
-      {
-        
-      }
-    }
-    else
-    {
-      // Ghost cannot be placed
-      LOG( "Cannot place building here" );
-    }
-  }
 
   // If we're doing something with the mouse click, do it here.
   if( NextAction.Type != NOTHING )
@@ -628,22 +595,15 @@ void AFlyCam::MouseMoved()
       if( hit.GetActor() == floor )
       {
         ghost->Pos = hit.ImpactPoint;
-        // Check the position is not blocked
-        set<AGameObject*> objs = Game->pc->Pick( ghost );
-        for( AGameObject* o : objs )
+        if( !ghost->CanBePlaced() )
         {
-          LOG( "Ghost %s intersects %s", *ghost->Stats.Name, *o->Stats.Name );
-        }
-
-        ghost->CanBePlaced = !objs.size();
-        
-        if( ghost->CanBePlaced )
-        {
-          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,0,0,.5 ) );
+          // Red, to indicate building cannot be placed here.
+          ghost->SetMaterialColors( "Multiplier", FLinearColor( .9,.2,.2,.5 ) );
         }
         else
         {
-          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1,1,1,.5 ) );
+          // White to indicate placement success
+          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1.,1.,1.,.5 ) );
         }
       }
     }

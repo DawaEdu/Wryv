@@ -22,7 +22,7 @@ AGameObject* AGameObject::Nothing = 0;
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
-  //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
+  LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
   Repairing = 0;
   team = 0;
@@ -37,6 +37,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
+
   OnReachDestination = function< void () >();
 }
 
@@ -359,7 +360,6 @@ bool AGameObject::UseAbility( int index )
     info( FS( "Building a %s", *GetTypesName( type ) ));
     // Set placement object with instance of type
     Game->flycam->ghost = Game->Make< ABuilding >( type, team );
-
   }
   else if( IsUnit( type ) )
   {
@@ -900,7 +900,7 @@ void AGameObject::SetMaterialColors( FName parameterName, FLinearColor color )
       UMaterialInterface *mi = mesh->GetMaterial( i );
       if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
       {
-        info( "The MID was created" );
+        //info( "The MID was created" );
         mid->SetVectorParameterValue( FName( parameterName ), color );
       }
       else

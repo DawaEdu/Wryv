@@ -128,30 +128,68 @@ set<AGameObject*> APlayerControl::PickByCylinder( AGameObject* object )
 
 set<AGameObject*> APlayerControl::Pick( AGameObject* object )
 {
+  return PickExcept( object, {object} );
+}
+
+set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, set<AGameObject*> except )
+{
   FComponentQueryParams fqp;
   
-  fqp.AddIgnoredActor( object ); // Don't report collisions with self.
+  except.insert( object );
+
+  // this will cause the object to pick itself if you don't put it in the except group
+  for( AGameObject* o : except )
+  {
+    if( !o )
+    {
+      warning( "NULL object in PickExcept()" );
+    }
+    else
+    {
+      fqp.AddIgnoredActor( o );
+    }
+  }
+
   FQuat quat( 0.f, 0.f, 0.f, 0.f );
   FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
     FCollisionObjectQueryParams::InitType::AllObjects );
   objectTypes.AddObjectTypesToQuery( ECollisionChannel::ECC_GameTraceChannel3 ); // Channel 3 is
   // the RESOURCES channel.
+
   set<AGameObject*> intersections;
+
+  // grab the hitBounds
+  TArray<FOverlapResult> overlaps;
+
+  FRotator ro = object->hitBounds->GetComponentRotation();
+  FVector ve = object->hitBounds->GetComponentLocation();
+  // We're looking on channel 4 ("CHECKERS" channel)
+  // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
+  GetWorld()->ComponentOverlapMultiByChannel( overlaps, object->hitBounds, ve, ro,
+    ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
+  for( int i = 0; i < overlaps.Num(); i++ )
+    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
+      intersections.insert( go );
+  return intersections;
+
   TArray<UActorComponent*> comps = object->GetComponents();
   for( UActorComponent* ac : comps )
   {
-    TArray<FOverlapResult> overlaps;
     if( UPrimitiveComponent* up = Cast<UPrimitiveComponent>( ac ) )
     {
-      FRotator ro = up->GetComponentRotation();
-      FVector ve = up->GetComponentLocation();
-      // We're looking on channel 4 ("CHECKERS" channel)
-      // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
-      GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro,
-        ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
-      for( int i = 0; i < overlaps.Num(); i++ )
-        if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-          intersections.insert( go );
+      info( FS( "Tracing with primitive %s", *up->GetName() ) );
+      if( up->GetCollisionEnabled() != ECollisionEnabled::NoCollision )
+      {
+        FRotator ro = up->GetComponentRotation();
+        FVector ve = up->GetComponentLocation();
+        // We're looking on channel 4 ("CHECKERS" channel)
+        // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
+        GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro,
+          ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
+        for( int i = 0; i < overlaps.Num(); i++ )
+          if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
+            intersections.insert( go );
+      }
     }
   }
 
@@ -254,7 +292,7 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
   planes.Push( FPlane( rays[3].end,   rays[3].start, rays[0].start ) ); // Top
   planes.Push( FPlane( rays[1].start, rays[0].start, rays[2].start ) ); // Near
   planes.Push( FPlane( rays[2].end,   rays[0].end,   rays[1].end   ) ); // Far (CCW)
-  FConvexVolume v( planes );
+  FConvexVolume selectionVolume( planes );
   
   // go through all world actors and see what is intersected
   //Game->flycam->ClearViz();
@@ -262,20 +300,12 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
   {
     for( AGameObject* go : team->units )
     {
-      //FBox box = go->GetComponentsBoundingBox();
-      Types type = go->Stats.Type.GetValue();
-      if( !go->IsPendingKill()   &&   !go->Dead )
+      if( go->IsPendingKill()   ||   go->Dead ) skip;
+      FBox box = go->hitBounds->Bounds.GetBox();
+      // Selection by mesh's bounding box is best.
+      if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )
       {
-        // Selection by mesh's bounding box is best.
-        vector<UMeshComponent*> meshes = go->GetComponentsByType<UMeshComponent>();
-        for( UMeshComponent* mesh : meshes )
-        {
-          FBox box = mesh->Bounds.GetBox();
-          if( v.IntersectBox( box.GetCenter(), box.GetExtent() ) )
-          {
-            objects.insert( go );
-          }
-        }
+        objects.insert( go );
       }
     }
   }

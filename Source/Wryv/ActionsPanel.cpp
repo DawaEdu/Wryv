@@ -75,7 +75,6 @@ void AbilitiesPanel::Set( AGameObject *go )
       go->UseAbility( i );
       return Consumed;
     };
-    
   }
   
   buildButton->Hide();

@@ -36,7 +36,7 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USceneComponent* DummyRoot;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* hitBounds;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USphereComponent* repulsionBounds;
-  
+
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
@@ -174,7 +174,7 @@ class WRYV_API AGameObject : public AActor
   FCollisionShape GetBoundingCylinder();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );
-  void PlaySound( USoundBase* sound ){ UGameplayStatics::PlaySoundAttached( sound, RootComponent ); }
+  void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, RootComponent ); }
   void SetMaterial( UMaterialInterface* mat );
   void SetColor( FLinearColor color );
 

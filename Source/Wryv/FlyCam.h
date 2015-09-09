@@ -113,7 +113,7 @@ public:
   void MoveLeft( float amount );
   void MoveRight( float amount );
   void PlaySound( UISounds sound ){
-    UGameplayStatics::PlaySoundAttached( SFX[ sound ].Sound, RootComponent );
+    UGameplayStatics::SpawnSoundAttached( SFX[ sound ].Sound, RootComponent );
   }
 
 	virtual void Tick( float t ) override;
