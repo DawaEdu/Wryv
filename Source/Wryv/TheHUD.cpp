@@ -134,7 +134,7 @@ void ATheHUD::MarkAsSelected( AGameObject* object )
 
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
   widget->Tags.Add( SelectedTargetName );
-  float r = object->GetBoundingRadius();
+  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
   object->AddChild( widget );

@@ -22,7 +22,7 @@ AGameObject* AGameObject::Nothing = 0;
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
-  LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
+  //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
   Repairing = 0;
   team = 0;

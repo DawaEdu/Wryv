@@ -29,27 +29,6 @@
     <Filter Include="Source\Wryv">
       <UniqueIdentifier>{24A9FC34-0021-49EB-9FAC-80A24EC5F3F8}</UniqueIdentifier>
     </Filter>
-    <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp">
-      <Filter>Source\Wryv</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\Wryv\Pathfinder.h">
-      <Filter>Source\Wryv</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\Source\Wryv\Settings.cpp">
-      <Filter>Source\Wryv</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\Wryv\Settings.h">
-      <Filter>Source\Wryv</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
-      <Filter>Source\Wryv</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\Source\Wryv\Team.cpp">
-      <Filter>Source\Wryv</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\Wryv\Team.h">
-      <Filter>Source\Wryv</Filter>
-    </ClInclude>
     <None Include="..\..\Source\Wryv\Wryv.Build.cs">
       <Filter>Source\Wryv</Filter>
     </None>
@@ -270,6 +249,18 @@
     <ClInclude Include="..\..\Source\Wryv\Widget3D.h">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Pathfinder.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Team.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Settings.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -430,6 +421,15 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Settings.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Team.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -58,18 +58,21 @@ void ABuilding::Move( float t )
   {
     TimeBuilding += t;
     UAnimInstance* anim = Mesh->GetAnimInstance();
-    FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
-    if( fmontage )
+    if( anim )
     {
-      int frames = fmontage->Montage->GetNumberOfFrames();
-      float len = fmontage->Montage->GetTimeAtFrame( frames );
-      //wainfo( FS( "fmontage is SET, frames=%d, len=%f", frames, len ) );
-      float p = len * PercentBuilt();
-      fmontage->SetPosition( p );
-    }
-    else
-    {
-      info( FS( "there is No fmontage" ) );
+      FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
+      if( fmontage )
+      {
+        int frames = fmontage->Montage->GetNumberOfFrames();
+        float len = fmontage->Montage->GetTimeAtFrame( frames );
+        //info( FS( "fmontage is SET, frames=%d, len=%f", frames, len ) );
+        float p = len * PercentBuilt();
+        fmontage->SetPosition( p );
+      }
+      else
+      {
+        info( FS( "there is No fmontage" ) );
+      }
     }
 
     // keep the dust on while the building is being built.
@@ -77,6 +80,7 @@ void ABuilding::Move( float t )
 
     // Building not complete yet, so increase HP and increase HP by a fraction
     Hp += t / Stats.TimeLength * Stats.HpMax;// hp increases because building may be attacked while being built.
+
     // The building cannot do anything else while building.
     Clamp( Hp, 0.f, Stats.HpMax );
   }
