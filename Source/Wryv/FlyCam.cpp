@@ -206,7 +206,7 @@ void AFlyCam::InitializePathfinding()
         // Pick objects intersecting with the sphere. If anything intersects, then
         // the node is regarded as impassible.
         set<AGameObject*> forbidden = { floor };
-        set<AGameObject*> intns = Game->pc->Pick( sphere ) | forbidden;
+        set<AGameObject*> intns = Game->pc->Pick( sphere, sphere->hitBounds ) | forbidden;
         
         if( intns.size() ) {
           pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
@@ -558,10 +558,7 @@ void AFlyCam::MouseDownRight()
     // An actor was hit by the click. Detect if friendly or not.
     for( AGameObject* go : Game->hud->Selected )
     {
-      if( go->isEnemyTo( target ) )
-        go->Attack( target );
-      else
-        go->Follow( target );
+      go->Target( target );
     }
   }
 }

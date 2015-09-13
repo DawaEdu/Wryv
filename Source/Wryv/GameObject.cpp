@@ -94,6 +94,7 @@ AGameObject* AGameObject::SetParent( AGameObject* newParent )
 
   // Keep original scale & reset
   FVector s = FVector( hitBounds->GetScaledCapsuleRadius() * 1.5f );
+
   //LOG( "Scaling %f %f %f", s.X, s.Y, s.Z );
   // Set the world position to being that of parent, then keep world position on attachment
   GetRootComponent()->SetWorldScale3D( FVector(1,1,1) ); // reset the scale off
@@ -157,15 +158,16 @@ float AGameObject::centroidDistance( AGameObject *go )
   return FVector::Dist( Pos, go->Pos );
 }
 
-float AGameObject::outsideDistance( AGameObject *go )
+float AGameObject::outerDistance( AGameObject *go )
 {
   if( !go ) {
-    LOG( "outsideDistance( 0 ): null" );
+    LOG( "outerDistance( 0 ): null" );
     return FLT_MAX;
   }
-  float r1 = GetBoundingRadius();
-  float r2 = go->GetBoundingRadius();
-  return centroidDistance( go ) - (r1 + r2);
+  float r1 = hitBounds->GetScaledCapsuleRadius();
+  float r2 = hitBounds->GetScaledCapsuleRadius();
+  float dist = centroidDistance( go );
+  return dist - (r1 + r2);
 }
 
 bool AGameObject::isAttackTargetWithinRange()
@@ -178,7 +180,7 @@ bool AGameObject::isAttackTargetWithinRange()
   return 0;
 }
 
-float AGameObject::HpPercent()
+float AGameObject::HpFraction()
 {
   if( ! Stats.HpMax ) {
     error( FS( "HpMax not set for %s", *Stats.Name ) );
@@ -330,7 +332,7 @@ void AGameObject::UpdateStats( float t )
     if( BuildQueueCounters[i].Done() )
     {
       // Remove it and consider ith building complete. Place @ unoccupied position around building.
-      FVector buildPos = Pos + GetActorForwardVector() * GetBoundingRadius();
+      FVector buildPos = Pos + GetActorForwardVector() * hitBounds->GetScaledCapsuleRadius();
       
       AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, buildPos, team );
 
@@ -429,17 +431,27 @@ void AGameObject::FlushPosition()
 // proportional with formula around ln( a - x ) like formula
 FVector AGameObject::Repel( AGameObject* go )
 {
+  float r = 1.f;
+  if( AttackTarget == go )
+  {
+    // For attack target, use the hitBounds.
+    r = repulsionBounds->GetScaledSphereRadius()   +   go->repulsionBounds->GetScaledSphereRadius();
+  }
+  else
+  {
+    r = hitBounds->GetScaledCapsuleHalfHeight()   +   go->hitBounds->GetScaledCapsuleHalfHeight();
+  }
+
   // The object will overlap in the future position, so don't move.
   // Get radius of other actor
-  float r = GetBoundingRadius() + go->GetBoundingRadius();
   FVector from = Pos - go->Pos;
   if( float x = from.Size() )
   {
     from /= x;
-    if( x < 1 + r )
+    if( x < 1.f + r )
     {
       return RepelMultiplier * SpeedPercent()/100.f * 
-        log( 1 + r - x )/log( 1 + r ) * from;
+        log( 1.f + r - x )/log( 1.f + r ) * from;
     }
     else
     {
@@ -532,6 +544,7 @@ void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPri
 void AGameObject::AddRepulsionForcesFromOverlappedUnits()
 {
   FVector forces( 0,0,0 );
+
   // If there is no attack target, don't use repel forces.
   for( int i = 0; i < Overlaps.size(); i++ )
   {
@@ -739,6 +752,14 @@ bool AGameObject::isEnemyTo( AGameObject* go )
   return team->isEnemyTo( go );
 }
 
+void AGameObject::Target( AGameObject* target )
+{
+  if( isEnemyTo( target ) )
+    Attack( target );
+  else
+    Follow( target );
+}
+
 void AGameObject::Follow( AGameObject* go )
 {
   StopAttackAndFollow();
@@ -841,52 +862,33 @@ map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
 
 AGameObject* AGameObject::GetClosestObjectOfType( Types type )
 {
+  // You can only select within range of unit
+  set<AGameObject*> sels = Game->pc->Pick( this, hitBounds );
   AGameObject* closestObject = 0;
   float closestDistance = FLT_MAX;
-
-  // Get all objects in the level of this type
-  ULevel* level = GetLevel();
-  TTransArray<AActor*> *actors = &level->Actors;
-  for( int i = 0; i < actors->Num(); i++ )
+  map<float, AGameObject*> distances;
+  for( AGameObject* go : sels )
   {
-    AGameObject* g = Cast<AGameObject>( (*actors)[i] );
-    if( g   &&   g->Stats.Type == type )
+    if( go->Stats.Type == type )
     {
-      float dist = FVector::Dist( Pos, g->Pos );
-      if( dist < closestDistance ) {
-        closestObject = g;
-        closestDistance = dist;
-      }
+      float d = centroidDistance( go );
+      distances[ d ] = go;
     }
   }
-
-  return closestObject;
+  if( distances.size() )
+    return distances.begin()->second;
+  else
+  {
+    info( FS( "Could not find an object of type %s with %f units of %s",
+      *GetTypesName( type ), Stats.SightRange, *Stats.Name ) );
+    return 0; // NO UNITS In sight
+  }
 }
 
 void AGameObject::OnSelected()
 {
   // play selection sound
   if( Greets.Num() )  PlaySound( Greets[ randInt( Greets.Num() ) ].Sound );
-}
-
-float AGameObject::GetBoundingRadius()
-{
-  FVector2D size;
-  GetComponentsBoundingCylinder( size.X, size.Y, 1 );
-  return size.GetMax();
-}
-
-FBox AGameObject::GetBoundingBox()
-{
-  return GetComponentsBoundingBox();
-}
-
-FCollisionShape AGameObject::GetBoundingCylinder()
-{
-  FCollisionShape c1;
-  c1.ShapeType = ECollisionShape::Capsule;
-  GetSimpleCollisionCylinder( c1.Capsule.Radius, c1.Capsule.HalfHeight );
-  return c1;
 }
 
 void AGameObject::SetMaterialColors( FName parameterName, FLinearColor color )
@@ -980,6 +982,12 @@ void AGameObject::Die()
   Dead = 1; // updates the blueprint animation,
 
   // Filter THIS from collection if exists
+  if( in( Game->hud->Selected, this ) )
+  {
+    // Remove any selectors on there.
+    RemoveTagged( this, Game->hud->SelectedTargetName );
+  }
+
   removeElement( Game->hud->Selected, this );
 
   // Remove from team. This finally removes its game-tick counter.

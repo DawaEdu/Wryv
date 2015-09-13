@@ -60,7 +60,8 @@ public:
     if( !team )
     {
       LOG( "Make(): team was null!" );
-      return 0;
+      // select the neutral team.
+      team = gm->neutralTeam;
     }
 
     if( type < 0 || type >= Types::MAX )

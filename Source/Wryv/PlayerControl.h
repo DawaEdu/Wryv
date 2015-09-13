@@ -35,9 +35,8 @@ public:
   set<AGameObject*> Pick( FVector pos, FCollisionShape shape );
 
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
-  set<AGameObject*> PickByCylinder( AGameObject* object );
-  set<AGameObject*> Pick( AGameObject* object );
-  set<AGameObject*> PickExcept( AGameObject* object, set<AGameObject*> except );
+  set<AGameObject*> Pick( AGameObject* object, UPrimitiveComponent* up );
+  set<AGameObject*> PickExcept( AGameObject* object, UPrimitiveComponent* up, set<AGameObject*> except );
   
   // Gets all objects that are traced thru by vector
   set<AGameObject*> Pick( const FVector2D& ScreenPosition );

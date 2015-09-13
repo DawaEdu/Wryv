@@ -226,7 +226,7 @@ void Team::runAI( float t )
   APeasant* peasant = GetNextAvailablePeasant();
   if( GetNumberOf( Types::BLDGTOWNHALL ) < 1   &&   CanAfford( Types::BLDGTOWNHALL ) )
   {
-    peasant->Build( Types::BLDGTOWNHALL );
+    //peasant->Build( Types::BLDGTOWNHALL );
   }
 
   // Do we need a farm?
@@ -238,12 +238,12 @@ void Team::runAI( float t )
     //LOG( "Team %s is building a farm", *team.Name );
     // request the team build a farm.
     // Try and assign the farm building to an available peasant
-    peasant->Build( Types::BLDGFARM );
+    //peasant->Build( Types::BLDGFARM );
   }
   
   else if( GetNumberOf( Types::BLDGBARRACKS )   &&   CanAfford( Types::BLDGBARRACKS ) )
   {
-    peasant->Build( Types::BLDGBARRACKS );
+    //peasant->Build( Types::BLDGBARRACKS );
   }
 }
 

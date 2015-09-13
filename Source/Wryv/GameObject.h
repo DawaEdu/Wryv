@@ -94,9 +94,9 @@ class WRYV_API AGameObject : public AActor
   FVector GetCentroid();
   float GetHeight();
   float centroidDistance( AGameObject *go );
-  float outsideDistance( AGameObject *go );
+  float outerDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
-  UFUNCTION(BlueprintCallable, Category = Fighting)  float HpPercent();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float HpFraction();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
   // Pass thru to stats structure property
   UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiplier; }
@@ -152,6 +152,7 @@ class WRYV_API AGameObject : public AActor
   bool isAllyTo( AGameObject* go );
   bool isEnemyTo( AGameObject* go );
 
+  virtual void Target( AGameObject* target );
   void Follow( AGameObject* go );
   void Attack( AGameObject* go );
   void StopAttackAndFollow();
@@ -169,9 +170,6 @@ class WRYV_API AGameObject : public AActor
   // 
   // Utility
   void OnSelected();
-  float GetBoundingRadius();
-  FBox GetBoundingBox();
-  FCollisionShape GetBoundingCylinder();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, RootComponent ); }

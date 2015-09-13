@@ -14,25 +14,19 @@ class WRYV_API APeasant : public AUnit
 {
   GENERATED_UCLASS_BODY()
 public:
-  
   float MiningTime;  // Total time the peasant has been mining for
-  ABuilding* building; // The building this unit is building
-  AGameObject* repair; // The building this unit is currently Repairing
-  AResource* MiningTarget; // The Resource we are mining
+  Types MinedResourceType;  // The resource type I'm mining
+  int32 MinedQuantity;    // The amount of resource I'm holding.
 
   //APeasant(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
-  AGameObject* Build( Types type, FVector location );
-  bool PlaceBuilding( ABuilding* go, FVector location );
-  AGameObject* aiPlaceBuildingAtRandomLocation( Types type );
-
-  void Build( float t );
+  virtual void Target( AGameObject* target ) override;
   void Repair( float t );
+  UFUNCTION(BlueprintCallable, Category = Mining)
   void Mine( float t );
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
-  virtual void SetTarget( AGameObject* go );
   virtual void Move( float t );
   virtual void ai( float t );
-  bool isBusy(){ return building!=NULL || AttackTarget!=NULL; }
+  bool isBusy(){ return AttackTarget || FollowTarget || Waypoints.size(); }
   
 };

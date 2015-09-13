@@ -62,7 +62,9 @@ public:
 
   // Because canvas has to be valid for box selection to work it seems
   set<AGameObject*> Selected;
-  FName AttackTargetName, FollowTargetName, SelectedTargetName;
+  static FName AttackTargetName;
+  static FName FollowTargetName;
+  static FName SelectedTargetName;
 
   // The buttons currently showing on the user interface.
   UserInterface* ui;  // The root UI widget. It doesn't have a viz, but it parents all other display containers.

@@ -107,31 +107,12 @@ set<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
   return intersections;
 } 
 
-set<AGameObject*> APlayerControl::PickByCylinder( AGameObject* object )
+set<AGameObject*> APlayerControl::Pick( AGameObject* object, UPrimitiveComponent* up )
 {
-  FCollisionShape c1 = object->GetBoundingCylinder();
-  FCollisionQueryParams fqp;
-  fqp.AddIgnoredActor( object ); // Don't report collisions with self.
-  TArray<FOverlapResult> overlaps;
-  FQuat quat( 0.f, 0.f, 0.f, 0.f );
-  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-    FCollisionObjectQueryParams::InitType::AllObjects );
-  GetWorld()->OverlapMultiByObjectType( overlaps, object->Pos, quat, objectTypes, c1, fqp ); // default is to interpret as a line!
-  
-  set<AGameObject*> intersections;
-  for( int i = 0; i < overlaps.Num(); i++ )
-    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-      intersections.insert( go );
-
-  return intersections;
+  return PickExcept( object, up, {object} );
 }
 
-set<AGameObject*> APlayerControl::Pick( AGameObject* object )
-{
-  return PickExcept( object, {object} );
-}
-
-set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, set<AGameObject*> except )
+set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveComponent* up, set<AGameObject*> except )
 {
   FComponentQueryParams fqp;
   
@@ -161,39 +142,15 @@ set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, set<AGameObje
   // grab the hitBounds
   TArray<FOverlapResult> overlaps;
 
-  FRotator ro = object->hitBounds->GetComponentRotation();
-  FVector ve = object->hitBounds->GetComponentLocation();
+  FRotator ro = up->GetComponentRotation();
+  FVector ve = up->GetComponentLocation();
   // We're looking on channel 4 ("CHECKERS" channel)
   // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
-  GetWorld()->ComponentOverlapMultiByChannel( overlaps, object->hitBounds, ve, ro,
+  GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro,
     ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
   for( int i = 0; i < overlaps.Num(); i++ )
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
       intersections.insert( go );
-  return intersections;
-
-  TArray<UActorComponent*> comps = object->GetComponents();
-  for( UActorComponent* ac : comps )
-  {
-    if( UPrimitiveComponent* up = Cast<UPrimitiveComponent>( ac ) )
-    {
-      info( FS( "Tracing with primitive %s", *up->GetName() ) );
-      if( up->GetCollisionEnabled() != ECollisionEnabled::NoCollision )
-      {
-        FRotator ro = up->GetComponentRotation();
-        FVector ve = up->GetComponentLocation();
-        // We're looking on channel 4 ("CHECKERS" channel)
-        // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
-        GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro,
-          ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
-        for( int i = 0; i < overlaps.Num(); i++ )
-          if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-            intersections.insert( go );
-      }
-    }
-  }
-
-  // Non-empty means intns exists
   return intersections;
 }
 

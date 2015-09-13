@@ -124,11 +124,11 @@ bool ABuilding::CanBePlaced()
   set<AGameObject*> objs;
   if( peasant )
   {
-    objs = Game->pc->PickExcept( this, {peasant} );
+    objs = Game->pc->PickExcept( this, hitBounds, {peasant} );
   }
   else
   {
-    objs = Game->pc->Pick( this );
+    objs = Game->pc->Pick( this, hitBounds );
   }
   for( AGameObject* o : objs )
   {

@@ -318,7 +318,9 @@
     <ClCompile Include="..\..\Source\Wryv\Minimap.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Minimap.h" />
     <ClInclude Include="..\..\Source\Wryv\MissionObjectivesScreen.h" />
+    <ClCompile Include="..\..\Source\Wryv\NotifyTreeFinishedFall.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\NotifyTreeFinishedFall.h" />
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />

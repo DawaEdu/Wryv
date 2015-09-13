@@ -19,15 +19,16 @@
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
 
+FName ATheHUD::AttackTargetName = "AttackTarget";
+FName ATheHUD::FollowTargetName = "FollowTarget";
+FName ATheHUD::SelectedTargetName = "SelTarget";
+
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
   NextAction = NOTHING;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
-  AttackTargetName = "AttackTarget";
-  FollowTargetName = "FollowTarget";
-  SelectedTargetName = "SelTarget";
 }
 
 void ATheHUD::BeginPlay()
@@ -133,6 +134,8 @@ void ATheHUD::MarkAsSelected( AGameObject* object )
   if( HasChildWithTag( object, SelectedTargetName ) )  return;
 
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
   widget->Tags.Add( SelectedTargetName );
   float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
@@ -150,8 +153,10 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
   }
 
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
   widget->Tags.Add( FollowTargetName );
-  float r = object->GetBoundingRadius();
+  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
   object->AddChild( widget );
@@ -166,8 +171,10 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
   }
 
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
   widget->Tags.Add( AttackTargetName );
-  float r = object->GetBoundingRadius();
+  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
   widget->SetActorScale3D( FVector( r,r,r ) );
   widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
   object->AddChild( widget );
@@ -310,7 +317,7 @@ void ATheHUD::DrawPortrait()
     // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
     RenderScreen( rendererIcon, PortraitTexture, 
-      selected->Pos, selected->GetBoundingRadius(), camDir );
+      selected->Pos, selected->hitBounds->GetScaledCapsuleRadius(), camDir );
   }
 }
 

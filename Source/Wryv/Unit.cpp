@@ -51,7 +51,7 @@ void AUnit::Move( float t )
   if( Stats.SpeedMax )
   {
     if( FollowTarget )
-      MoveWithinDistanceOf( FollowTarget, FollowTarget->GetBoundingRadius() );
+      MoveWithinDistanceOf( FollowTarget, FollowTarget->hitBounds->GetScaledCapsuleRadius() );
     else if( AttackTarget )
       MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
   }

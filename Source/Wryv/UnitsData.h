@@ -22,6 +22,7 @@ public:
 
   // Cost of casting 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 ManaCost;
+  // The amount something has. For a resource, its the amount of resource in the mine etc.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Quantity;
   
   // Health
@@ -38,6 +39,9 @@ public:
   //   * Length of the effect (only used for time-limited things such as spells or items)
   //   * Time to mine (resource)
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float TimeLength;
+  // The rate at which a resource is gathered
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float GatheringRate;
+
   // Attack and defense properties
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SpeedMax;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SightRange;
@@ -130,6 +134,11 @@ public:
     r.BonusAttackDamage += row.BonusAttackDamage;
     r.AttackRange += row.AttackRange;
     return r;
+  }
+
+  void Print()
+  {
+    LOG( "%f %f %f",  );
   }
 };
 

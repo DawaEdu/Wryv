@@ -58,6 +58,9 @@
     <Filter Include="Source\Wryv\GameObject\Buildings">
       <UniqueIdentifier>{e50aa51a-c305-4bfa-8641-a06e41de3030}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\GameObject\AnimationNotifies">
+      <UniqueIdentifier>{42f57184-e7ff-46e8-9fff-0cc78ecc2497}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\AI.h">
@@ -261,6 +264,9 @@
     <ClInclude Include="..\..\Source\Wryv\Settings.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\NotifyTreeFinishedFall.h">
+      <Filter>Source\Wryv\GameObject\AnimationNotifies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -430,6 +436,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Team.cpp">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\NotifyTreeFinishedFall.cpp">
+      <Filter>Source\Wryv\GameObject\AnimationNotifies</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

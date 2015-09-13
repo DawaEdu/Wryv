@@ -134,7 +134,8 @@ vector<Clock*> SlotPalette::Populate( vector< CooldownCounter > elts )
   {
     Types e = elts[i].Type;
     // Construct buttons that run abilities of the object.
-    SetSlotTexture( i, Game->GetPortrait( e ) );
+    UTexture* tex = Game->GetPortrait( e );
+    SetSlotTexture( i, tex );
     Clock* clock = GetSlot( i );
     clock->Set( elts[i].Fraction() );
     clock->Show();
