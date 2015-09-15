@@ -9,20 +9,20 @@ enum Types
 {
   NOTHING = 0           UMETA(DisplayName = "NOTHING"),
 
-  UNITSPHERE            UMETA(DisplayName = "Sphere"),
-  UNITCUBE              UMETA(DisplayName = "Cube"),
-  UNITEDGE              UMETA(DisplayName = "Edge"),
+  SHAPESPHERE           UMETA(DisplayName = "Sphere"),
+  SHAPECUBE             UMETA(DisplayName = "Cube"),
+  SHAPEEDGE             UMETA(DisplayName = "Edge"),
 
   // Units.
-  UNITPEASANT           UMETA(DisplayName = "Peasant"),
-  UNITFOOTMAN           UMETA(DisplayName = "Footman"),
-  UNITARCHER            UMETA(DisplayName = "Archer"),
-  UNITMAGE              UMETA(DisplayName = "Mage"),
+  UNITPEASANT           UMETA(DisplayName = "Unit Peasant"),
+  UNITFOOTMAN           UMETA(DisplayName = "Unit Footman"),
+  UNITARCHER            UMETA(DisplayName = "Unit Archer"),
+  UNITMAGE              UMETA(DisplayName = "Unit Mage"),
 
   // Resources.
-  RESTREE               UMETA(DisplayName = "Resource Tree"),
+  RESLUMBER             UMETA(DisplayName = "Resource Lumber"),
   RESSTONE              UMETA(DisplayName = "Resource Stone"),
-  RESGOLDMINE           UMETA(DisplayName = "Resource Goldmine"),
+  RESGOLD               UMETA(DisplayName = "Resource Goldmine"),
 
   // Buildings.
   BLDGFARM              UMETA(DisplayName = "Building Farm"),
@@ -30,6 +30,7 @@ enum Types
   BLDGTOWNHALL          UMETA(DisplayName = "Building Townhall"),
   BLDGITEMSHOP          UMETA(DisplayName = "Building Itemshop"),
 
+  TOMBSTONE             UMETA(DisplayName = "Tombstone"),
   GROUNDPLANE           UMETA(DisplayName = "Ground Plane"),
 
   // ACTION to boost own speed
@@ -48,17 +49,17 @@ enum Types
   UISELECTOR            UMETA(DisplayName = "UI Selector"),
 
   // Weapons.
-  WEAPONARROW           UMETA(DisplayName = "Weapon Arrow"),
-  SPELLFIRE             UMETA(DisplayName = "Spell Fire"),
-  SPELLICE              UMETA(DisplayName = "Spell Ice"),
-  SPELLLIGHTNING        UMETA(DisplayName = "Spell Lightning"),
+  PROJWEAPONARROW      UMETA(DisplayName = "Arrow Projectile"),
+  PROJFIRE             UMETA(DisplayName = "Fire Projectile"),
+  PROJICE              UMETA(DisplayName = "Ice Projectile"),
+  PROJLIGHTNING        UMETA(DisplayName = "Lightning Projectile"),
 
-  EXPLOSIONWHITE        UMETA(DisplayName = "Explosion White"),
-  EXPLOSIONYELLOW       UMETA(DisplayName = "Explosion Yellow"),
-  EXPLOSIONARROWDUST    UMETA(DisplayName = "Explosion Arrow Dust"),
-  SPELLFIRESPLASH       UMETA(DisplayName = "Spell Fire Splash"),
-  SPELLICESPLASH        UMETA(DisplayName = "Spell Ice Splash"),
-  SPELLLIGHTNINGSPLASH  UMETA(DisplayName = "Spell Lightning Splash"),
+  EXPLWHITE            UMETA(DisplayName = "Explosion White"),
+  EXPLYELLOW           UMETA(DisplayName = "Explosion Yellow"),
+  EXPLARROWDUST        UMETA(DisplayName = "Explosion Arrow Dust"),
+  EXPLFIRESPLASH       UMETA(DisplayName = "Explosion Fire Splash"),
+  EXPLICESPLASH        UMETA(DisplayName = "Explosion Ice Splash"),
+  EXPLLIGHTNINGSPLASH  UMETA(DisplayName = "Explosion Lightning Splash"),
 
   MAX                   UMETA(DisplayName = "Max"),
 };
@@ -81,19 +82,19 @@ inline bool IsBuilding( Types b ) {
   return Between( b, BLDGFARM, BLDGTOWNHALL );
 }
 inline bool IsResource( Types b ) {
-  return Between( b, RESTREE, RESGOLDMINE );
+  return Between( b, RESLUMBER, RESGOLD );
 }
 inline bool IsItem( Types b ) {
   return Between( b, ITEMSPEEDUP, ITEMDEFENSEUP );
 }
-inline bool IsSpell( Types b ) {
-  return Between( b, SPELLFIRE, SPELLLIGHTNINGSPLASH );
+inline bool IsProjectile( Types b ) {
+  return Between( b, PROJWEAPONARROW, PROJLIGHTNING );
 }
 inline bool IsAction( Types b ) {
   return Between( b, ACTIONMOVE, ACTIONDOUBLEDAMAGE );
 }
 inline bool IsShape( Types b ) {
-  return Between( b, UNITSPHERE, UNITEDGE );
+  return Between( b, SHAPESPHERE, SHAPEEDGE );
 }
 
 inline FString GetEnumName( TCHAR* enumType, int enumValue )

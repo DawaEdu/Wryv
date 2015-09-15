@@ -7,7 +7,6 @@ UCLASS()
 class WRYV_API ACombatUnit : public AUnit
 {
 	GENERATED_UCLASS_BODY()
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USkeletalMeshComponent* Mesh;
 
 public:
   virtual void Move( float t ) override;

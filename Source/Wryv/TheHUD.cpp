@@ -103,7 +103,8 @@ void ATheHUD::Select( set<AGameObject*> objects )
   set<Types> forbidden = { Types::GROUNDPLANE, Types::UISELECTOR };
   function< bool (AGameObject*) > filter = [forbidden]( AGameObject *g ) -> bool {
     // remove objects of forbidden types.
-    return in( forbidden, g->Stats.Type.GetValue() );
+    return g->Dead || in( forbidden, g->Stats.Type.GetValue() ) ||
+           IsProjectile( g->Stats.Type.GetValue() );
   };
   objects |= filter;
 
@@ -121,23 +122,63 @@ void ATheHUD::Select( set<AGameObject*> objects )
   {
     // make an attack target if there is an attack target for the gameobject
     MarkAsSelected( go );
+    LOG( "%s marked as selected", *go->GetName() );
     if( go->AttackTarget )  MarkAsAttack( go->AttackTarget );
     if( go->FollowTarget )  MarkAsFollow( go->FollowTarget );
   }
 
   // Modify the UI to reflect selected gameobjects
   ui->gameChrome->Select( Selected );
+
+  // Run its OnSelected function, playing sounds etc.
+  for( AGameObject* go : Selected )
+    go->OnSelected();
+
+}
+
+void ATheHUD::Unselect( set<AGameObject*> objects )
+{
+  // Filter THIS from collection if exists
+  for( AGameObject* go : objects )
+  {
+    // Remove any selectors on there
+    RemoveTagged( go, SelectedTargetName );
+
+    // If I'm the only selected unit with on follow target then remove follow target selection
+    // If go is the only follower / attacker in Selected, then remove the marker.
+    if( go->FollowTarget )
+      if( Intersection( Selected, go->FollowTarget->Followers ).size() <= 1 )
+        RemoveTagged( go, FollowTargetName );
+
+    if( go->AttackTarget )
+      if( Intersection( Selected, go->AttackTarget->Attackers ).size() <= 1 )
+        RemoveTagged( go, AttackTargetName );
+  }
+
+  Selected -= objects;
+
+  //Reselect selected, to refresh the selectors on attack targets.
+  Select( Selected );
+}
+
+void ATheHUD::Status( FString msg )
+{
+  ui->statusBar->Set( msg );
+  info( msg );
 }
 
 void ATheHUD::MarkAsSelected( AGameObject* object )
 {
-  if( HasChildWithTag( object, SelectedTargetName ) )  return;
+  if( HasChildWithTag( object, SelectedTargetName ) ) {
+    LOG( "%s already has a %s", *object->Stats.Name, *SelectedTargetName.ToString() );
+    return;
+  }
 
   AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( SelectedTargetName );
-  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
+  float r = object->Radius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
   object->AddChild( widget );
@@ -156,7 +197,7 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( FollowTargetName );
-  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
+  float r = object->Radius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
   object->AddChild( widget );
@@ -174,7 +215,7 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( AttackTargetName );
-  float r = object->hitBounds->GetScaledCapsuleRadius() * 1.5f;
+  float r = object->Radius() * 1.5f;
   widget->SetActorScale3D( FVector( r,r,r ) );
   widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
   object->AddChild( widget );
@@ -317,7 +358,7 @@ void ATheHUD::DrawPortrait()
     // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
     RenderScreen( rendererIcon, PortraitTexture, 
-      selected->Pos, selected->hitBounds->GetScaledCapsuleRadius(), camDir );
+      selected->Pos, selected->Radius(), camDir );
   }
 }
 

@@ -21,7 +21,6 @@ ImageWidget::ImageWidget( FString name, UTexture* pic ) : HotSpot( name )
   ImageWidgetDefaults();
   Tex = pic;
   if( Tex ) {
-    SetName( Tex->GetName() );
     Size.X = Tex->GetSurfaceWidth();
     Size.Y = Tex->GetSurfaceHeight();
   }

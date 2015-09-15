@@ -1,7 +1,7 @@
 #include "Wryv.h"
 #include "PortraitsPanel.h"
 #include "WryvGameInstance.h"
-#include "FlyCam.h"
+#include "TheHUD.h"
 
 PortraitsPanel::PortraitsPanel( FVector2D size ) :
   FlowPanel( "PortraitsPanel", 0, 1, 1, size )
@@ -21,9 +21,8 @@ void PortraitsPanel::Set( set<AGameObject*> objects )
     Add( im ) ;
     im->OnMouseDownLeft = [go]( FVector2D mouse ){
       // re-select this object
-      set<AGameObject*> s;
-      s.insert( go );
-      Game->flycam->Select( s );
+      set<AGameObject*> objects = { go };
+      Game->hud->Select( objects );
       return Consumed;
     };
   }

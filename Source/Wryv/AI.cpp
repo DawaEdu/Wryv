@@ -14,11 +14,11 @@ Types AI::GetNeededResourceType( Team& team )
   // which has the greatest need
   if( goldP < lumberP   &&   goldP < stoneP )
   {
-    return Types::RESGOLDMINE;
+    return Types::RESGOLD;
   }
   else if( lumberP < goldP   &&   lumberP < stoneP )
   {
-    return Types::RESTREE;
+    return Types::RESLUMBER;
   }
   else
   {

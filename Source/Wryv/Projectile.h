@@ -10,10 +10,11 @@ class WRYV_API AProjectile : public AGameObject
   GENERATED_UCLASS_BODY()
 public:
   AGameObject* Shooter;
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Gravity;
+  float Gravity;
   
   // Called when the game starts or when spawned
   virtual void ai( float t );
   virtual void Move( float t ) override;
+  virtual void Hit( AGameObject* other );
   void SetDestinationArc( FVector start, FVector end, float speed, float h );
 };

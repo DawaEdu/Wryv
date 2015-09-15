@@ -41,7 +41,7 @@ public:
   // Gets all objects that are traced thru by vector
   set<AGameObject*> Pick( const FVector2D& ScreenPosition );
   set<AGameObject*> Pick( const FVector& eye, const FVector& lookDir );
-  set<AGameObject*> Pick( const FBox2DU& box );
+  set<AGameObject*> Pick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes );
   bool IsKeyDown( FKey key );
   bool IsAnyKeyDown( vector<FKey> key );
   virtual void Tick( float t ) override;

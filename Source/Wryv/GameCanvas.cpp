@@ -13,7 +13,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
 {
   selectBox = new MouseSelectBox( "mouse's select box",
     FBox2DU( FVector2D(100, 100), FVector2D(50, 50) ),
-    8.f, FLinearColor::Green);
+    4.f, FLinearColor::Green);
   Add( selectBox );
   selectBox->Hide();
 
@@ -41,6 +41,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
             if( APeasant *peasant = Cast<APeasant>( *Game->hud->Selected.begin() ) )
             {
               ghost->PlaceBuilding( peasant );
+              //Game->EnqueueCommand( Command( Command::Build, peasant->ID, ghost->Pos ) );
               Game->flycam->ghost = 0; // stop moving the ghost.
             }
             else
@@ -63,7 +64,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     return Consumed;
   };
   OnMouseUpLeft = [this]( FVector2D mouse ) {
-    Game->hud->Select( Game->pc->Pick( selectBox->Box ) );
+    // Box shaped selection of units.
+    Game->hud->Select( Game->pc->Pick( selectBox->Box, {}, {} ) );
     SelectEnd();
     return Consumed;
   };

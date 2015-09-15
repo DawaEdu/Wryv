@@ -27,9 +27,11 @@ void BuildQueue::Set( AGameObject* go )
   // When you call SET, you clear all the old buildcounters.
   // Clocks inside the buildcounter are not cached.
   Clear();
-  recomputeSizeToContainChildren();
+  Hide(); // Assume hidden
   if( !go )  return;
 
+  if( go->BuildQueueCounters.size() )
+    Show(); // There is an object to show
   // Things that are spawning each have a clock.
   for( int i = 0; i < go->BuildQueueCounters.size(); i++ )
   {

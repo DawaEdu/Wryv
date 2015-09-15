@@ -16,5 +16,5 @@ void AExplosion::PostInitializeComponents()
 void AExplosion::OnEmitterFinished_Implementation( UParticleSystemComponent* PSystem )
 {
   LOG( "Emitter finished" );
-  Destroy();
+  Cleanup();
 }

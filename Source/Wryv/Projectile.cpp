@@ -29,6 +29,29 @@ void AProjectile::Move( float t )
   AGameObject::Move( t ); // Calls flush, so we put it last
 }
 
+void AProjectile::Hit( AGameObject* other )
+{
+  if( !other ) {
+    error( FS( "%s Hit NULL object", *Stats.Name ) );
+    return;
+  }
+
+  // If the projectile is running into its attack target,
+  // OR the object has hit the floor, then allow it to deal damage
+  if( other == AttackTarget   &&   !AttackTarget->Dead )
+  {
+    LOG( "%s is detonating", *Stats.Name );
+    // Damage the attack target with impact-damage
+    SendDamageTo( AttackTarget );
+    Die(); Cleanup();
+  }
+  else if( other == Game->flycam->floor )
+  {
+    LOG( "%s is contacting the floor", *Stats.Name );
+    Die(); Cleanup();
+  }
+}
+
 void AProjectile::SetDestinationArc( FVector start, FVector end, float speed, float h )
 {
   FVector dir = end - start;

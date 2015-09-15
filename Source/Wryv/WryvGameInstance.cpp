@@ -11,7 +11,7 @@ UWryvGameInstance* Game = 0;
 UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "UWryvGameInstance::UWryvGameInstance()");
-  
+  ID = 1;
   // On construction of first game object, initialize game instance
   Game = Cast<UWryvGameInstance>( this );
   init = 0;
@@ -21,6 +21,33 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   gs = 0;
   flycam = 0;
   IsDestroyStarted = 0;
+}
+
+void UWryvGameInstance::EnqueueCommand( const Command& cmd )
+{
+  AGameObject* unit = GetUnitById( cmd.objectId );
+  if( unit )
+  {
+    unit->commands.push_back( cmd );
+  }
+  else
+  {
+    error( FS( "Unit %d not found", cmd.objectId ) );
+  }
+}
+
+int64 UWryvGameInstance::NextId()
+{
+  return ID++;
+}
+
+AGameObject* UWryvGameInstance::GetUnitById( int64 unitId )
+{
+  for( int i = 0; i < gm->teams.size(); i++ )
+    for( int j = 0; j < gm->teams[i]->units.size(); j++ )
+      if( gm->teams[i]->units[j]->ID == unitId )
+        return gm->teams[i]->units[j];
+  return 0;
 }
 
 // A check function. You should avoid using this function whenever possible
@@ -76,10 +103,10 @@ void UWryvGameInstance::AssertIntegrity()
   {
     FUnitsDataRow ud = p.second;
     // Check contact object not same
-    if( ud.OnContact != Types::NOTHING   &&   ud.Type == ud.OnContact )
+    if( ud.OnExploded != Types::NOTHING   &&   ud.Type == ud.OnExploded )
     {
-      error( FS( "OBJECT TYPE %s spawns same as self (%s) on Contact",
-        *GetTypesName( ud.Type ), *GetTypesName( ud.OnContact ) ) );
+      error( FS( "OBJECT TYPE %s spawns same as self (%s) OnExploded",
+        *GetTypesName( ud.Type ), *GetTypesName( ud.OnExploded ) ) );
     }
   }
 }
@@ -90,13 +117,20 @@ void UWryvGameInstance::LoadUClasses()
   map<Types,UClass*> classes;
   for( int i = 0; i < UnitTypeUClasses.Num(); i++ )
   {
-    if( !UnitTypeUClasses[i].uClass )
+    int type = UnitTypeUClasses[i].Type;
+    UClass* uClass = UnitTypeUClasses[i].uClass;
+    if( !uClass )
     {
-      LOG( "entry %d wasn't set in UnitTypeUClasses", i );
+      error( FS( "LoadUClasses: entry %d => uClass=NULL in UnitTypeUClasses", i ) );
       skip;
     }
-    LOG( "entry %d => class (%s)", (int)UnitTypeUClasses[i].Type, *UnitTypeUClasses[i].uClass->GetName() );
-    classes[ UnitTypeUClasses[i].Type ] = UnitTypeUClasses[i].uClass;
+    else if( type >= Types::MAX ) {
+      error( FS( "BAD ENTRY %d => class %s", type, *uClass->GetName() ) );
+      skip;
+    }
+
+    info( FS( "entry %d => class (%s)", type, *uClass->GetName() ) );
+    classes[ (Types)type ] = uClass;
   }
 
   // Fix the array so we're sure it is in order
@@ -144,7 +178,7 @@ void UWryvGameInstance::LoadUClasses()
     LOG( "Type %s => Blueprint (%s)", *GetTypesName( type ), *p.second->GetName() );
     unit->BaseStats.uClass = GetUClass( type );   // Write the uClass associated with the type here
     Game->unitsData[ type ] = unit->BaseStats;    // 
-    unit->Destroy();                              // destroy the sample unit
+    unit->Cleanup();                              // destroy the sample unit
   }
 
   AssertIntegrity();

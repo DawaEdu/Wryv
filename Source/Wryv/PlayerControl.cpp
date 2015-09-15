@@ -74,11 +74,22 @@ FHitResult APlayerControl::TraceAgainst( AActor* actor, const FVector& eye, cons
 
 FHitResult APlayerControl::PickClosest( const FVector2D& ScreenPosition )
 {
-  FHitResult hit;
-  // Trace into the scene and check what got hit.
-  Game->pc->GetHitResultAtScreenPosition( ScreenPosition, ECollisionChannel::ECC_GameTraceChannel2, true, hit );
-  return hit;
+  TArray<FHitResult> hits;
+  FVector Start, Dir;
+	if( UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, Start, Dir ) )
+	{
+    FVector End = Start + Dir*1e6f;
+    GetWorld()->LineTraceMultiByProfile( hits, Start, End, "RayCast" );
+	}
+  
+  for( int i = 0 ; i < hits.Num(); i++ )
+    if( AGameObject* go = Cast<AGameObject>( hits[i].GetActor() ) )
+      if( !go->Dead )
+        return hits[i];
+
+	return FHitResult(); // Null hit
 }
+
 
 FHitResult APlayerControl::PickClosest( const FVector& eye, const FVector& lookDir )
 {
@@ -99,6 +110,7 @@ set<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
   FQuat quat( 0.f, 0.f, 0.f, 0.f );
   FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
     FCollisionObjectQueryParams::InitType::AllObjects );
+  // To query using a specific object TYPE, use OverlapMultiByProfile()
   GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fqp );
   set<AGameObject*> intersections;
   for( int i = 0; i < overlaps.Num(); i++ )
@@ -202,7 +214,7 @@ set<AGameObject*> APlayerControl::Pick( const FVector& eye, const FVector& lookD
 }  
 
 // If InTypes is EMPTY, then it picks any type
-set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
+set<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
 {
   set<AGameObject*> objects;
   
@@ -257,7 +269,15 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box )
   {
     for( AGameObject* go : team->units )
     {
-      if( go->IsPendingKill()   ||   go->Dead ) skip;
+      // You cannot select dead objects
+      if( go->IsPendingKill()   ||   go->Dead )  skip;
+
+      // If the accepted types collection was specified, and the type is not in accepted types, skip
+      if( AcceptedTypes.size() && ( !in( AcceptedTypes, go->Stats.Type.GetValue() ) ) )  skip;
+
+      // If you are in the not types group, skip also
+      if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
+
       FBox box = go->hitBounds->Bounds.GetBox();
       // Selection by mesh's bounding box is best.
       if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )

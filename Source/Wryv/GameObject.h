@@ -11,6 +11,7 @@ using namespace std;
 #include "UnitsData.h"
 #include "CooldownCounter.h"
 #include "SoundEffect.h"
+#include "Command.h"
 #include "GameFramework/Actor.h"
 #include "GameObject.generated.h"
 
@@ -25,9 +26,11 @@ class WRYV_API AGameObject : public AActor
   const static float WaypointAngleTolerance; // 
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
   static AGameObject* Nothing;
-  
+  static float CapDeadTime; // Dead units get cleaned up after this many seconds (time given for dead anim to play out)
+
   // 
   // Stats.
+  int64 ID; // Unique Identity of the object.
   Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
@@ -42,6 +45,7 @@ class WRYV_API AGameObject : public AActor
   float Mana;           // Current Mana.
   bool Repairing;       // If the building/unit is Repairing
   UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UnitProperties)  bool Dead;            // Whether unit is dead or not.
+  float DeadTime, MaxDeadTime; // how long the object has been dead for
   vector< CooldownCounter > AbilityCooldowns;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
@@ -58,10 +62,13 @@ class WRYV_API AGameObject : public AActor
   vector<FVector> Waypoints;
   function <void ()> OnReachDestination; // Something to do when reach destination.
 
+  // Series of commands.
+  vector<Command> commands;
+
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
-  vector<AGameObject*> Followers, Attackers, Overlaps;
+  set<AGameObject*> Followers, Attackers, Overlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
 
   // 
@@ -72,7 +79,9 @@ class WRYV_API AGameObject : public AActor
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
-  
+  // Hashes the object (checking for network state desync)
+  float Hash();
+
   // 
   // Scenegraph management.
   AGameObject* SetParent( AGameObject* newParent );
@@ -104,7 +113,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasFollowTarget() { return FollowTarget != 0; }
   // Called by blueprints (AttackAnimation) when attack is launched (for ranged weapons)
   // or strikes (for melee weapons).
-  UFUNCTION(BlueprintCallable, Category = Fighting)  void AttackCycle();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
   void Shoot();
   void SendDamageTo( AGameObject* other );
@@ -143,9 +152,12 @@ class WRYV_API AGameObject : public AActor
   void Stop();
   void Face( FVector point );
   // time-stepped attack of current target (if any)
-  void MoveWithinDistanceOf( AGameObject* target, float distance );
+  void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
   virtual void Move( float t );
   virtual void ai( float t );
+  // The hit volumes overlapped
+  virtual void Hit( AGameObject* other );
+  float Radius();
 
   // 
   // Unit relationship functions
@@ -155,9 +167,12 @@ class WRYV_API AGameObject : public AActor
   virtual void Target( AGameObject* target );
   void Follow( AGameObject* go );
   void Attack( AGameObject* go );
-  void StopAttackAndFollow();
+  // Drop attack & follow targets
+  void DropAttackAndFollowTargets();
 
+  // If you call while iterating the Followers set, set removeFromFollowerSet to false!
   void LoseFollower( AGameObject* formerFollower );
+  // Do not call while iterating the Attackers set, set removeFromAttackersSet to false!
   void LoseAttacker( AGameObject* formerAttacker );
   void LoseAttackersAndFollowers();
 
@@ -165,7 +180,7 @@ class WRYV_API AGameObject : public AActor
   // AI
   AGameObject* GetClosestEnemyUnit();
 	map<float, AGameObject*> FindEnemyUnitsInSightRange();
-	AGameObject* GetClosestObjectOfType( Types type );
+  AGameObject* GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius );
 
   // 
   // Utility
@@ -186,6 +201,8 @@ class WRYV_API AGameObject : public AActor
   bool isItem(){ return IsItem( Stats.Type ); }
   bool isShape(){ return IsShape( Stats.Type ); }
   virtual void Die();
+  UFUNCTION(BlueprintCallable, Category = Fighting) 
+  void Cleanup();
   virtual void BeginDestroy() override;
 
 };

@@ -11,12 +11,13 @@ AResource::AResource( const FObjectInitializer& PCIP ) : Super( PCIP )
   Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "mesh1" );
   Mesh->AttachTo( RootComponent );
   Jiggle = 0;
+  AmountRemaining = 0.f;
 }
 
 void AResource::BeginPlay()
 {
   Super::BeginPlay();
-  AmountRemaining = OriginalAmount;
+  AmountRemaining = Stats.Quantity;
 }
 
 void AResource::PostInitializeComponents()
@@ -27,35 +28,18 @@ void AResource::PostInitializeComponents()
 void AResource::Harvest( APeasant* peasant )
 {
   // Just mined it. Get the resource.
-  switch( Stats.Type )
-  {
-    case RESTREE:
-      peasant->team->Lumber += Multiplier;
-      break;
-    case RESGOLDMINE:
-      peasant->team->Gold += Multiplier;
-      break;
-    case RESSTONE:
-      peasant->team->Stone += Multiplier;
-      break;
-    default:
-      error( FS( "Resource type `%s` not a resource", *GetTypesName( Stats.Type ) ) );
-      break;
-  }
-
-  // We've mined.
   if( AmountRemaining > 0 )
   {
-    AmountRemaining--;
+    float dmg = peasant->DamageRoll();
+    peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
+    AmountRemaining -= dmg;
 
-    if( !AmountRemaining )
+    if( AmountRemaining <= 0 )
     {
+      AmountRemaining = 0.f;
       ResourcesFinished = 1; // Signal for blueprints to kick-off the animation,
       // then, this flag is reset from blueprints
       Die();
     }
   }
-
-  // Reset mining time. TimeLength is a polymorphic property.
-  peasant->MiningTime = Stats.TimeLength;
 }

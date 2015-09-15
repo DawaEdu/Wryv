@@ -19,7 +19,9 @@ class WRYV_API ABuilding : public AGameObject
 
   // Time to wait after exploding for cleanup
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float MaxExplosionTime;
-  
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveRadius;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveForce;
+
   //ABuilding(const FObjectInitializer& PCIP);
   APeasant* peasant;      // The peasant building, inside the building.
   float TimeBuilding;     // When a unit is building, this is the % progress it is to completion.
@@ -39,7 +41,5 @@ class WRYV_API ABuilding : public AGameObject
   UFUNCTION(BlueprintCallable, Category = Building)  float PercentBuilt() { return TimeBuilding / Stats.TimeLength; }
   UFUNCTION(BlueprintCallable, Category = Building)  float BuildTime() { return Stats.TimeLength; }
   UFUNCTION(BlueprintCallable, Category = Building)  bool BuildingDone() { return TimeBuilding >= Stats.TimeLength; }
-  UFUNCTION(BlueprintNativeEvent, Category = Building)
-  void BuildingExploded();
   virtual void Die();
 };

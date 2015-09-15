@@ -27,6 +27,7 @@ public:
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
 
+  int64 ID;
   map<Types,FUnitsDataRow> unitsData;
   bool init;
   ATheHUD *hud;
@@ -37,6 +38,9 @@ public:
   bool IsDestroyStarted;
   
   UWryvGameInstance(const FObjectInitializer& PCIP);
+  void EnqueueCommand( const Command& cmd );
+  int64 NextId();
+  AGameObject* GetUnitById( int64 unitId );
   bool IsReady();
   virtual void Init() override;
   void AssertIntegrity();

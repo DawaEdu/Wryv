@@ -34,7 +34,7 @@ void AItem::ProxPickup_Implementation( AActor* OtherActor, UPrimitiveComponent* 
   {
     unit->Items.Push( Stats );
     LOG( "%s picked up a %s", *unit->Stats.Name, *Stats.Name );
-    Destroy();
+    Cleanup();
   }
 
 }

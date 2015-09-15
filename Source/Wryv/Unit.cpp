@@ -13,9 +13,8 @@ using namespace std;
 // Sets default values
 AUnit::AUnit( const FObjectInitializer& PCIP ) : AGameObject( PCIP )
 {
- 	// Set this actor to call Tick() every frame.
-  // You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "themeshof" );
+  Mesh->AttachTo( DummyRoot );
 }
 
 void AUnit::BeginPlay()
@@ -51,9 +50,14 @@ void AUnit::Move( float t )
   if( Stats.SpeedMax )
   {
     if( FollowTarget )
-      MoveWithinDistanceOf( FollowTarget, FollowTarget->hitBounds->GetScaledCapsuleRadius() );
+    {
+      MoveWithinDistanceOf( FollowTarget,  FollowTarget->Radius() );
+    }
     else if( AttackTarget )
+    {
       MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
+      Face( AttackTarget->Pos );
+    }
   }
 
   Walk( t );   // Walk towards destination

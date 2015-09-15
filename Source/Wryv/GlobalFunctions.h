@@ -7,6 +7,7 @@
 #include <set>
 #include <functional>
 #include <map>
+#include <algorithm>
 #include <stdarg.h>
 
 using namespace std;
@@ -40,35 +41,47 @@ __forceinline void info( FString message )
   UE_LOG( K, Display, TEXT("%s"), *message );
 }
 
-template <typename T> void removeElement( vector<T*>& v, T* elt )
+// Removes all occurrences of `elt` from `v`
+template <typename T> int removeElement( vector<T*>& v, T* elt )
 {
+  int count = 0;
   for( int i = v.size()-1 ; i >= 0; i-- )
-    if( v[i] == elt )
+    if( v[i] == elt ) {
       v.erase( v.begin() + i );
+      count++;
+    }
+  return count;
 }
 
-template <typename T> bool removeElement( vector<T>& v, T& elt )
+template <typename T> int removeElement( vector<T>& v, T& elt )
 {
+  int count = 0;
   for( int i = v.size()-1 ; i >= 0; i-- )
-    if( v[i] == elt )
+    if( v[i] == elt ) {
       v.erase( v.begin() + i );
+      count++;
+    }
+  return count;
 }
 
-template <typename T> void removeElement( set<T*>& v, T* elt )
+template <typename T> bool removeElement( set<T*>& s, T* elt )
 {
-  for( set<T*>::iterator it = v.begin(); it != v.end(); )
-  {
-    if( *it == elt )
-      it = v.erase( it );
-    else ++it;
+  set<T*>::iterator it = s.find( elt );
+  if( it != s.end() ) {
+    s.erase( it );
+    return 1;
   }
+  return 0;
 }
 
-template <typename T> void removeElement( set<T>& s, T& elt )
+template <typename T> bool removeElement( set<T>& s, T& elt )
 {
   set<T>::iterator it = s.find( elt );
-  if( it != s.end() )
+  if( it != s.end() ) {
     s.erase( it );
+    return 1;
+  }
+  return 0;
 }
 
 template <typename T> T* removeIndex( vector<T*>& v, int index )
@@ -171,19 +184,11 @@ template <typename T> bool pop_back( vector<T>& v, int eltNumber )
   return 0;
 }
 
-// AActor* derivative required
-template <typename T> void DestroyAll( vector<T*> &v )
+template <typename T> set<T*> Intersection( const set<T*>& A, const set<T*>& B )
 {
-  for( int i = 0; i < v.size(); i++ )
-    v[i]->Destroy();
-  v.clear();
-}
-
-template <typename T> void DestroyAll( set<T*> &v )
-{
-  for( T* t : v )
-    t->Destroy();
-  v.clear();
+  set<T*> intns;
+  std::set_intersection( A.begin(), A.end(), B.begin(), B.end(), inserter( intns, intns.begin() ) );
+  return intns;
 }
 
 // Adds B to A, removing duplicates
@@ -194,6 +199,18 @@ template <typename T> vector<T*>& operator+=( vector<T*>& A, const vector<T*>& B
       LOG( "don't keep: b was in A" );
     }
     else A.push_back( b ) ;
+  return A;
+}
+
+template <typename T> vector<T>& operator+=( vector<T>& A, const T& b )
+{
+  A.push_back( b );
+  return A;
+}
+
+template <typename T> vector<T*>& operator+=( vector<T*>& A, const T* b )
+{
+  A.push_back( b );
   return A;
 }
 

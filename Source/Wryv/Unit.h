@@ -15,6 +15,8 @@ class WRYV_API AUnit : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
 public:
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USkeletalMeshComponent* Mesh;
+
   // These start with # items in editor. Defaults "Nothing" in toolbelt
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)  TArray< TEnumAsByte< Types > > StartingItems;
   // The items the unit is holding
@@ -24,4 +26,5 @@ public:
   void ConsumeItem( int i );
   // Function that runs whenever the unit is first clicked on or selected.
   virtual void Move( float t ) override;
+
 };

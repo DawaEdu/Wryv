@@ -168,9 +168,9 @@ void AFlyCam::InitializePathfinding()
   pathfinder = new Pathfinder( Rows, Cols );
 
   set<Types> intTypes;
-  intTypes.insert( Types::RESTREE );
+  intTypes.insert( Types::RESLUMBER );
   intTypes.insert( Types::RESSTONE );
-  intTypes.insert( Types::RESGOLDMINE );
+  intTypes.insert( Types::RESGOLD );
   
   // get the actual spacing between nodes, then divide by 2
   // use 95% prox to ensure that
@@ -200,7 +200,7 @@ void AFlyCam::InitializePathfinding()
       else
       {
         pathfinder->nodes[ idx ]->point = p;
-        AGameObject* sphere = Game->Make<AGameObject>( UNITSPHERE, p, Game->gm->neutralTeam );
+        AGameObject* sphere = Game->Make<AGameObject>( SHAPESPHERE, p, Game->gm->neutralTeam );
         sphere->SetSize( radiusScale );
         
         // Pick objects intersecting with the sphere. If anything intersects, then
@@ -217,7 +217,7 @@ void AFlyCam::InitializePathfinding()
           sphere->SetColor( FLinearColor::White );
         }
 
-        sphere->Destroy(); // Don't show the sphere visualization
+        sphere->Cleanup(); // Don't show the sphere visualization
       }
       pathfinder->updateGraphConnections( coord );
     }
@@ -234,7 +234,7 @@ void AFlyCam::InitializePathfinding()
     GraphNode *node = pathfinder->nodes[i];
     if( node->terrain == Passible )
     {
-      AGameObject *vizSphere = Game->Make<AGameObject>( UNITSPHERE, node->point, Game->gm->neutralTeam );
+      AGameObject *vizSphere = Game->Make<AGameObject>( SHAPESPHERE, node->point, Game->gm->neutralTeam );
       vizSphere->SetSize( radiusScale );
     }
     // create a node and edge connections
@@ -356,7 +356,7 @@ void AFlyCam::Visualize( Types type, vector<FVector>& v, float s, FLinearColor s
 void AFlyCam::ClearViz()
 {
   for( int i = 0; i < viz.size(); i++ )
-    viz[i]->Destroy();
+    viz[i]->Cleanup();
   viz.clear();
 }
 
@@ -372,7 +372,7 @@ AGameObject* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
   }
   dir /= len;
 
-  AGameObject *line = Game->Make<AGameObject>( Types::UNITEDGE, a, Game->gm->neutralTeam );
+  AGameObject *line = Game->Make<AGameObject>( Types::SHAPEEDGE, a, Game->gm->neutralTeam );
   line->SetSize( FVector(len) );
   line->SetColor( color );
   line->SetActorRotation( dir.Rotation() );
@@ -461,16 +461,6 @@ void AFlyCam::FindFloor()
   fogOfWar->Init( floorBox );
 }
 
-void AFlyCam::Select( set<AGameObject*> objects )
-{
-  // Change UI to reflect selected object
-  Game->hud->Select( objects );
-
-  // Run its OnSelected function, playing sounds etc.
-  for( AGameObject* go : objects )
-    go->OnSelected();
-}
-
 void AFlyCam::MouseUpLeft()
 {
   //LOG( "MouseUpLeft");
@@ -551,6 +541,7 @@ void AFlyCam::MouseDownRight()
     FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to loc from first->Pos
     for( AGameObject * go : Game->hud->Selected ) {
       go->SetGroundPosition( go->Pos + offset );
+      //Game->EnqueueCommand( Command( Command::GoTo, go->ID, go->Pos + offset ) );
     }
   }
   else // Some object was right-clicked.
@@ -559,6 +550,7 @@ void AFlyCam::MouseDownRight()
     for( AGameObject* go : Game->hud->Selected )
     {
       go->Target( target );
+      //Game->EnqueueCommand( Command( Command::Target, target->ID ) );
     }
   }
 }

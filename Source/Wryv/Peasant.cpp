@@ -11,27 +11,63 @@
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
-  MiningTime = 0.f;
+  ResourceCarry = PCIP.CreateDefaultSubobject<USceneComponent>( this, "ResourceCarry1" );
+  ResourceCarry->AttachTo( RootComponent );
+
+  GoldPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "GoldPiece1" );
+  GoldPiece->AttachTo( ResourceCarry );
+  LumberPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "LumberPiece1" );
+  LumberPiece->AttachTo( ResourceCarry );
+  StonePiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "StonePiece1" );
+  StonePiece->AttachTo( ResourceCarry );
+
+  GoldPiece->SetVisibility( false );
+  LumberPiece->SetVisibility( false );
+  StonePiece->SetVisibility( false );
+
+  MinedResources[ Types::RESGOLD ] = 0;
+  MinedResources[ Types::RESLUMBER ] = 0;
+  MinedResources[ Types::RESSTONE ] = 0;
+
+  MinedPieces[ Types::RESGOLD ] = GoldPiece;
+  MinedPieces[ Types::RESLUMBER ] = LumberPiece;
+  MinedPieces[ Types::RESSTONE ] = StonePiece;
+
+  Carrying = 0;
+  Repairing = 0;
+  //RepairTarget = 0;
+  LastResource = 0;
 }
 
-void APeasant::BeginPlay()
+void APeasant::PostInitializeComponents()
 {
-  Super::BeginPlay();
+  Super::PostInitializeComponents();
+
+  Capacities[ Types::RESGOLD ] = GoldCarryCapacity;
+  Capacities[ Types::RESLUMBER ] = LumberCarryCapacity;
+  Capacities[ Types::RESSTONE ] = StoneCarryCapacity;
 }
 
 void APeasant::Target( AGameObject* target )
 {
-  AResource *resource = Cast<AResource>( target );
-  if( resource )
+  if( AResource *resource = Cast<AResource>( target ) )
   {
     // "attack" the resource to mine it.
+    LastResource = resource;
     Attack( resource );
-    MiningTime = resource->Stats.TimeLength;
+    return;
   }
-  else
+
+  else if( ABuilding *building = Cast<ABuilding>( target ) )
   {
-    AUnit::Target( target );
+    if( building->isAllyTo( this ) ) {
+      info( FS( "%s repairing %s", *GetName(), *target->GetName() ) );
+      Repairing = 1;
+      return;
+    }
   }
+
+  AUnit::Target( target );
 }
 
 void APeasant::Repair( float t )
@@ -56,41 +92,34 @@ void APeasant::Repair( float t )
       team->Stone  -= stoneCost;
       RepairTarget->Hp   += hpRecovered;
     }
+    else
+    {
+      // Stop repairing
+      Game->hud->Status( "Need more resources to continue repair" );
+    }
   }
 }
 
-void APeasant::Mine( float t )
+void APeasant::AttackCycle()
 {
   if( AResource *MiningTarget = Cast<AResource>( AttackTarget ) )
   {
+    //LOG( "%s mines from %s", *Stats.Name, *AttackTarget->Stats.Name );
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
     float distance = outerDistance( MiningTarget );
     if( distance   <=   Stats.AttackRange )
     {
-      //LOG( "Distance to target is %f %f units", distance, Stats.AttackRange );
       StopMoving();      // Can stop moving, as we mine the resource
-      MiningTime -= t;   // Progress mining.
-
       MiningTarget->Jiggle = 1; // This jiggles the animation when the attack cycle
-
-      // The peasant has to be mining the resource
-      // for a certain amount of time
-      // 
-      // The amount of time to mine the resource is in
-      // the ResourceTypes map
-      if( MiningTime < 0 )
-      {
-        MiningTarget->Harvest( this );
-
-      }
+      MiningTarget->Harvest( this );
     }
   }
   else
   {
     // Its a regular attack target, pass to AttackCycle to roll the usual attack
-    AttackCycle();
+    AGameObject::AttackCycle();
   }
 }
 
@@ -124,8 +153,18 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
 
 void APeasant::ai( float t )
 {
-  // Search for a repair target
+  // already doing something
+  if( FollowTarget || AttackTarget ) return;
 
+  // Search for a repair target
+  for( AGameObject *go : team->units )
+  {
+    if( go->isBuilding() && go->HpFraction() < .5f )
+    {
+      Follow( go ) ; // repair it
+      return;
+    }
+  }
   /////////////////////////
   // Check resource type I'm mining is correct resource type to mine.
   // Select a resource type to mine, based on need
@@ -139,23 +178,71 @@ void APeasant::ai( float t )
     // may have changed, but only change mining type after
     // successful mining operation of this type
     // Try and find an object of type resType in the level
-    MiningTarget = Cast<AResource>( GetClosestObjectOfType( neededResType ) );
+    MiningTarget = Cast<AResource>( GetClosestObjectOfType( neededResType, Game->gm->neutralTeam, 1e6f ) );
     Attack( MiningTarget );
-    // Reset mining time remaining
-    MiningTime = MiningTarget->Stats.TimeLength;
+  }
+}
+
+void APeasant::Hit( AGameObject* other )
+{
+  // if the other building is a townhall, can drop off resources
+  if( other->Stats.Type == Types::BLDGTOWNHALL )
+  {
+    team->Gold += MinedResources[ Types::RESGOLD ];
+    MinedResources[ Types::RESGOLD ] = 0;
+    team->Lumber += MinedResources[ Types::RESLUMBER ];
+    MinedResources[ Types::RESLUMBER ] = 0;
+    team->Stone += MinedResources[ Types::RESSTONE ];
+    MinedResources[ Types::RESSTONE ] = 0;
+    Follow( 0 );
+    // go back to get more resources
+    Attack( LastResource );
   }
 }
 
 void APeasant::Move( float t )
 {
+  Carrying = 0;
+  for( pair< Types, int32 > p : MinedResources )
+  {
+    if( p.second > 0 )
+    {
+      Carrying = 1; // Apply carrying animation.
+      MinedPieces[ p.first ] -> SetVisibility( true );
+      if( p.second >= Capacities[ p.first ] )
+      {
+        // Return to nearest townhall for dropoff
+        AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL, team, 1e6f );
+        if( !returnCenter )
+        {
+          info( "NO RETURN CENTER" );
+        }
+        else
+        {
+          info( FS( "Peasant %s returning to town center %s with %d %s",
+            *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
+          // Check if the resource is exhausted. If so, look for a similar resource
+
+          Follow( returnCenter ); // Keep the attacktarget (miningtarget) set.
+        }
+      }
+    }
+    else
+    {
+      MinedPieces[ p.first ] -> SetVisibility( false );
+    }
+  }
+
   // We repair the building that is currently selected
   if( FollowTarget )  Repair( t );
-  
-  // The attacktarget designates what to mine
-  if( AttackTarget )  Mine( t );
-
   AUnit::Move( t ); // Calls flush, so we put it last
 }
 
-
+void APeasant::JobDone()
+{
+  if( JobsDoneSound )
+    PlaySound( JobsDoneSound );
+  else
+    info( FS( "%s: Job done sound not set", *Stats.Name ) );
+}
 

@@ -16,6 +16,9 @@ ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
   Complete = 0;
   TimeBuilding = FLT_MAX; // So the building starts complete.
   ExplodedTime = 0.f;
+  MaxDeadTime = MaxExplosionTime;
+  ExplosiveRadius = 11.f;
+  ExplosiveForce = 50000.f;
   
   Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "buildingmesh" );
   Mesh->AttachTo( DummyRoot );
@@ -47,18 +50,11 @@ void ABuilding::Move( float t )
 {
   AGameObject::Move( t ); // Updates Dead variable
 
-  if( Dead )
-  {
-    if( !ExplodedTime )  BuildingExploded();
-    ExplodedTime += t;
-  }
-
   // Peasant's required to continue the building.
   if( peasant && TimeBuilding < Stats.TimeLength )
   {
     TimeBuilding += t;
-    UAnimInstance* anim = Mesh->GetAnimInstance();
-    if( anim )
+    if( UAnimInstance* anim = Mesh->GetAnimInstance() )
     {
       FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
       if( fmontage )
@@ -71,7 +67,7 @@ void ABuilding::Move( float t )
       }
       else
       {
-        info( FS( "there is No fmontage" ) );
+        error( FS( "there is No fmontage" ) );
       }
     }
 
@@ -101,16 +97,14 @@ void ABuilding::Move( float t )
 void ABuilding::Tick( float t )
 {
   Super::Tick( t );
-
   if( Dead )
   {
+    // This has to be here because
+    // ::Move() won't get called for dead objects (since they get removed
+    // from the Team when they die)
     ExplodedTime += t;
-
     if( ExplodedTime > MaxExplosionTime )
-    {
-      Destroy();
-      return;
-    }
+      Cleanup();
   }
 }
 
@@ -174,22 +168,18 @@ void ABuilding::OnBuildingComplete()
   LOG( "Job's done" );
   if( peasant )
   {
+    peasant->JobDone();
     peasant->SetPosition( ExitPosition->GetComponentLocation() );
   }
-
   Complete = 1;
-}
-
-void ABuilding::BuildingExploded_Implementation()
-{
-  MakeChild<AExplosion>( Stats.OnContact );
-  Mesh->SetVisibility( false ); // hide the normal mesh
-  destructableMesh->SetVisibility( true ); // use destructible mesh
-  destructableMesh->ApplyRadiusDamage( 111, Pos, 10.f, 50000.f, 1 );
 }
 
 void ABuilding::Die()
 {
+  Mesh->SetVisibility( false ); // hide the normal mesh
+  destructableMesh->SetVisibility( true ); // use destructible mesh
+  destructableMesh->ApplyRadiusDamage( 111, Pos, 10.f, 50000.f, 1 ); // Shatter the destructable.
+
   AGameObject::Die();
 }
 

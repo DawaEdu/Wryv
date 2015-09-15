@@ -18,18 +18,22 @@ const float AGameObject::WaypointAngleTolerance = 30.f; //
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
 
 AGameObject* AGameObject::Nothing = 0;
+float AGameObject::CapDeadTime = 10.f;
 
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
   //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
+  ID = 0;
   Repairing = 0;
   team = 0;
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
   RepelMultiplier = 1.f;
   Dead = 0;
+  DeadTime = 0.f;
+  MaxDeadTime = CapDeadTime;
 
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
@@ -79,11 +83,22 @@ void AGameObject::BeginPlay()
   // Instantiate abilities
   for( int i = 0; i < Stats.Abilities.Num(); i++ )
     AbilityCooldowns.push_back( CooldownCounter( Stats.Abilities[i] ) );
+
+  ID = Game->NextId();
 }
 
 void AGameObject::OnMapLoaded()
 {
   
+}
+
+float AGameObject::Hash()
+{
+  // The Hash function computes a simple checksum of the object, combining
+  // ID of what object 
+  return Pos.X + Pos.Y + Pos.Z + ID + 
+         (FollowTarget?FollowTarget->Hash():0)+
+         (AttackTarget?AttackTarget->Hash():0);
 }
 
 AGameObject* AGameObject::SetParent( AGameObject* newParent )
@@ -164,10 +179,8 @@ float AGameObject::outerDistance( AGameObject *go )
     LOG( "outerDistance( 0 ): null" );
     return FLT_MAX;
   }
-  float r1 = hitBounds->GetScaledCapsuleRadius();
-  float r2 = hitBounds->GetScaledCapsuleRadius();
   float dist = centroidDistance( go );
-  return dist - (r1 + r2);
+  return dist - (Radius() + go->Radius());
 }
 
 bool AGameObject::isAttackTargetWithinRange()
@@ -332,7 +345,7 @@ void AGameObject::UpdateStats( float t )
     if( BuildQueueCounters[i].Done() )
     {
       // Remove it and consider ith building complete. Place @ unoccupied position around building.
-      FVector buildPos = Pos + GetActorForwardVector() * hitBounds->GetScaledCapsuleRadius();
+      FVector buildPos = Pos + GetActorForwardVector() * Radius();
       
       AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, buildPos, team );
 
@@ -433,14 +446,10 @@ FVector AGameObject::Repel( AGameObject* go )
 {
   float r = 1.f;
   if( AttackTarget == go )
-  {
-    // For attack target, use the hitBounds.
+    // For attack target, use the hitBounds for the radius
     r = repulsionBounds->GetScaledSphereRadius()   +   go->repulsionBounds->GetScaledSphereRadius();
-  }
   else
-  {
     r = hitBounds->GetScaledCapsuleHalfHeight()   +   go->hitBounds->GetScaledCapsuleHalfHeight();
-  }
 
   // The object will overlap in the future position, so don't move.
   // Get radius of other actor
@@ -455,7 +464,7 @@ FVector AGameObject::Repel( AGameObject* go )
     }
     else
     {
-      LOG( "x is too large (%f) for radius r=%f", x, r );
+      //LOG( "x is too large (%f) for radius r=%f", x, r );
     }
   }
 
@@ -466,43 +475,23 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
-  //LOG( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() );
-
+  info( FS( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() ) );
   if( OtherActor == this )
   {
     // Don't do anything with reports of collision with self.
     return;
   }
 
-  AProjectile *p = Cast<AProjectile>( this );
-  AGameObject *other = Cast<AGameObject>( OtherActor );
-  // Make sure other component with defined overlap is AGameObject derivative.
-  if( other && p )
+  AGameObject* THIS = Cast<AGameObject>( this );
+  AGameObject* THAT = Cast<AGameObject>( OtherActor );
+  if( THIS && THAT )
   {
-    // If this object type detonates on contact, then its a projectile.
-    // make it explode when it hits its attack target
-    if( AttackTarget == other || other == Game->flycam->floor )
-    {
-      // This means the object is a projectile.
-      if( AttackTarget && !AttackTarget->Dead )
-      {
-        LOG( "%s is detonating", *Stats.Name );
-        // Damage the attack target with impact-damage
-        SendDamageTo( AttackTarget );
-      }
-      else if( other == Game->flycam->floor )
-      {
-        LOG( "%s is contacting the floor", *Stats.Name );
-      }
-      
-      if( Stats.OnContact )
-      {
-        AGameObject* expl = Game->Make<AGameObject>( Stats.OnContact, GetTip(), team );
-      }
-
-      Die();
-      Destroy();
-    }
+    // Both were gameobjects
+    THIS->Hit( THAT );
+  }
+  else
+  {
+    error( "One of the colliding objects was not a gameobject instance" );
   }
 }
 
@@ -526,7 +515,7 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   // Make sure other component with defined overlap is AGameObject derivative.
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    Overlaps.push_back( go );
+    Overlaps.insert( go );
   }
 }
 
@@ -546,9 +535,9 @@ void AGameObject::AddRepulsionForcesFromOverlappedUnits()
   FVector forces( 0,0,0 );
 
   // If there is no attack target, don't use repel forces.
-  for( int i = 0; i < Overlaps.size(); i++ )
+  for( AGameObject * go : Overlaps )
   {
-    FVector repel = Repel( Overlaps[i] );
+    FVector repel = Repel( go );
     forces += repel; // gather repelling force from other object
   }
   // Add in repulsion forces to the position.
@@ -605,7 +594,7 @@ void AGameObject::Walk( float t )
 
 void AGameObject::SetGroundPosition( FVector groundPos )
 {
-  StopAttackAndFollow();
+  DropAttackAndFollowTargets();
   SetDestination( groundPos );
 }
 
@@ -622,6 +611,13 @@ void AGameObject::SetDestination( FVector d )
   
   // Find the path, then submit list of Waypoints
   Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
+  if( !Waypoints.size() )
+  {
+    error( FS( "No waypoints in path from %f %f %f to %f %f %f", Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z ) );
+    Dest = d;
+    return;
+  }
+
   // Fix Waypoints z value so they sit on ground plane
   for( int i = 0; i < Waypoints.size(); i++ )
   {
@@ -670,7 +666,6 @@ void AGameObject::SetDestination( FVector d )
   //Game->flycam->ClearViz();
   //Game->flycam->Visualize( UNITSPHERE, Waypoints, 11.f, FLinearColor( 0, 0, 0, 1.f ), FLinearColor( 1, 1, 1, 1.f ) );
   //Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
-  
   Dest = Waypoints.front();
   pop_front( Waypoints );
 }
@@ -684,7 +679,7 @@ void AGameObject::StopMoving()
 void AGameObject::Stop()
 {
   StopMoving();
-  StopAttackAndFollow();
+  DropAttackAndFollowTargets();
 }
 
 void AGameObject::Face( FVector point )
@@ -698,20 +693,21 @@ void AGameObject::Face( FVector point )
 }
 
 // Stand outside target within `distance` units
-void AGameObject::MoveWithinDistanceOf( AGameObject* target, float distance )
+void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDistance )
 {
   FVector targetToMe = Pos - target->Pos;
   float len = targetToMe.Size();
   //info( FS( "%s attacking %s is %f units from it", *Stats.Name, *AttackTarget->Stats.Name, len ) );
   // If we're outside the attack range.. move in.
-  if( len > distance )
+  if( len > fallbackDistance )
   {
     targetToMe /= len;
     // set the fallback distance to being size of bounding radius of other unit
-    SetDestination( target->Pos + targetToMe*Stats.AttackRange*.9f );
+    SetDestination( target->Pos + targetToMe*fallbackDistance );
   }
   else
   {
+    // Within distance, so face
     // You are within attack range, so face the attack target
     Face( target->Pos );
   }
@@ -721,6 +717,12 @@ void AGameObject::Move( float t )
 {
   if( Dead ) {
     //error( FS( "Dead Unit %s had Move called for it", *Stats.Name ) );
+    DeadTime += t;
+    if( DeadTime >= MaxDeadTime )
+    {
+      warning( FS( "Dead unit %s was cleaned up", *Stats.Name ) );
+      Cleanup();
+    }
     return; // Cannot move if dead
   }
   if( Hp <= 0 ) {
@@ -740,6 +742,17 @@ void AGameObject::Move( float t )
 void AGameObject::ai( float t )
 {
   // Base GameObject doesn't have AI for it.
+}
+
+// The hit volumes overlapped
+void AGameObject::Hit( AGameObject* other )
+{
+  
+}
+
+float AGameObject::Radius()
+{
+  return hitBounds->GetScaledCapsuleRadius();
 }
 
 bool AGameObject::isAllyTo( AGameObject* go )
@@ -762,27 +775,28 @@ void AGameObject::Target( AGameObject* target )
 
 void AGameObject::Follow( AGameObject* go )
 {
-  StopAttackAndFollow();
+  DropAttackAndFollowTargets();
   FollowTarget = go;
   if( FollowTarget )
   {
-    FollowTarget->Followers.push_back( this );
+    FollowTarget->Followers.insert( this );
     Game->hud->MarkAsFollow( FollowTarget );
   }
 }
 
 void AGameObject::Attack( AGameObject* go )
 {
-  StopAttackAndFollow();
+  DropAttackAndFollowTargets();
   AttackTarget = go;
   if( AttackTarget )
   {
-    AttackTarget->Attackers.push_back( this );
+    AttackTarget->Attackers.insert( this );
     Game->hud->MarkAsAttack( AttackTarget );
   }
 }
 
-void AGameObject::StopAttackAndFollow()
+
+void AGameObject::DropAttackAndFollowTargets()
 {
   // Tell my old follow target (if any) that I'm no longer following him
   if( FollowTarget )
@@ -794,7 +808,7 @@ void AGameObject::StopAttackAndFollow()
   // If the AttackTarget was already set, tell it loses the old attacker (this).
   if( AttackTarget )
   {
-    //LOG( "%s losing follower %s", *Stats.Name, *AttackTarget->Stats.Name );
+    //LOG( "%s losing attacker %s", *Stats.Name, *AttackTarget->Stats.Name );
     AttackTarget->LoseAttacker( this );
   }
 }
@@ -814,7 +828,9 @@ void AGameObject::LoseFollower( AGameObject* formerFollower )
 void AGameObject::LoseAttacker( AGameObject* formerAttacker )
 {
   if( !formerAttacker ) error( "Cannot lose null follower" );
+  // This tends to be called while iterating. So be careful here.
   removeElement( Attackers, formerAttacker );
+  
   formerAttacker->AttackTarget = 0;
   // If there are no more attackers, unselect in ui
   if( !Attackers.size() )
@@ -826,10 +842,22 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
 
 void AGameObject::LoseAttackersAndFollowers()
 {
-  for( int i = Attackers.size()-1; i >= 0; i-- )
-    Attackers[i]->Attack( 0 );
-  for( int i = Followers.size()-1; i >= 0; i-- )
-    Followers[i]->Follow( 0 );
+  // Carefully remove each Attacker from the set. Since the
+  // set CANNOT be removed from while iterating here, we cannot use
+  // a regular range for based loop.
+  //for( AGameObject* go : Attackers )  // Won't work, since go->Attack( 0 ) causes removal from Attackers set.
+  //  go->Attack( 0 );                  // Won't work, since go->Attack( 0 ) causes removal from Attackers set.
+  // Cap iterations @ Attackers.size(), to definite safe-guard against infinite loop bug.
+  for( int i = Attackers.size() - 1; i >= 0; i-- )
+    (*Attackers.begin())->Attack( 0 );
+  if( Attackers.size() )
+    error( FS( "%s: There are %d attackers after losing all attackers", *Stats.Name, Attackers.size() ) );
+
+  for( int i = Followers.size() - 1; i >= 0; i-- )
+    (*Followers.begin())->Follow( 0 );
+  if( Followers.size() )
+    error( FS( "%s: There are %d followers after losing all followers", *Stats.Name, Followers.size() ) );
+  
 }
 
 AGameObject* AGameObject::GetClosestEnemyUnit()
@@ -860,27 +888,30 @@ map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
   return distances;
 }
 
-AGameObject* AGameObject::GetClosestObjectOfType( Types type )
+AGameObject* AGameObject::GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius )
 {
   // You can only select within range of unit
-  set<AGameObject*> sels = Game->pc->Pick( this, hitBounds );
+  //set<AGameObject*> sels = //Game->pc->Pick( this, hitBounds );
+  // Go thru all objects on team
   AGameObject* closestObject = 0;
   float closestDistance = FLT_MAX;
   map<float, AGameObject*> distances;
-  for( AGameObject* go : sels )
+  for( AGameObject* go : onTeam->units )
   {
     if( go->Stats.Type == type )
     {
       float d = centroidDistance( go );
-      distances[ d ] = go;
+      if( d < searchRadius )
+        distances[ d ] = go;
     }
   }
+  
   if( distances.size() )
     return distances.begin()->second;
   else
   {
-    info( FS( "Could not find an object of type %s with %f units of %s",
-      *GetTypesName( type ), Stats.SightRange, *Stats.Name ) );
+    info( FS( "Could not find an object of type %s within %f units of %s",
+      *GetTypesName( type ), searchRadius, *Stats.Name ) );
     return 0; // NO UNITS In sight
   }
 }
@@ -976,22 +1007,29 @@ void AGameObject::SetColor( FLinearColor color )
 
 void AGameObject::Die()
 {
-  StopAttackAndFollow(); // Remove its attack and follow
+  DropAttackAndFollowTargets(); // Remove its attack and follow
   LoseAttackersAndFollowers(); // Attackers and followers stop detecting
 
-  Dead = 1; // updates the blueprint animation,
+  Dead = 1; // updates the blueprint animation and kicks off the death animation in the
+  // state machine (usually).
 
-  // Filter THIS from collection if exists
-  if( in( Game->hud->Selected, this ) )
+  // Remove from selection.
+  if( Game->hud ) Game->hud->Unselect( { this } );
+
+  if( Stats.OnExploded )
   {
-    // Remove any selectors on there.
-    RemoveTagged( this, Game->hud->SelectedTargetName );
+    Game->Make<AGameObject>( Stats.OnExploded, Pos, team );
   }
+}
 
-  removeElement( Game->hud->Selected, this );
-
+void AGameObject::Cleanup()
+{
   // Remove from team. This finally removes its game-tick counter.
-  if( team )  team->RemoveUnit( this );
+  if( team )
+  {
+    team->RemoveUnit( this );
+  }
+  Destroy();
 }
 
 void AGameObject::BeginDestroy()
@@ -1001,6 +1039,12 @@ void AGameObject::BeginDestroy()
   if( team ) {
     //warning( FS( "Unit %s was removed from team in BeginDestroy()", *Stats.Name ) );
     team->RemoveUnit( this );
+  }
+
+  if( Attackers.size() || Followers.size() )
+  {
+    error( FS("There are %d attackers and %d followers", Attackers.size(), Followers.size() ) );
+    LoseAttackersAndFollowers();
   }
 
   // Check if object is selected, only possible game launched/ready

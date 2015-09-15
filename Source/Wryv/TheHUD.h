@@ -98,6 +98,8 @@ public:
   HotSpot* MouseDownLeft( FVector2D mouse );
   set<AGameObject*> Filter( set<AGameObject*> objects, set<Types> typesToRemove );
   void Select( set<AGameObject*> objects );
+  void Unselect( set<AGameObject*> objects );
+  void Status( FString msg );
   void MarkAsSelected( AGameObject* object );
   void MarkAsFollow( AGameObject* object );
   void MarkAsAttack( AGameObject* object );

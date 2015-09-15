@@ -3,8 +3,6 @@
 
 ACombatUnit::ACombatUnit( const FObjectInitializer& PCIP ):Super( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "themeshof" );
-  Mesh->AttachTo( DummyRoot );
 }
 
 void ACombatUnit::Move( float t )

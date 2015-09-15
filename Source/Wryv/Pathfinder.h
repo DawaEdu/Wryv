@@ -385,6 +385,12 @@ public:
       dists[ dist ] = nodes[i];
     }
 
+    if( !dists.size() )
+    {
+      error( "There were no nodes in dists" );
+      return 0;
+    }
+
     // Find the closest 4 nodes with prioritize angle on top of prox.
     // ie choose the point with maximal dot product with dir.
     GraphNode *node = 0;
@@ -395,7 +401,7 @@ public:
       FVector towards = p.second->point - pos;
       towards.Normalize();
       float dot = FVector::DotProduct( dir, towards );
-      if( dot > largestDot )
+      if( dot >= largestDot )
       {
         node = p.second;
         largestDot = dot;
@@ -405,6 +411,10 @@ public:
       if( count >= 4 ) break;
     }
 
+    if( !node )
+    {
+      error( FS( "Couldn't find node near %f %f %f", pos.X, pos.Y, pos.Z ) ) ;
+    }
     // shortest distance is front
     return node;
   }
@@ -425,16 +435,16 @@ public:
   // }
   vector<FVector> findPath( FVector src, FVector dst )
   {
+    vector<FVector> finalPath;
     set<GraphNode *> openList, closedList;
     
     // Find the node nearest src
     FVector dir = dst - src;
     startNode = findNear( src, dir );
-    startNode->costToGetHere = FVector::Dist( src, startNode->point );
     endNode = findNear( dst, dir );
+    if( !startNode || !endNode )  return finalPath;
+    startNode->costToGetHere = FVector::Dist( src, startNode->point );
     openList.insert( startNode ) ;
-
-    vector<FVector> finalPath;
 
     // Last pt to add in is DST itself
     finalPath.insert( finalPath.begin(), dst );

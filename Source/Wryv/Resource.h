@@ -10,10 +10,7 @@ class WRYV_API AResource : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
 public:
-  int32 AmountRemaining;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 OriginalAmount;
-  // Multiply the amount mined each turn by this amount.
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 Multiplier;
+  float AmountRemaining;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USkeletalMeshComponent* Mesh;
   // Sets the tree to jiggling.
   UPROPERTY( VisibleAnywhere, BlueprintReadWrite, Category = Stats )  bool Jiggle;
@@ -24,5 +21,5 @@ public:
   void BeginPlay() override;
   void PostInitializeComponents() override;
   void Harvest( APeasant* peasant );
-  float ResourcesFraction() { return AmountRemaining / OriginalAmount; }
+  float ResourcesFraction() { return AmountRemaining / Stats.Quantity; }
 };

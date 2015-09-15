@@ -61,6 +61,15 @@
     <Filter Include="Source\Wryv\GameObject\AnimationNotifies">
       <UniqueIdentifier>{42f57184-e7ff-46e8-9fff-0cc78ecc2497}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\GameObject\Resources">
+      <UniqueIdentifier>{1d858b2f-de93-4c29-96a1-9e15e8ce7382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\GameObject\Units">
+      <UniqueIdentifier>{377f7797-0c08-41ae-aa16-98af67222cd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Wryv\GameObject\Objects">
+      <UniqueIdentifier>{43aa52bf-de88-4486-b47b-72f73754515a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\AI.h">
@@ -93,20 +102,11 @@
     <ClInclude Include="..\..\Source\Wryv\GameCanvas.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Explosion.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\GameChrome.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\CursorTexture.h">
       <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\GroundPlane.h">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ImageWidget.h">
       <Filter>Source\Wryv\UI\Elements</Filter>
@@ -117,17 +117,11 @@
     <ClInclude Include="..\..\Source\Wryv\HotSpot.h">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Item.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Box2DU.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\FlyCam.h">
       <Filter>Source\Wryv\Wryv</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\FogOfWar.h">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h">
       <Filter>Source\Wryv\Structures</Filter>
@@ -153,20 +147,11 @@
     <ClInclude Include="..\..\Source\Wryv\MissionObjectivesScreen.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Peasant.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\PortraitsPanel.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ProgressBar.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Projectile.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Resource.h">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ResourcesWidget.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
@@ -206,12 +191,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\TheHUD.h">
       <Filter>Source\Wryv\Wryv</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Unit.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\CombatUnit.h">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ItemShop.h">
       <Filter>Source\Wryv\GameObject\Buildings</Filter>
@@ -267,6 +246,42 @@
     <ClInclude Include="..\..\Source\Wryv\NotifyTreeFinishedFall.h">
       <Filter>Source\Wryv\GameObject\AnimationNotifies</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Resource.h">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ExplodableResource.h">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\CombatUnit.h">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Unit.h">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Peasant.h">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Item.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GroundPlane.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\FogOfWar.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Explosion.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Projectile.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Command.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\AI.cpp">
@@ -299,17 +314,8 @@
     <ClCompile Include="..\..\Source\Wryv\GameCanvas.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Explosion.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\GameChrome.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\GroundPlane.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ImageWidget.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
@@ -320,17 +326,11 @@
     <ClCompile Include="..\..\Source\Wryv\HotSpot.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Item.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp">
       <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\FlyCam.cpp">
       <Filter>Source\Wryv\Wryv</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\FogOfWar.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp">
       <Filter>Source\Wryv\Structures</Filter>
@@ -350,20 +350,11 @@
     <ClCompile Include="..\..\Source\Wryv\Building.cpp">
       <Filter>Source\Wryv\GameObject\Buildings</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Peasant.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ProgressBar.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Projectile.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Resource.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ResourcesWidget.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
@@ -394,12 +385,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\TheHUD.cpp">
       <Filter>Source\Wryv\Wryv</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Unit.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\CombatUnit.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ItemShop.cpp">
       <Filter>Source\Wryv\GameObject\Buildings</Filter>
@@ -439,6 +424,42 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\NotifyTreeFinishedFall.cpp">
       <Filter>Source\Wryv\GameObject\AnimationNotifies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Resource.cpp">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ExplodableResource.cpp">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\CombatUnit.cpp">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Unit.cpp">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Peasant.cpp">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Item.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GroundPlane.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\FogOfWar.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Explosion.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Projectile.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Command.cpp">
+      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

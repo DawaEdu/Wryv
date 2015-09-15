@@ -97,7 +97,6 @@ public:
   bool SetOnGround( FVector& v );
   
   void FindFloor();
-  void Select( set<AGameObject*> objects );
   void MouseUpLeft();
   void MouseDownLeft();
   void MouseUpRight();
