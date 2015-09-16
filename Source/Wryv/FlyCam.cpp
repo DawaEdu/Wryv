@@ -200,13 +200,13 @@ void AFlyCam::InitializePathfinding()
       else
       {
         pathfinder->nodes[ idx ]->point = p;
-        AGameObject* sphere = Game->Make<AGameObject>( SHAPESPHERE, p, Game->gm->neutralTeam );
+        AGameObject* sphere = Game->Make<AGameObject>( SHAPESPHERE, Game->gm->neutralTeam, p );
         sphere->SetSize( radiusScale );
         
         // Pick objects intersecting with the sphere. If anything intersects, then
         // the node is regarded as impassible.
-        set<AGameObject*> forbidden = { floor };
-        set<AGameObject*> intns = Game->pc->Pick( sphere, sphere->hitBounds ) | forbidden;
+        vector<AGameObject*> forbidden = { floor };
+        vector<AGameObject*> intns = Game->pc->Pick( sphere, sphere->hitBounds ) | forbidden;
         
         if( intns.size() ) {
           pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
@@ -234,7 +234,7 @@ void AFlyCam::InitializePathfinding()
     GraphNode *node = pathfinder->nodes[i];
     if( node->terrain == Passible )
     {
-      AGameObject *vizSphere = Game->Make<AGameObject>( SHAPESPHERE, node->point, Game->gm->neutralTeam );
+      AGameObject *vizSphere = Game->Make<AGameObject>( SHAPESPHERE, Game->gm->neutralTeam, node->point );
       vizSphere->SetSize( radiusScale );
     }
     // create a node and edge connections
@@ -307,7 +307,7 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   //pos += camera->GetForwardVector() * -startLoc.Size();
   
   FQuat q( 0.f, 0.f, 0.f, 0.f );
-  //LOG( "New camera loc %f %f %f", pos.X, pos.Y, pos.Z );
+  //LOG( "New camera pos %f %f %f", pos.X, pos.Y, pos.Z );
   SetActorLocationAndRotation( P2, q );
 
   // Compute frustum corners collision with ground plane.
@@ -336,7 +336,7 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 
 void AFlyCam::Visualize( Types type, FVector& v, float s, FLinearColor color )
 {
-  AGameObject* go = Game->Make<AGameObject>( type, v, Game->gm->neutralTeam );
+  AGameObject* go = Game->Make<AGameObject>( type, Game->gm->neutralTeam, v );
   go->SetSize( FVector(s) );
   go->SetColor( color );
   viz.push_back( go );
@@ -372,7 +372,7 @@ AGameObject* AFlyCam::MakeLine( FVector a, FVector b, FLinearColor color )
   }
   dir /= len;
 
-  AGameObject *line = Game->Make<AGameObject>( Types::SHAPEEDGE, a, Game->gm->neutralTeam );
+  AGameObject *line = Game->Make<AGameObject>( Types::SHAPEEDGE, Game->gm->neutralTeam, a );
   line->SetSize( FVector(len) );
   line->SetColor( color );
   line->SetActorRotation( dir.Rotation() );
@@ -498,7 +498,8 @@ void AFlyCam::MouseDownLeft()
         for( AGameObject *go : Game->hud->Selected )
         {
           /// Launch projectile @ ground
-          AProjectile* p = Game->Make<AProjectile>( NextAction.Type, go->Pos, go->team );
+          
+          AProjectile* p = Game->Make<AProjectile>( NextAction.Type, go->team, go->Pos );
           p->SetDestinationArc( go->Pos, hitResult.ImpactPoint, p->BaseStats.SpeedMax, p->BaseStats.MaxTravelHeight );
         }
       }
@@ -538,10 +539,20 @@ void AFlyCam::MouseDownRight()
   {
     // Calculate offsets with respect to first command unit
     AGameObject* first = *Game->hud->Selected.begin();
-    FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to loc from first->Pos
-    for( AGameObject * go : Game->hud->Selected ) {
-      go->SetGroundPosition( go->Pos + offset );
-      //Game->EnqueueCommand( Command( Command::GoTo, go->ID, go->Pos + offset ) );
+    FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to pos from first->Pos
+    for( AGameObject * go : Game->hud->Selected )
+    {
+      //go->GoToGroundPosition( go->Pos + offset ); // C++ Code Command
+      if( Game->pc->IsKeyDown( EKeys::LeftShift )   ||   Game->pc->IsKeyDown( EKeys::RightShift ) )
+      {
+        // When shift is down, we have to add the command to the list of commands for this unit.
+        Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
+      }
+      else
+      {
+        // When shift is NOT down, we have to clear the unit's command set.
+        Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
+      }
     }
   }
   else // Some object was right-clicked.
@@ -549,8 +560,15 @@ void AFlyCam::MouseDownRight()
     // An actor was hit by the click. Detect if friendly or not.
     for( AGameObject* go : Game->hud->Selected )
     {
-      go->Target( target );
-      //Game->EnqueueCommand( Command( Command::Target, target->ID ) );
+      //go->Target( target );
+      if( Game->pc->IsKeyDown( EKeys::LeftShift )   ||   Game->pc->IsKeyDown( EKeys::RightShift ) )
+      {
+        Game->EnqueueCommand( Command( Command::Target, go->ID, target->ID ) );
+      }
+      else
+      {
+        Game->SetCommand( Command( Command::Target, go->ID, target->ID ) );
+      }
     }
   }
 }

@@ -87,7 +87,7 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
   return 0;
 }
 
-void ATheHUD::Select( set<AGameObject*> objects )
+void ATheHUD::Select( vector<AGameObject*> objects )
 {
   // Remove all selection markers (previous selection)
   for( AGameObject* sel : Selected )
@@ -136,7 +136,7 @@ void ATheHUD::Select( set<AGameObject*> objects )
 
 }
 
-void ATheHUD::Unselect( set<AGameObject*> objects )
+void ATheHUD::Unselect( vector<AGameObject*> objects )
 {
   // Filter THIS from collection if exists
   for( AGameObject* go : objects )

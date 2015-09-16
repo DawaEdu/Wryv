@@ -47,19 +47,20 @@ enum Types
 
   // Some kind of widget or selector
   UISELECTOR            UMETA(DisplayName = "UI Selector"),
+  UIFLAGWAYPOINT        UMETA(DisplayName = "UI Flag Waypoint"),
 
   // Weapons.
-  PROJWEAPONARROW      UMETA(DisplayName = "Arrow Projectile"),
-  PROJFIRE             UMETA(DisplayName = "Fire Projectile"),
-  PROJICE              UMETA(DisplayName = "Ice Projectile"),
-  PROJLIGHTNING        UMETA(DisplayName = "Lightning Projectile"),
+  PROJWEAPONARROW       UMETA(DisplayName = "Arrow Projectile"),
+  PROJFIRE              UMETA(DisplayName = "Fire Projectile"),
+  PROJICE               UMETA(DisplayName = "Ice Projectile"),
+  PROJLIGHTNING         UMETA(DisplayName = "Lightning Projectile"),
 
-  EXPLWHITE            UMETA(DisplayName = "Explosion White"),
-  EXPLYELLOW           UMETA(DisplayName = "Explosion Yellow"),
-  EXPLARROWDUST        UMETA(DisplayName = "Explosion Arrow Dust"),
-  EXPLFIRESPLASH       UMETA(DisplayName = "Explosion Fire Splash"),
-  EXPLICESPLASH        UMETA(DisplayName = "Explosion Ice Splash"),
-  EXPLLIGHTNINGSPLASH  UMETA(DisplayName = "Explosion Lightning Splash"),
+  EXPLWHITE             UMETA(DisplayName = "Explosion White"),
+  EXPLYELLOW            UMETA(DisplayName = "Explosion Yellow"),
+  EXPLARROWDUST         UMETA(DisplayName = "Explosion Arrow Dust"),
+  EXPLFIRESPLASH        UMETA(DisplayName = "Explosion Fire Splash"),
+  EXPLICESPLASH         UMETA(DisplayName = "Explosion Ice Splash"),
+  EXPLLIGHTNINGSPLASH   UMETA(DisplayName = "Explosion Lightning Splash"),
 
   MAX                   UMETA(DisplayName = "Max"),
 };

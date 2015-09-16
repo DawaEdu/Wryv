@@ -32,10 +32,10 @@ public:
   CostWidget*       costWidget;   // a flyover cost of the hovered item from 
   Tooltip*          tooltip;      // 
   GameCanvas*       gameCanvas;   // like acetate sheet user uses to select units etc.
-  set<AGameObject*> Selected;
+  vector<AGameObject*> Selected;
 
   GameChrome( FString name, FVector2D size );
-  void Select( set<AGameObject*> objects );
+  void Select( vector<AGameObject*> objects );
 };
 
 

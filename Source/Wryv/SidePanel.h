@@ -33,6 +33,6 @@ public:
   // For the group of selected units.
   SidePanel( FVector2D size, FVector2D spacing );
   virtual ~SidePanel() { }
-  void Set( set<AGameObject*> objects );
+  void Set( vector<AGameObject*> objects );
 };
 

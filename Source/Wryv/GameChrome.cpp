@@ -38,7 +38,7 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
   Add( gameCanvas );
 }
 
-void GameChrome::Select( set<AGameObject*> objects )
+void GameChrome::Select( vector<AGameObject*> objects )
 {
   Selected = objects;
   AGameObject* go = first( Selected );

@@ -115,7 +115,7 @@ void ABuilding::montageStarted_Implementation( UAnimMontage* Montage )
 
 bool ABuilding::CanBePlaced()
 {
-  set<AGameObject*> objs;
+  vector<AGameObject*> objs;
   if( peasant )
   {
     objs = Game->pc->PickExcept( this, hitBounds, {peasant} );
@@ -154,6 +154,7 @@ void ABuilding::PlaceBuilding( APeasant *p )
   // The peasant must be allowed inside the hitbounds.
   p->hitBounds->SetCollisionEnabled( ECollisionEnabled::NoCollision ); // deactivate collisions?
   p->SetDestination( Pos );
+  // What if the peasant dies?
   p->OnReachDestination = [this,p]()
   {
     // put the peasant underground, so it appears to be building.

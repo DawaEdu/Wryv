@@ -1,32 +1,30 @@
 #pragma once
 
 class AGameObject;
+#include "Types.h"
 
 // This structure contains a single command for a unit.
 // Units can stack these in a series
 struct Command
 {
-  enum CommandType { Target, GoTo, Build };
-  CommandType commandType;
-  int64 objectId;
-  FVector loc;
+  static int64 NextCommandID;
 
-  Command() : commandType( CommandType::GoTo ), objectId( 0 ), loc( 0,0,0 )
-  {
-  }
+  enum CommandType { Target, GoToGroundPosition, Build };
 
-  Command( const Command& cmd ) :
-    commandType( cmd.commandType ), objectId( cmd.objectId ), loc( cmd.loc )
-  {
-  }
+  int64 CommandID;          // The numeric ID of the Command (these are in-order)
+  int64 FrameID;
+  CommandType commandType;  // The type of the command added here
+  int64 srcObjectId;        // The ID of the object that this command concerns
+  int64 targetObjectId;     // The target object that this command concerns (for Follow or Attack commands)
+  Types buildingType;       // Commands that build things use this field
+  FVector pos;              // Location of the command (esp if ground position)
 
-  Command( CommandType cmd, int64 iObjectId ) :
-    commandType( cmd ), objectId( iObjectId ), loc( 0,0,0 )
-  {
+  Command();
+  Command( CommandType cmd, int64 iSrcObjectId );
+  Command( CommandType cmd, int64 iSrcObjectId, FVector iLocation );
+  Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId );
+  bool operator==( const Command& cmd ) {
+    return CommandID == cmd.CommandID;
   }
-
-  Command( CommandType cmd, int64 iObjectId, FVector iLoc ) :
-    commandType( cmd ), objectId( iObjectId ), loc( iLoc )
-  {
-  }
+  FString ToString() const;
 };

@@ -25,6 +25,7 @@ void StatsPanel::Blank()
 {
   unitName -> Set( "" );
   hpBar->Set( 0.f );
+  hpBar->Hide();
   hpText -> Set( "" );
   damage -> Set( "" );
   armor -> Set( "" );
@@ -47,6 +48,7 @@ void StatsPanel::Set( AGameObject* go )
 {
   Selected = go;
   Blank();  // blank the stats
+  hpBar->Show();
   Restack();
   if( !go )  return;
   

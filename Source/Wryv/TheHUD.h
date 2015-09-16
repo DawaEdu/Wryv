@@ -61,7 +61,7 @@ public:
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
 
   // Because canvas has to be valid for box selection to work it seems
-  set<AGameObject*> Selected;
+  vector<AGameObject*> Selected;
   static FName AttackTargetName;
   static FName FollowTargetName;
   static FName SelectedTargetName;
@@ -96,9 +96,9 @@ public:
   HotSpot* MouseMoved( FVector2D mouse );
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
-  set<AGameObject*> Filter( set<AGameObject*> objects, set<Types> typesToRemove );
-  void Select( set<AGameObject*> objects );
-  void Unselect( set<AGameObject*> objects );
+  vector<AGameObject*> Filter( vector<AGameObject*> objects, set<Types> typesToRemove );
+  void Select( vector<AGameObject*> objects );
+  void Unselect( vector<AGameObject*> objects );
   void Status( FString msg );
   void MarkAsSelected( AGameObject* object );
   void MarkAsFollow( AGameObject* object );

@@ -5,6 +5,7 @@
 #include "PlayerControl.h"
 #include "FlyCam.h"
 #include "Building.h"
+#include "Peasant.h"
 
 FCursorTexture GameCanvas::MouseCursorHand;
 FCursorTexture GameCanvas::MouseCursorCrossHairs;
@@ -23,25 +24,30 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   // Attach functionality
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
-    ABuilding *ghost = Game->flycam->ghost;
-    if( ghost )
+    if( !Game->flycam->ghost )
     {
+      // Box-shaped selection here
+      SelectStart( mouse );
+    }
+    else
+    {
+      ABuilding *ghostBuilding = Game->flycam->ghost;
+
       // Places the selected object without forming a new selection.
-      if( ghost->CanBePlaced() )
+      if( ghostBuilding->CanBePlaced() )
       {
-        info( FS( "Placing building %s", *ghost->Stats.Name ) );
-        // Build the building. If ghost doesn't intersect any existing buildings then place it.
-        if( ghost->team->CanAfford( ghost->Stats.Type ) )
+        if( ghostBuilding->team->CanAfford( ghostBuilding->Stats.Type ) )
         {
-          ghost->team->Spend( ghost->Stats.Type );
-          
-          // Get the first Peasant object in selected
+          ghostBuilding->team->Spend( ghostBuilding->Stats.Type );
+
+          // Get the first Peasant object in selected.
           if( Game->hud->Selected.size() )
           {
             if( APeasant *peasant = Cast<APeasant>( *Game->hud->Selected.begin() ) )
             {
-              ghost->PlaceBuilding( peasant );
-              //Game->EnqueueCommand( Command( Command::Build, peasant->ID, ghost->Pos ) );
+              //ghost->PlaceBuilding( peasant );
+              Game->EnqueueCommand( Command( Command::Build, peasant->ID, ghostBuilding->Pos ) );
+              ghostBuilding->Cleanup();
               Game->flycam->ghost = 0; // stop moving the ghost.
             }
             else
@@ -57,10 +63,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
         LOG( "Cannot place building here" );
       }
     }
-    else
-    {
-      SelectStart( mouse );
-    }
+    
     return Consumed;
   };
   OnMouseUpLeft = [this]( FVector2D mouse ) {

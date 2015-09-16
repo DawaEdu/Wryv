@@ -23,13 +23,14 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  UStaticMeshComponent* LumberPiece;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  UStaticMeshComponent* StonePiece;
   
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Carrying;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 GoldCarryCapacity;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 LumberCarryCapacity;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 StoneCarryCapacity;
 
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Carrying;
+  ABuilding* Building;
   //ABuilding* RepairTarget;
-  AResource* LastResource;
+  FVector LastResourcePosition;
   bool Repairing; // Is the unit repairing something
 
   // [The resource type I'm mining] => The amount of resource I'm holding.
@@ -43,6 +44,8 @@ public:
   void Repair( float t );
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
+  void CreateBuilding( Types type, const FVector& pos );
+  void ReturnResources();
   virtual void Move( float t );
   virtual void ai( float t );
   virtual void Hit( AGameObject* other );

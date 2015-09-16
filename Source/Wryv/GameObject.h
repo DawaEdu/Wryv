@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <deque>
 #include <List.h>
 #include <Array.h>
 using namespace std;
@@ -17,6 +18,7 @@ using namespace std;
 
 class AItem;
 class AGameObject;
+class AResource;
 struct Team;
 
 UCLASS()
@@ -63,12 +65,12 @@ class WRYV_API AGameObject : public AActor
   function <void ()> OnReachDestination; // Something to do when reach destination.
 
   // Series of commands.
-  vector<Command> commands;
+  deque<Command> commands;
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
-  set<AGameObject*> Followers, Attackers, Overlaps;
+  vector<AGameObject*> Followers, Attackers, Overlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
 
   // 
@@ -146,14 +148,16 @@ class WRYV_API AGameObject : public AActor
   
   void AddRepulsionForcesFromOverlappedUnits();
   void Walk( float t );
-  void SetGroundPosition( FVector groundPos );
+  void GoToGroundPosition( FVector groundPos );
   void SetDestination( FVector d );
   void StopMoving();
   void Stop();
   void Face( FVector point );
   // time-stepped attack of current target (if any)
   void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
+  void exec( const Command& cmd );
   virtual void Move( float t );
+  bool Idling();
   virtual void ai( float t );
   // The hit volumes overlapped
   virtual void Hit( AGameObject* other );
@@ -179,6 +183,7 @@ class WRYV_API AGameObject : public AActor
   // 
   // AI
   AGameObject* GetClosestEnemyUnit();
+  AGameObject* GetClosestObjectNear( FVector pos, float radius, set<Types> AcceptedTypes, set<Types> NotTypes );
 	map<float, AGameObject*> FindEnemyUnitsInSightRange();
   AGameObject* GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius );
 
@@ -190,7 +195,7 @@ class WRYV_API AGameObject : public AActor
   void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, RootComponent ); }
   void SetMaterial( UMaterialInterface* mat );
   void SetColor( FLinearColor color );
-
+  
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]

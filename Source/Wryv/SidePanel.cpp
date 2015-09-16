@@ -48,7 +48,7 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
 
 }
 
-void SidePanel::Set( set<AGameObject*> objects )
+void SidePanel::Set( vector<AGameObject*> objects )
 {
   AGameObject* go = first( objects );
   Portraits->Set( objects );

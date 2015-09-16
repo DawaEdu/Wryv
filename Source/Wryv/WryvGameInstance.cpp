@@ -5,6 +5,7 @@
 #include "TheHUD.h"
 #include "FlyCam.h"
 #include "UnitTypeUClassPair.h"
+#include "Command.h"
 
 UWryvGameInstance* Game = 0;
 
@@ -23,16 +24,48 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   IsDestroyStarted = 0;
 }
 
+void UWryvGameInstance::SetCommand( const Command& cmd )
+{
+  /// retrieve command list from object
+  AGameObject* go = GetUnitById( cmd.srcObjectId );
+
+  /// Remove those commands from global history
+  for( deque<Command>::iterator it = commands.begin(); it != commands.end(); ++it )
+  {
+    // If this command object is found in the gameobject's locals
+    if( in( go->commands, *it ) )
+    {
+      info( FS( "Erasing old command `%s` from global history", *it->ToString() ) );
+      it = commands.erase( it );
+    }
+  }
+
+  go->commands.clear();
+  go->commands.push_back( cmd );
+}
+
 void UWryvGameInstance::EnqueueCommand( const Command& cmd )
 {
-  AGameObject* unit = GetUnitById( cmd.objectId );
+  info( FS( "Enqueued Command %s", *cmd.ToString() ) );
+  commands.push_back( cmd );
+  AGameObject* unit = GetUnitById( cmd.srcObjectId );
   if( unit )
   {
     unit->commands.push_back( cmd );
   }
   else
   {
-    error( FS( "Unit %d not found", cmd.objectId ) );
+    error( FS( "Unit %d not found", cmd.srcObjectId ) );
+  }
+
+
+  if( cmd.commandType == Command::CommandType::GoToGroundPosition )
+  {
+    // Add in a waypoint flag when commanded unit is 1st in hud selection 
+    if( Game->hud->Selected.size() && unit == *Game->hud->Selected.begin() )
+    {
+      
+    }
   }
 }
 

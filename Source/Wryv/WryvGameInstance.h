@@ -10,6 +10,7 @@ using namespace std;
 #include "Team.h"
 #include "UnitTypeUClassPair.h"
 #include "GlobalFunctions.h"
+#include "Command.h"
 #include "WryvGameInstance.generated.h"
 
 class ATheHUD;
@@ -36,8 +37,12 @@ public:
   AWryvGameState *gs;
   AFlyCam *flycam;
   bool IsDestroyStarted;
+  deque<Command> commands;
   
   UWryvGameInstance(const FObjectInitializer& PCIP);
+  // Sets the command for a specific object, clearing previous queue
+  void SetCommand( const Command& cmd );
+  // Queues a command for an object
   void EnqueueCommand( const Command& cmd );
   int64 NextId();
   AGameObject* GetUnitById( int64 unitId );
@@ -60,21 +65,19 @@ public:
     return UnitTypeUClasses[ t ].uClass;
   }
   // T Must be a AGameObject class derivative.
-  template <typename T> T* Make( Types type, FVector v, Team* team ) {
+  template <typename T> T* Make( Types type, Team* team, FVector v ) {
     if( !team )
     {
       LOG( "Make(): team was null!" );
       // select the neutral team.
       team = gm->neutralTeam;
     }
-
     if( type < 0 || type >= Types::MAX )
     {
       error( FS( "Type %d is OOB defined types", (int)type ) );
       type = NOTHING;
     }
     UClass *uClass = GetUClass( type );
-
     if( !uClass )
     {
       error( FS( "Couldn't find UCLASS belonging to type %d", (int)type ) );
@@ -82,7 +85,6 @@ public:
     }
 
     T* obj = GetWorld()->SpawnActor<T>( uClass, v, FRotator(0.f) );
-    
     if( obj )
     {
       obj->SetTeam( team );
@@ -95,7 +97,7 @@ public:
     return obj;
   }
   template <typename T> T* Make( Types type, Team* team ) {
-    return Make<T>( type, FVector( 0.f ), team );
+    return Make<T>( type, team, FVector( 0.f ) );
   }
   FUnitsDataRow GetData( Types type ) { return unitsData[ type ]; }
   UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }

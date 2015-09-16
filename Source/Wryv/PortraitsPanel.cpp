@@ -9,7 +9,7 @@ PortraitsPanel::PortraitsPanel( FVector2D size ) :
   
 }
 
-void PortraitsPanel::Set( set<AGameObject*> objects )
+void PortraitsPanel::Set( vector<AGameObject*> objects )
 {
   // Change rows/cols.
   Cols = Rows = ceilf( sqrtf( objects.size() ) ) ;
@@ -21,7 +21,7 @@ void PortraitsPanel::Set( set<AGameObject*> objects )
     Add( im ) ;
     im->OnMouseDownLeft = [go]( FVector2D mouse ){
       // re-select this object
-      set<AGameObject*> objects = { go };
+      vector<AGameObject*> objects = { go };
       Game->hud->Select( objects );
       return Consumed;
     };

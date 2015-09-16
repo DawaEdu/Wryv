@@ -90,7 +90,6 @@ FHitResult APlayerControl::PickClosest( const FVector2D& ScreenPosition )
 	return FHitResult(); // Null hit
 }
 
-
 FHitResult APlayerControl::PickClosest( const FVector& eye, const FVector& lookDir )
 {
   FHitResult res;
@@ -103,7 +102,24 @@ FHitResult APlayerControl::PickClosest( const FVector& eye, const FVector& lookD
   return res;
 }
 
-set<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
+map<float,AGameObject*> APlayerControl::PickNearest( FVector pos, FCollisionShape shape,
+  set<Types> AcceptedTypes, set<Types> NotTypes )
+{
+  map<float, AGameObject*> m;
+
+  vector<AGameObject*> picks = Pick( pos, shape );
+  for( AGameObject* go : picks )
+  {
+    if( AcceptedTypes.size() && !in( AcceptedTypes, go->Stats.Type.GetValue() ) )  skip;
+    if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
+    float d = ( go->Pos - pos ).Size();
+    m[ d ] = go;
+  }
+  
+  return m;
+}
+
+vector<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
 {
   FCollisionQueryParams fqp;
   TArray<FOverlapResult> overlaps;
@@ -112,23 +128,24 @@ set<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
     FCollisionObjectQueryParams::InitType::AllObjects );
   // To query using a specific object TYPE, use OverlapMultiByProfile()
   GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fqp );
-  set<AGameObject*> intersections;
+  vector<AGameObject*> intersections;
   for( int i = 0; i < overlaps.Num(); i++ )
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-      intersections.insert( go );
+      if( !go->Dead )
+        intersections += go;
   return intersections;
 } 
 
-set<AGameObject*> APlayerControl::Pick( AGameObject* object, UPrimitiveComponent* up )
+vector<AGameObject*> APlayerControl::Pick( AGameObject* object, UPrimitiveComponent* up )
 {
   return PickExcept( object, up, {object} );
 }
 
-set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveComponent* up, set<AGameObject*> except )
+vector<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveComponent* up, vector<AGameObject*> except )
 {
   FComponentQueryParams fqp;
   
-  except.insert( object );
+  except += object;
 
   // this will cause the object to pick itself if you don't put it in the except group
   for( AGameObject* o : except )
@@ -149,7 +166,7 @@ set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveCom
   objectTypes.AddObjectTypesToQuery( ECollisionChannel::ECC_GameTraceChannel3 ); // Channel 3 is
   // the RESOURCES channel.
 
-  set<AGameObject*> intersections;
+  vector<AGameObject*> intersections;
 
   // grab the hitBounds
   TArray<FOverlapResult> overlaps;
@@ -162,13 +179,13 @@ set<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveCom
     ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
   for( int i = 0; i < overlaps.Num(); i++ )
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-      intersections.insert( go );
+      intersections += go;
   return intersections;
 }
 
-set<AGameObject*> APlayerControl::Pick( const FVector2D& ScreenPosition )
+vector<AGameObject*> APlayerControl::Pick( const FVector2D& ScreenPosition )
 {
-  set<AGameObject*> objects;
+  vector<AGameObject*> objects;
   
   ULocalPlayer* LP = GetLocalPlayer();
   if( !LP ) return objects;
@@ -193,14 +210,14 @@ set<AGameObject*> APlayerControl::Pick( const FVector2D& ScreenPosition )
   GetWorld()->LineTraceMultiByChannel( res, ray.start, ray.end, ECollisionChannel::ECC_GameTraceChannel2, fqp );
   for( int i = 0; i < res.Num(); i++ ) {
     if( AGameObject *go = Cast< AGameObject >( res[i].GetActor() ) )
-      objects.insert( go );
+      objects += go;
   }
   return objects;
 }
 
-set<AGameObject*> APlayerControl::Pick( const FVector& eye, const FVector& lookDir )
+vector<AGameObject*> APlayerControl::Pick( const FVector& eye, const FVector& lookDir )
 {
-  set<AGameObject*> objects;
+  vector<AGameObject*> objects;
   // Casts a ray into the scene
   FCollisionQueryParams fqp( "ClickableTrace", true );
   TArray<FHitResult> res;
@@ -208,15 +225,15 @@ set<AGameObject*> APlayerControl::Pick( const FVector& eye, const FVector& lookD
   GetWorld()->LineTraceMultiByChannel( res, eye, end, ECollisionChannel::ECC_GameTraceChannel2, fqp );
   for( int i = 0; i < res.Num(); i++ ) {
     if( AGameObject *go = Cast< AGameObject >( res[i].GetActor() ) )
-      objects.insert( go );
+      objects += go;
   }
   return objects;
 }  
 
 // If InTypes is EMPTY, then it picks any type
-set<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
+vector<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
 {
-  set<AGameObject*> objects;
+  vector<AGameObject*> objects;
   
   // A 0 area box picks with a ray from TL corner of the click.
   if( !box.GetArea() ) {
@@ -282,7 +299,7 @@ set<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> AcceptedT
       // Selection by mesh's bounding box is best.
       if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )
       {
-        objects.insert( go );
+        objects += go;
       }
     }
   }

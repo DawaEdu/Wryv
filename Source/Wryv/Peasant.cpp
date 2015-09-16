@@ -33,10 +33,11 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   MinedPieces[ Types::RESLUMBER ] = LumberPiece;
   MinedPieces[ Types::RESSTONE ] = StonePiece;
 
+  Building = 0;
   Carrying = 0;
   Repairing = 0;
   //RepairTarget = 0;
-  LastResource = 0;
+  LastResourcePosition = FVector(0,0,0);
 }
 
 void APeasant::PostInitializeComponents()
@@ -53,7 +54,7 @@ void APeasant::Target( AGameObject* target )
   if( AResource *resource = Cast<AResource>( target ) )
   {
     // "attack" the resource to mine it.
-    LastResource = resource;
+    LastResourcePosition = resource->Pos;
     Attack( resource );
     return;
   }
@@ -114,6 +115,17 @@ void APeasant::AttackCycle()
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTarget->Jiggle = 1; // This jiggles the animation when the attack cycle
       MiningTarget->Harvest( this );
+
+      // If the mining target ran out of resources, find a new one.
+      if( MiningTarget->AmountRemaining <= 0 )
+      {
+        AGameObject *res = GetClosestObjectNear( LastResourcePosition, Stats.SightRange,
+          { Types::RESGOLD, Types::RESLUMBER, Types::RESSTONE }, {} );
+        if( res )
+          Attack( res );
+        else
+          error( "No resource near previously harvested resource" );
+      }
     }
   }
   else
@@ -149,6 +161,12 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
     }
   }
   return lowestHpUnit;
+}
+
+void APeasant::CreateBuilding( Types type, const FVector& pos )
+{
+  ABuilding* building = Game->Make<ABuilding>( type, team, pos );
+  building->PlaceBuilding( this );
 }
 
 void APeasant::ai( float t )
@@ -195,43 +213,57 @@ void APeasant::Hit( AGameObject* other )
     team->Stone += MinedResources[ Types::RESSTONE ];
     MinedResources[ Types::RESSTONE ] = 0;
     Follow( 0 );
-    // go back to get more resources
-    Attack( LastResource );
+    // go back to get more resources, if the last resource is still present
+    AGameObject *res = GetClosestObjectNear( LastResourcePosition, Stats.SightRange,
+      {Types::RESGOLD,Types::RESLUMBER,Types::RESSTONE}, {} );
+    if( res )
+      Attack( res );
+    else
+      error( FS( "%s: There are no resources near %f %f %f", *GetName(),
+        LastResourcePosition.X, LastResourcePosition.Y, LastResourcePosition.Z ) );
+  }
+}
+
+void APeasant::ReturnResources()
+{
+  // Attempt to return resources if full-up on any type.
+  if( !FollowTarget )
+  {
+    for( pair< Types, int32 > p : MinedResources )
+    {
+      if( p.second > 0 )
+      {
+        Carrying = 1; // Apply carrying animation.
+        MinedPieces[ p.first ] -> SetVisibility( true );
+        if( p.second >= Capacities[ p.first ] )
+        {
+          // Return to nearest townhall for dropoff
+          AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL, team, 1e6f );
+          if( !returnCenter )
+          {
+            info( "NO RETURN CENTER" );
+          }
+          else
+          {
+            //info( FS( "Peasant %s returning to town center %s with %d %s",
+            //  *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
+            // Check if the resource is exhausted. If so, look for a similar resource
+            Follow( returnCenter ); // Keep the attacktarget (miningtarget) set.
+          }
+        }
+      }
+      else
+      {
+        MinedPieces[ p.first ] -> SetVisibility( false );
+      }
+    }
   }
 }
 
 void APeasant::Move( float t )
 {
   Carrying = 0;
-  for( pair< Types, int32 > p : MinedResources )
-  {
-    if( p.second > 0 )
-    {
-      Carrying = 1; // Apply carrying animation.
-      MinedPieces[ p.first ] -> SetVisibility( true );
-      if( p.second >= Capacities[ p.first ] )
-      {
-        // Return to nearest townhall for dropoff
-        AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL, team, 1e6f );
-        if( !returnCenter )
-        {
-          info( "NO RETURN CENTER" );
-        }
-        else
-        {
-          info( FS( "Peasant %s returning to town center %s with %d %s",
-            *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
-          // Check if the resource is exhausted. If so, look for a similar resource
-
-          Follow( returnCenter ); // Keep the attacktarget (miningtarget) set.
-        }
-      }
-    }
-    else
-    {
-      MinedPieces[ p.first ] -> SetVisibility( false );
-    }
-  }
+  ReturnResources();
 
   // We repair the building that is currently selected
   if( FollowTarget )  Repair( t );

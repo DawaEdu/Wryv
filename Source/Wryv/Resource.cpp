@@ -31,6 +31,13 @@ void AResource::Harvest( APeasant* peasant )
   if( AmountRemaining > 0 )
   {
     float dmg = peasant->DamageRoll();
+    set<Types> acceptable = {RESGOLD,RESLUMBER,RESSTONE};
+    if( !in( acceptable, Stats.Type.GetValue() ) )
+    {
+      // This happens when you have a bad entry in BaseStats.
+      error( FS( "Resource object type %s not recognized", *Stats.Name ) );
+      return;
+    }
     peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
     AmountRemaining -= dmg;
 

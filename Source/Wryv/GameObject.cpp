@@ -12,7 +12,7 @@
 #include "Widget3D.h"
 #include "Building.h"
 #include "Explosion.h"
-
+#include "Peasant.h"
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -259,7 +259,7 @@ void AGameObject::Shoot()
   }
 
   LOG( "%s launching a projectile of type %d", *Stats.Name, (int)Stats.ReleasedProjectileWeapon.GetValue() );
-  AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, launchPos, team );
+  AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, team, launchPos );
   if( !projectile )
   {
     error( FS( "Projectile couldn't be launched from %s", *Stats.Name ) );
@@ -347,7 +347,7 @@ void AGameObject::UpdateStats( float t )
       // Remove it and consider ith building complete. Place @ unoccupied position around building.
       FVector buildPos = Pos + GetActorForwardVector() * Radius();
       
-      AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, buildPos, team );
+      AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, team, buildPos );
 
       // Remove counter & refresh the build queue.
       removeIndex( BuildQueueCounters, i );
@@ -428,7 +428,7 @@ void AGameObject::CheckWaypoint()
 void AGameObject::SetPosition( FVector v )
 {
   // Check if there's something there.
-  //set<AGameObject*> objs = Game->pc->Pick( 
+  //vector<AGameObject*> objs = Game->pc->Pick( 
 
   // While encountering objects, keep searching adjacent to the picked objects until finding empty place.
   Pos = Dest = v;
@@ -515,7 +515,7 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   // Make sure other component with defined overlap is AGameObject derivative.
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    Overlaps.insert( go );
+    Overlaps += go;
   }
 }
 
@@ -525,7 +525,7 @@ void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPri
   
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    removeElement( Overlaps, go );
+    Overlaps -= go;
   }
 }
 
@@ -592,7 +592,7 @@ void AGameObject::Walk( float t )
   }
 }
 
-void AGameObject::SetGroundPosition( FVector groundPos )
+void AGameObject::GoToGroundPosition( FVector groundPos )
 {
   DropAttackAndFollowTargets();
   SetDestination( groundPos );
@@ -713,6 +713,51 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   }
 }
 
+void AGameObject::exec( const Command& cmd )
+{
+  info( cmd.ToString() );
+  switch( cmd.commandType )
+  {
+    case Command::CommandType::Build:
+      {
+        // builds the assigned building using peasant (id)
+        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
+        if( APeasant* peasant = Cast<APeasant>( go ) )
+        {
+          peasant->CreateBuilding( cmd.buildingType, cmd.pos );
+        }
+        else
+        {
+          error( FS( "The unit [%s] asked to build %s was not a peasant",
+            *go->GetName(), *GetTypesName( cmd.buildingType ) ) );
+        }
+      }
+      break;
+    case Command::CommandType::GoToGroundPosition:
+      {
+        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
+        go->GoToGroundPosition( cmd.pos );
+      }
+      break;
+    case Command::CommandType::Target:
+      {
+        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
+        AGameObject* target = Game->GetUnitById( cmd.targetObjectId );
+        if( !go || !target )
+        {
+          error( "GameObject was NULL or target was NULL" );
+        }
+        else
+        {
+          go->Target( target );
+        }
+      }
+      break;
+    default:
+      break;
+  }
+}
+
 void AGameObject::Move( float t )
 {
   if( Dead ) {
@@ -725,6 +770,17 @@ void AGameObject::Move( float t )
     }
     return; // Cannot move if dead
   }
+
+  // Process enqueued commands when idling.
+  if( Idling() )
+  {
+    if( commands.size() )
+    {
+      exec( commands.front() );
+      commands.pop_front();
+    }
+  }
+
   if( Hp <= 0 ) {
     Die();
     return;
@@ -733,10 +789,18 @@ void AGameObject::Move( float t )
     UpdateStats( t );
     // Update & Cache Unit's stats this frame, including HP recovery
   }
+
+
   
   // Call the ai for this object type
   //ai( t );
   FlushPosition();
+}
+
+bool AGameObject::Idling()
+{
+  // no scheduled activity. sitting beside followtarget doesn't mean idling
+  return !AttackTarget   &&   !Waypoints.size();
 }
 
 void AGameObject::ai( float t )
@@ -779,7 +843,12 @@ void AGameObject::Follow( AGameObject* go )
   FollowTarget = go;
   if( FollowTarget )
   {
-    FollowTarget->Followers.insert( this );
+    if( FollowTarget->Dead ) {
+      error( FS( "Trying to follow dead attack target %s", *go->Stats.Name ) );
+      return;
+    }
+    
+    FollowTarget->Followers += this;
     Game->hud->MarkAsFollow( FollowTarget );
   }
 }
@@ -790,7 +859,12 @@ void AGameObject::Attack( AGameObject* go )
   AttackTarget = go;
   if( AttackTarget )
   {
-    AttackTarget->Attackers.insert( this );
+    if( AttackTarget->Dead ) {
+      error( FS( "Trying to attack dead attack target %s", *go->Stats.Name ) );
+      return;
+    }
+
+    AttackTarget->Attackers += this;
     Game->hud->MarkAsAttack( AttackTarget );
   }
 }
@@ -820,7 +894,7 @@ void AGameObject::LoseFollower( AGameObject* formerFollower )
   formerFollower->FollowTarget = 0;
   // if I lost all followers, update the hud
   if( !Followers.size() ) {
-    LOG( "%s doesn't need follow ring", *Stats.Name );
+    //LOG( "%s doesn't need follow ring", *Stats.Name );
     RemoveTagged( this, Game->hud->FollowTargetName );
   }
 }
@@ -835,7 +909,7 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
   // If there are no more attackers, unselect in ui
   if( !Attackers.size() )
   {
-    LOG( "%s doesn't need attack ring", *Stats.Name );
+    //LOG( "%s doesn't need attack ring", *Stats.Name );
     RemoveTagged( this, Game->hud->AttackTargetName );
   }
 }
@@ -857,7 +931,6 @@ void AGameObject::LoseAttackersAndFollowers()
     (*Followers.begin())->Follow( 0 );
   if( Followers.size() )
     error( FS( "%s: There are %d followers after losing all followers", *Stats.Name, Followers.size() ) );
-  
 }
 
 AGameObject* AGameObject::GetClosestEnemyUnit()
@@ -865,6 +938,21 @@ AGameObject* AGameObject::GetClosestEnemyUnit()
   map<float, AGameObject*> closeUnits = FindEnemyUnitsInSightRange();
   if( closeUnits.size() )
     return closeUnits.begin()->second;
+  return 0;
+}
+
+AGameObject* AGameObject::GetClosestObjectNear( FVector pos, float radius, set<Types> AcceptedTypes, set<Types> NotTypes )
+{
+  FCollisionShape shape = FCollisionShape::MakeCapsule( radius, hitBounds->GetScaledCapsuleHalfHeight() );
+  map<float,AGameObject*> objs = Game->pc->PickNearest( pos, shape, AcceptedTypes, NotTypes );
+
+  if( objs.size() )
+  {
+    return objs.begin()->second;
+  }
+
+  info( FS( "%s couldn't find a resource within %f units of (%f %f %f)",
+    *GetName(), radius, pos.X, pos.Y, pos.Z ) );
   return 0;
 }
 
@@ -891,7 +979,7 @@ map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
 AGameObject* AGameObject::GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius )
 {
   // You can only select within range of unit
-  //set<AGameObject*> sels = //Game->pc->Pick( this, hitBounds );
+  //vector<AGameObject*> sels = //Game->pc->Pick( this, hitBounds );
   // Go thru all objects on team
   AGameObject* closestObject = 0;
   float closestDistance = FLT_MAX;
@@ -1018,7 +1106,7 @@ void AGameObject::Die()
 
   if( Stats.OnExploded )
   {
-    Game->Make<AGameObject>( Stats.OnExploded, Pos, team );
+    Game->Make<AGameObject>( Stats.OnExploded, team, Pos );
   }
 }
 
@@ -1029,6 +1117,13 @@ void AGameObject::Cleanup()
   {
     team->RemoveUnit( this );
   }
+
+  if( Attackers.size() || Followers.size() )
+  {
+    error( FS("There are %d attackers and %d followers", Attackers.size(), Followers.size() ) );
+    LoseAttackersAndFollowers();
+  }
+
   Destroy();
 }
 
