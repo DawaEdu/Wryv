@@ -24,6 +24,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   // Attach functionality
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
+    // Presence of the ghost indicates a building is queued to be placed by the UI.
     if( !Game->flycam->ghost )
     {
       // Box-shaped selection here
@@ -31,31 +32,30 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     }
     else
     {
-      ABuilding *ghostBuilding = Game->flycam->ghost;
-
       // Places the selected object without forming a new selection.
-      if( ghostBuilding->CanBePlaced() )
-      {
-        if( ghostBuilding->team->CanAfford( ghostBuilding->Stats.Type ) )
-        {
-          ghostBuilding->team->Spend( ghostBuilding->Stats.Type );
+      ABuilding *g = Game->flycam->ghost;
 
-          // Get the first Peasant object in selected.
-          if( Game->hud->Selected.size() )
-          {
-            if( APeasant *peasant = Cast<APeasant>( *Game->hud->Selected.begin() ) )
-            {
-              //ghost->PlaceBuilding( peasant );
-              Game->EnqueueCommand( Command( Command::Build, peasant->ID, ghostBuilding->Pos ) );
-              ghostBuilding->Cleanup();
-              Game->flycam->ghost = 0; // stop moving the ghost.
-            }
-            else
-            {
-              error( "A peasant wasn't selected to place the building." );
-            }
-          }
-        }
+      // the src peasant must be present
+      APeasant *peasant = 0;
+      if( Game->hud->Selected.size() )
+      {
+        peasant = Cast<APeasant>( Game->hud->Selected[0] );
+      }
+
+      if( !peasant )
+      {
+        error( FS( "A peasant wasn't selected to place the building.", *peasant->GetName() ) );
+        return NotConsumed;
+      }
+
+      // If the user has UI-placed the building in an acceptable spot,
+      // then we should place the building here.
+      if( g->CanBePlaced() )
+      {
+        // Build a building @ location. The peasant will pick up this command next frame.
+        Game->EnqueueCommand( Command( Command::CommandType::CreateBuilding,
+          peasant->ID, g->Stats.Type, g->Pos ) );
+        Game->flycam->ClearGhost();
       }
       else
       {
@@ -68,7 +68,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   };
   OnMouseUpLeft = [this]( FVector2D mouse ) {
     // Box shaped selection of units.
-    Game->hud->Select( Game->pc->Pick( selectBox->Box, {}, {} ) );
+    // Filtration is done after selection,
+    Game->hud->Select( Game->pc->FrustumPick( selectBox->Box ) );
     SelectEnd();
     return Consumed;
   };

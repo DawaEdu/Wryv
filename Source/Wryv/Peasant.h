@@ -28,9 +28,11 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 StoneCarryCapacity;
 
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Carrying;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Shrugging;
   ABuilding* Building;
   //ABuilding* RepairTarget;
   FVector LastResourcePosition;
+  Types Mining;   // The type of resource that I'm mining
   bool Repairing; // Is the unit repairing something
 
   // [The resource type I'm mining] => The amount of resource I'm holding.
@@ -40,14 +42,16 @@ public:
   
   //APeasant(const FObjectInitializer& PCIP);
   void PostInitializeComponents();
+  void Build( Types type, FVector pos );
   virtual void Target( AGameObject* target ) override;
   void Repair( float t );
+  AResource* FindNewResource( FVector fromPos, Types type, float searchRadius );
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
-  void CreateBuilding( Types type, const FVector& pos );
   void ReturnResources();
   virtual void Move( float t );
   virtual void ai( float t );
+  void OnResourcesReturned();
   virtual void Hit( AGameObject* other );
   bool isBusy(){ return AttackTarget || FollowTarget || Waypoints.size(); }
   void JobDone();

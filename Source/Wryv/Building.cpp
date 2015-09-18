@@ -118,15 +118,16 @@ bool ABuilding::CanBePlaced()
   vector<AGameObject*> objs;
   if( peasant )
   {
-    objs = Game->pc->PickExcept( this, hitBounds, {peasant} );
+    objs = Game->pc->ComponentPickExcept( this, hitBounds, {peasant}, "Checkers", {"SolidObstacle"} );
+    for( AGameObject* go : objs )
+    {
+      LOG( "Building %s hits object %s", *GetName(), *go->GetName() );
+    }
   }
-  else
-  {
-    objs = Game->pc->Pick( this, hitBounds );
-  }
+
   for( AGameObject* o : objs )
   {
-    LOG( "building %s intersects with %s", *Stats.Name, *o->Stats.Name );
+    LOG( "building %s intersects with %s, so it could not be placed", *Stats.Name, *o->Stats.Name );
   }
 
   return !objs.size();
@@ -152,16 +153,7 @@ void ABuilding::PlaceBuilding( APeasant *p )
 
   // Move the peasant inside the building, then hide.
   // The peasant must be allowed inside the hitbounds.
-  p->hitBounds->SetCollisionEnabled( ECollisionEnabled::NoCollision ); // deactivate collisions?
-  p->SetDestination( Pos );
-  // What if the peasant dies?
-  p->OnReachDestination = [this,p]()
-  {
-    // put the peasant underground, so it appears to be building.
-    peasant = p; // only set the peasant here, so building only starts once he gets there.
-    peasant->SetPosition( peasant->Pos - FVector( 0, 0, peasant->GetHeight() ) );
-    peasant->hitBounds->SetCollisionEnabled( ECollisionEnabled::QueryOnly );
-  };
+  Game->EnqueueCommand( Command( Command::RepairBuilding, p->ID, ID ) );
 }
 
 void ABuilding::OnBuildingComplete()

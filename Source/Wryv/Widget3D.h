@@ -1,10 +1,10 @@
 #pragma once
 
-#include "GameObject.h"
+#include "Shape.h"
 #include "Widget3D.generated.h"
 
 UCLASS()
-class WRYV_API AWidget3D : public AGameObject
+class WRYV_API AWidget3D : public AShape
 {
   GENERATED_UCLASS_BODY()
 public:

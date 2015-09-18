@@ -26,7 +26,6 @@ FName ATheHUD::SelectedTargetName = "SelTarget";
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
-  NextAction = NOTHING;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
 }
@@ -99,8 +98,13 @@ void ATheHUD::Select( vector<AGameObject*> objects )
     if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, AttackTargetName );
   }
 
+  //if( Game->flycam->ghost )
+  //{
+  //  Game->flycam->ClearGhost();
+  //}
+
   // Cannot select objects of these types
-  set<Types> forbidden = { Types::GROUNDPLANE, Types::UISELECTOR };
+  set<Types> forbidden = { Types::GROUNDPLANE, Types::UISELECTOR, Types::UIFLAGWAYPOINT };
   function< bool (AGameObject*) > filter = [forbidden]( AGameObject *g ) -> bool {
     // remove objects of forbidden types.
     return g->Dead || in( forbidden, g->Stats.Type.GetValue() ) ||
@@ -115,14 +119,11 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   else
     Selected = objects;  //Replace old selection
 
-  NextAction = NOTHING;  //Unset next spell & building
-
   // create & parent the selectors to all selected objects
   for( AGameObject * go : Selected )
   {
     // make an attack target if there is an attack target for the gameobject
     MarkAsSelected( go );
-    LOG( "%s marked as selected", *go->GetName() );
     if( go->AttackTarget )  MarkAsAttack( go->AttackTarget );
     if( go->FollowTarget )  MarkAsFollow( go->FollowTarget );
   }
@@ -134,6 +135,13 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   for( AGameObject* go : Selected )
     go->OnSelected();
 
+  // Clear old waypointing flags
+  Game->ClearFlags();
+  // Take the front object and display waypointing if any
+  if( Selected.size() )
+  {
+    Selected[0]->DisplayWaypoints();
+  }
 }
 
 void ATheHUD::Unselect( vector<AGameObject*> objects )

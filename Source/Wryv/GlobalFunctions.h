@@ -289,17 +289,15 @@ template <typename T> set<T> operator|( set<T> src, const set<T>& forbidden )
 
   return src;
 }
+
 template <typename T> vector<T> operator|( vector<T> src, const vector<T>& forbidden )
 {
   // Filter objects from the set
-  for( vector<T>::iterator it = src.begin(); it != src.end(); )
+  for( int i = src.size() - 1; i >= 0; i-- )
   {
-    if( in( forbidden, *it ) ) // then must remove
+    if( in( forbidden, src[i] ) ) // then must remove
     {
-      vector<T>::iterator it2 = it;
-      ++it2;
-      src.erase( it );
-      it = it2;
+      src.erase( src.begin() + i );
     }
     else ++it;
   }
@@ -327,16 +325,10 @@ template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
 template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& forbidden )
 {
   // Filter objects from the set
-  for( vector<T*>::iterator it = src.begin(); it != src.end(); )
+  for( int i = src.size() - 1; i >= 0; i-- )
   {
-    if( in( forbidden, *it ) ) // then must remove
-    {
-      vector<T*>::iterator it2 = it;
-      ++it2;
-      src.erase( it );
-      it = it2;
-    }
-    else ++it;
+    if( in( forbidden, src[i] ) ) // then must remove
+      src.erase( src.begin() + i );
   }
   return src;
 }
@@ -358,20 +350,15 @@ template <typename T> set<T*> operator|(
   }
   return src;
 }
+
 template <typename T> vector<T*> operator|( 
   vector<T*> src, function< bool (T*) > doFilterFunction )
 {
   // Filter objects from the set
-  for( vector<T*>::iterator it = src.begin(); it != src.end(); )
+  for( int i = src.size() - 1; i >= 0; i-- )
   {
     if( doFilterFunction( *it ) ) // then must remove
-    {
-      vector<T*>::iterator it2 = it;
-      ++it2;
-      src.erase( it );
-      it = it2;
-    }
-    else ++it;
+      src.erase( src.begin() + i );
   }
   return src;
 }
@@ -509,16 +496,33 @@ struct Ray
   Ray()
   {
     start = FVector(0,0,0);
-    dir = FVector(0,0,1);
+    dir = FVector(0,0,-1);
     len = 1.f;
     end = start + dir*len;
   }
-  Ray(FVector o, FVector d) : start(o), dir(d)
+  Ray(FVector origin, FVector direction) : start(origin), dir(direction)
   {
-    end = o + d;
-    len = d.Size();
-    if( len )
-      d /= len;
+    len = dir.Size();
+    if( !len ) {
+      dir.Z = -1;
+      len = 1.f;
+    }
+    dir /= len;
+    end = start + dir*len;
+  }
+  
+  Ray(FVector origin, FVector NDirection, float length) : start(origin), dir(NDirection)
+  {
+    // Check the normalized input is indeed normalized
+    float NLen = dir.Size();
+    if( !NLen ) {
+      dir.Z = -1.f;
+      NLen = 1.f;
+    }
+    dir /= NLen;
+    
+    len = length;
+    end = start + dir*len;
   }
   void SetLen( float iLen ) {
     len = iLen;
@@ -531,34 +535,31 @@ struct Ray
   }
 };
 
-
 template <typename T> static T* GetComponentByType( AActor* a )
 {
-  TArray<UActorComponent*> comps = a->GetComponents();
-  for( int i = 0; i < comps.Num(); i++ )
-    if( T* s = Cast<T>( comps[i] ) )
-      return s;
+  TInlineComponentArray<T*> components;
+	a->GetComponents(components);
+  if( components.Num() ) return components[0];
   return 0;
 }
 
 template <typename T> static vector<T*> GetComponentsByType( AActor* a )
 {
-  TArray<UActorComponent*> comps = a->GetComponents();
-  //LOG( "# components %d", comps.Num() );
+  TInlineComponentArray<T*> components;
+	a->GetComponents(components);
   vector<T*> coll;
-  for( int i = 0; i < comps.Num(); i++ )
-    if( T* s = Cast<T>( comps[i] ) )
-      coll.push_back( s );
+  for( int i = 0; i < components.Num(); i++ )
+    coll.push_back( components[i] );
   return coll;
 }
 
 template <typename T> static T* GetComponentByName( AActor* a, FString name )
 {
-  TArray<UActorComponent*> comps = a->GetComponents();
-  for( int i = 0; i < comps.Num(); i++ )
-    if( T* s = Cast<T>( comps[i] ) )
-      if( s->GetName() == name )
-        return s;
+  TInlineComponentArray<T*> components;
+	a->GetComponents(components);
+  for( int i = 0; i < components.Num(); i++ )
+    if( components[i]->GetName() == name )
+      return components[i];
   return 0;
 }
 

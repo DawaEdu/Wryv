@@ -15,7 +15,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UTexture* Portrait;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
 
-  // Build-cost properties
+  // CreateBuilding-cost properties
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 GoldCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 LumberCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 StoneCost;
@@ -134,6 +134,18 @@ public:
     r.BonusAttackDamage += row.BonusAttackDamage;
     r.AttackRange += row.AttackRange;
     return r;
+  }
+
+  // Check that all Types-typed objects are within range
+  bool Integrity()
+  {
+    bool valid = IsValidType( Type.GetValue() )  &&  IsProjectile( ReleasedProjectileWeapon.GetValue() )  &&
+             IsExplosion( OnExploded.GetValue() );
+    for( int i = 0; i < Requirements.Num(); i++ )
+      valid &= IsValidType( Requirements[i].GetValue() );
+    for( int i = 0; i < Abilities.Num(); i++ )
+      valid &= IsValidType( Abilities[i].GetValue() );
+    return valid;
   }
 
   void Print()

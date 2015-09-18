@@ -2,6 +2,7 @@
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 #include "GameObject.h"
+#include "Shape.h"
 #include "TheHUD.h"
 #include "FlyCam.h"
 #include "UnitTypeUClassPair.h"
@@ -12,7 +13,7 @@ UWryvGameInstance* Game = 0;
 UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "UWryvGameInstance::UWryvGameInstance()");
-  ID = 1;
+  NextObjectID = 1;
   // On construction of first game object, initialize game instance
   Game = Cast<UWryvGameInstance>( this );
   init = 0;
@@ -26,6 +27,7 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
 
 void UWryvGameInstance::SetCommand( const Command& cmd )
 {
+  ClearFlags(); // Clear waypointed flags
   /// retrieve command list from object
   AGameObject* go = GetUnitById( cmd.srcObjectId );
 
@@ -46,6 +48,7 @@ void UWryvGameInstance::SetCommand( const Command& cmd )
 
 void UWryvGameInstance::EnqueueCommand( const Command& cmd )
 {
+  ClearFlags(); // Clear waypointed flags
   info( FS( "Enqueued Command %s", *cmd.ToString() ) );
   commands.push_back( cmd );
   AGameObject* unit = GetUnitById( cmd.srcObjectId );
@@ -58,20 +61,36 @@ void UWryvGameInstance::EnqueueCommand( const Command& cmd )
     error( FS( "Unit %d not found", cmd.srcObjectId ) );
   }
 
-
-  if( cmd.commandType == Command::CommandType::GoToGroundPosition )
+  // Add in a waypoint flag when commanded unit is 1st in hud selection 
+  if( Game->hud->Selected.size() && unit == Game->hud->Selected[0] )
   {
-    // Add in a waypoint flag when commanded unit is 1st in hud selection 
-    if( Game->hud->Selected.size() && unit == *Game->hud->Selected.begin() )
-    {
-      
-    }
+    unit->DisplayWaypoints();
+  }
+}
+
+// Clear waypointed flags
+void UWryvGameInstance::ClearFlags()
+{
+  for( pair< const int64, AShape* > p : Flags )
+  {
+    p.second->Cleanup();
+  }
+  Flags.clear();
+}
+
+void UWryvGameInstance::ClearFlag( int64 cmdId )
+{
+  map< int64, AShape* >::iterator it = Flags.find( cmdId );
+  if( it != Flags.end() )
+  {
+    it->second->Cleanup();
+    Flags.erase( it );
   }
 }
 
 int64 UWryvGameInstance::NextId()
 {
-  return ID++;
+  return NextObjectID++;
 }
 
 AGameObject* UWryvGameInstance::GetUnitById( int64 unitId )
@@ -88,7 +107,7 @@ bool UWryvGameInstance::IsReady()
 {
   if( !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder )
     return 1;
-  //else  error( "GAME NOT READY" );
+  else  error( "GAME NOT READY" );
   return 0;
 }
 
@@ -135,10 +154,19 @@ void UWryvGameInstance::AssertIntegrity()
   for( pair<Types,FUnitsDataRow> p : unitsData )
   {
     FUnitsDataRow ud = p.second;
-    // Check contact object not same
+    ud.Type = p.first;
+
+    if( ud.ReleasedProjectileWeapon && !IsProjectile( ud.ReleasedProjectileWeapon ) )
+    {
+      error( FS( "%s had a projectile of type %s", *ud.Name, *GetTypesName( ud.ReleasedProjectileWeapon ) ) );
+      ud.ReleasedProjectileWeapon = Types::PROJWEAPONARROW;
+    }
+
+    // Object spawned when exploded cannot be the same as this object
     if( ud.OnExploded != Types::NOTHING   &&   ud.Type == ud.OnExploded )
     {
-      error( FS( "OBJECT TYPE %s spawns same as self (%s) OnExploded",
+      ud.Type = p.first;
+      error( FS( "OBJECT TYPE `%s` spawns same as self (%s) OnExploded",
         *GetTypesName( ud.Type ), *GetTypesName( ud.OnExploded ) ) );
     }
   }

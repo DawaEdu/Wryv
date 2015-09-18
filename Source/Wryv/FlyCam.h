@@ -32,7 +32,9 @@ class WRYV_API AFlyCam : public APawn
 public:
   AGroundPlane* floor; // Every level must have an object called the floor.
   FBox floorBox;       // we only find the floor's box once (at level start).
-  ABuilding* ghost;  // ghost of the building being set for placement
+  ABuilding* ghost;    // ghosts of pending buildings being set for placement
+  //vector<ABuilding*> ghosts; // Shift+Click allows series of buildings for placement
+
   Pathfinder* pathfinder;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  USceneComponent* DummyRoot;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
@@ -42,7 +44,6 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float FloorBoxTraceFraction;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CheckerSphereRadius;
 
   // Use a TARRAY to keep sfx organized, includes music & effects
@@ -62,6 +63,7 @@ public:
   bool setupLevel;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  float CameraMovementSpeed;
   UFloatingPawnMovement *MovementComponent;
+  
   UInputComponent* InputComponent;
   vector<AGameObject*> viz;
   
@@ -75,9 +77,11 @@ public:
   // functionality to each input component
   virtual void SetupPlayerInputComponent( UInputComponent* InputComponent ) override;
   
+  void ClearGhost();
   // Start to load the map in levelName
   void LoadLevel( FName levelName );
   void OnLevelLoaded();
+  void SetObjectsOnGround();
   void InitializePathfinding();
   void UnloadLevel();
   
@@ -88,7 +92,7 @@ public:
   void Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
   void ClearViz();
   
-  AGameObject* MakeLine( FVector a, FVector b, FLinearColor color );
+  AGameObject* MakeLine( FVector Start, FVector End, FLinearColor color );
   void RetrievePointers();
   void debug( int slot, FColor color, FString mess );
   
@@ -107,6 +111,8 @@ public:
   
   void MoveCameraZUp( float amount );
   void MoveCameraZDown( float amount );
+  void MoveCameraPitchUp( float amount );
+  void MoveCameraPitchDown( float amount );
   void MoveForward( float amount );
   void MoveBack( float amount );
   void MoveLeft( float amount );

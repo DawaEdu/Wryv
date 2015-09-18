@@ -72,7 +72,10 @@ void AbilitiesPanel::Set( AGameObject *go )
     // Attach button with invokation of i'th ability
     clock->OnMouseDownLeft = [go,i]( FVector2D mouse ) {
       // Invoke I'th action of the object
-      go->UseAbility( i );
+      Game->EnqueueCommand( // Network cmd.
+        Command( Command::CommandType::UseAbility, go->ID, i )
+      );
+      //go->UseAbility( i );
       return Consumed;
     };
   }

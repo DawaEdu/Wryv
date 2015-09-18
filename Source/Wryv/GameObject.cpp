@@ -41,8 +41,6 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
-
-  OnReachDestination = function< void () >();
 }
 
 void AGameObject::PostInitializeComponents()
@@ -278,7 +276,7 @@ void AGameObject::Shoot()
 void AGameObject::SendDamageTo( AGameObject* go )
 {
   float damage = DamageRoll() - go->Stats.Armor;
-  info( FS( "%s attacking %s for %f damage", *Stats.Name, *go->Stats.Name, damage ) );
+  info( FS( "%s melee attacking %s for %f damage", *Stats.Name, *go->Stats.Name, damage ) );
   go->Hp -= damage;
   if( go->Hp < 0 )
     go->Hp = 0.f;
@@ -365,16 +363,16 @@ bool AGameObject::UseAbility( int index )
   }
 
   Types type = Stats.Abilities[index];
-  if( IsAction( type ) )
-  {
-    FUnitsDataRow action = Game->GetData( type );
-    info( FS( "%s used action %s", *Stats.Name, *action.Name ) );
-  }
-  else if( IsBuilding( type ) )
+  if( IsBuilding( type ) )
   {
     info( FS( "Building a %s", *GetTypesName( type ) ));
     // Set placement object with instance of type
     Game->flycam->ghost = Game->Make< ABuilding >( type, team );
+  }
+  else if( IsAction( type ) )
+  {
+    FUnitsDataRow action = Game->GetData( type );
+    info( FS( "%s used action %s", *Stats.Name, *action.Name ) );
   }
   else if( IsUnit( type ) )
   {
@@ -427,9 +425,7 @@ void AGameObject::CheckWaypoint()
 
 void AGameObject::SetPosition( FVector v )
 {
-  // Check if there's something there.
-  //vector<AGameObject*> objs = Game->pc->Pick( 
-
+  // Can check if there's something there.
   // While encountering objects, keep searching adjacent to the picked objects until finding empty place.
   Pos = Dest = v;
 }
@@ -570,10 +566,6 @@ void AGameObject::Walk( float t )
       travel = ToDest; // This is the displacement we actually moved.
       Speed = 0;
       Vel = FVector( 0, 0, 0 );
-      if( OnReachDestination ) {
-        OnReachDestination(); // Execute destination reached function
-        OnReachDestination = function< void () >();
-      }
     }
     else
     {
@@ -713,39 +705,39 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   }
 }
 
+void AGameObject::DisplayWaypoints()
+{
+  for( int i = 0; i < commands.size(); i++ )
+  {
+    if( commands[i].commandType == Command::CommandType::CreateBuilding )
+    {
+      //TODO: Ghost the building.
+    }
+    else
+    {
+      // Stick a flag in
+      AShape *flag = Game->Make<AShape>( Types::UIFLAGWAYPOINT, team, commands[i].pos );
+      Game->Flags[ commands[i].CommandID ] = flag;
+      flag->text = FS( "%d", i+1 );
+    }
+  }
+}
+
 void AGameObject::exec( const Command& cmd )
 {
-  info( cmd.ToString() );
+  info( FS( "Executing command: %s", *cmd.ToString() ) );
+  // remove flag for previous cmd if any
+  Game->ClearFlag( CurrentCommand.CommandID );
+  CurrentCommand = cmd;
+  AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
   switch( cmd.commandType )
   {
-    case Command::CommandType::Build:
-      {
-        // builds the assigned building using peasant (id)
-        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
-        if( APeasant* peasant = Cast<APeasant>( go ) )
-        {
-          peasant->CreateBuilding( cmd.buildingType, cmd.pos );
-        }
-        else
-        {
-          error( FS( "The unit [%s] asked to build %s was not a peasant",
-            *go->GetName(), *GetTypesName( cmd.buildingType ) ) );
-        }
-      }
-      break;
-    case Command::CommandType::GoToGroundPosition:
-      {
-        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
-        go->GoToGroundPosition( cmd.pos );
-      }
-      break;
     case Command::CommandType::Target:
       {
-        AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
         AGameObject* target = Game->GetUnitById( cmd.targetObjectId );
         if( !go || !target )
         {
-          error( "GameObject was NULL or target was NULL" );
+          error( "CommandType::Target: GameObject was NULL or target was NULL" );
         }
         else
         {
@@ -753,7 +745,47 @@ void AGameObject::exec( const Command& cmd )
         }
       }
       break;
+    case Command::CommandType::GoToGroundPosition:
+      {
+        go->GoToGroundPosition( cmd.pos );
+      }
+      break;
+    case Command::CommandType::CreateBuilding:
+      {
+        // builds the assigned building using peasant (id)
+        if( APeasant* peasant = Cast<APeasant>( go ) )
+        {
+          info( FS( "The unit [%s] is building a %s",
+            *peasant->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
+          peasant->Build( (Types)cmd.targetObjectId, cmd.pos );
+        }
+        else
+        {
+          error( FS( "The unit [%s] asked to build %s was not a peasant",
+            *go->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
+        }
+      }
+      break;
+    case Command::CommandType::RepairBuilding:
+      {
+        //p->SetDestination( Pos );
+        // What if the peasant dies?
+        //p->OnReachDestination = [this,p]()
+        //{
+        //  // put the peasant underground, so it appears to be building.
+        //  peasant = p; // only set the peasant here, so building only starts once he gets there.
+        //  peasant->SetPosition( peasant->Pos - FVector( 0, 0, peasant->GetHeight() ) );
+        //};
+      }
+      break;
+    case Command::CommandType::UseAbility:
+      {
+        go->UseAbility( cmd.targetObjectId );
+
+      }
+      break;
     default:
+      error( FS( "Undefined command %d", (int)cmd.commandType ) );
       break;
   }
 }
@@ -776,8 +808,16 @@ void AGameObject::Move( float t )
   {
     if( commands.size() )
     {
-      exec( commands.front() );
+      Command cmd = commands.front();
+      // erase the flag for what we're doing next
+      exec( cmd );
       commands.pop_front();
+    }
+    else
+    {
+      // Finished last task, idling.
+      // Clean up last flag when get there
+      Game->ClearFlag( CurrentCommand.CommandID );
     }
   }
 
@@ -790,8 +830,6 @@ void AGameObject::Move( float t )
     // Update & Cache Unit's stats this frame, including HP recovery
   }
 
-
-  
   // Call the ai for this object type
   //ai( t );
   FlushPosition();
@@ -800,7 +838,14 @@ void AGameObject::Move( float t )
 bool AGameObject::Idling()
 {
   // no scheduled activity. sitting beside followtarget doesn't mean idling
-  return !AttackTarget   &&   !Waypoints.size();
+  return 
+    // Not attacking something
+    !AttackTarget   &&
+    // Within Radius() units of the set destination
+    FVector::PointsAreNear( Pos, Dest, Radius() )   &&
+    // No more sceduled waypoints of destination
+    !Waypoints.size()
+  ;
 }
 
 void AGameObject::ai( float t )
@@ -941,21 +986,6 @@ AGameObject* AGameObject::GetClosestEnemyUnit()
   return 0;
 }
 
-AGameObject* AGameObject::GetClosestObjectNear( FVector pos, float radius, set<Types> AcceptedTypes, set<Types> NotTypes )
-{
-  FCollisionShape shape = FCollisionShape::MakeCapsule( radius, hitBounds->GetScaledCapsuleHalfHeight() );
-  map<float,AGameObject*> objs = Game->pc->PickNearest( pos, shape, AcceptedTypes, NotTypes );
-
-  if( objs.size() )
-  {
-    return objs.begin()->second;
-  }
-
-  info( FS( "%s couldn't find a resource within %f units of (%f %f %f)",
-    *GetName(), radius, pos.X, pos.Y, pos.Z ) );
-  return 0;
-}
-
 map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
 {
   map< float, AGameObject* > distances;
@@ -976,32 +1006,23 @@ map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
   return distances;
 }
 
-AGameObject* AGameObject::GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius )
+AGameObject* AGameObject::GetClosestObjectOfType( Types type )
 {
   // You can only select within range of unit
-  //vector<AGameObject*> sels = //Game->pc->Pick( this, hitBounds );
   // Go thru all objects on team
-  AGameObject* closestObject = 0;
-  float closestDistance = FLT_MAX;
-  map<float, AGameObject*> distances;
-  for( AGameObject* go : onTeam->units )
+  map< float, AGameObject* > m;
+  for( AGameObject* go : team->units )
   {
-    if( go->Stats.Type == type )
-    {
-      float d = centroidDistance( go );
-      if( d < searchRadius )
-        distances[ d ] = go;
-    }
+    if( go->Stats.Type != type )  skip;
+
+    float d = outerDistance( go );
+    m[d] = go;
   }
-  
-  if( distances.size() )
-    return distances.begin()->second;
-  else
-  {
-    info( FS( "Could not find an object of type %s within %f units of %s",
-      *GetTypesName( type ), searchRadius, *Stats.Name ) );
-    return 0; // NO UNITS In sight
-  }
+  if( m.size() )
+    return m.begin()->second;
+
+  info( FS( "Could not find an object of type %s", *GetTypesName( type ) ) );
+  return 0; // NO UNITS In sight
 }
 
 void AGameObject::OnSelected()
@@ -1146,5 +1167,30 @@ void AGameObject::BeginDestroy()
   //info( FS( "%s was destroyed", *Stats.Name ) );
   
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
+}
+
+FString AGameObject::ToString()
+{
+  FString string = GetName();
+  if( AttackTarget )
+    string += FString("\nATT: ") + AttackTarget->GetName();
+  if( FollowTarget )
+    string += FString("\nFOL: ") + FollowTarget->GetName();
+  return string;
+}
+
+FString AGameObject::FollowersToString()
+{
+  FString string = GetName();
+  if( Attackers.size() )  string += FString( "[" );
+  for( AGameObject* go : Attackers )
+    string += go->GetName() + FString(", ");
+  if( Attackers.size() )  string += FString( "]" );
+
+  if( Followers.size() )  string += FString( "[" );
+  for( AGameObject* go : Followers )
+    string += go->GetName() + FString(", ");
+  if( Followers.size() )  string += FString( "]" );
+  return string;
 }
 

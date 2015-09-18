@@ -228,9 +228,6 @@
     <ClInclude Include="..\..\Source\Wryv\PlayerControl.h">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Widget3D.h">
-      <Filter>Source\Wryv\UI\Elements</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
@@ -281,6 +278,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Command.h">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Shape.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Widget3D.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -410,9 +413,6 @@
     <ClCompile Include="..\..\Source\Wryv\PlayerControl.cpp">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp">
-      <Filter>Source\Wryv\UI\Elements</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Pathfinder.cpp">
       <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
@@ -460,6 +460,12 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Command.cpp">
       <Filter>Source\Wryv\Structures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Shape.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

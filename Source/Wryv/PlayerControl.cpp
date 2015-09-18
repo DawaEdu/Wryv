@@ -20,6 +20,23 @@ void APlayerControl::SetupInputComponent()
   static const FName InputComponentName( TEXT( "PlayerControllerInputComponent" ) );
   InputComponent = NewObject<UInputComponent>( this, InputComponentName );
   //InputComponent->BindAction( TEXT("KKey"), EInputEvent::IE_Pressed, this, &APlayerControl::K );
+
+  // Read collision profiles
+  TArray< TSharedPtr< FName > > profileNames;
+  UCollisionProfile::GetProfileNames( profileNames );
+
+  for( int i = 0; i < profileNames.Num(); i++ )
+  {
+    if( !profileNames[i].Get() )  skip;
+
+    FName profile = *profileNames[i].Get();
+    ECollisionChannel channel;
+    FCollisionResponseParams fcrp;
+    UCollisionProfile::GetChannelAndResponseParams( profile, channel, fcrp );
+
+    LOG( "COLLISION PROFILE %s ON CHANNEL [ %d ]", *profile.ToString(), (int)channel );
+    CollisionChannels[ profile.ToString() ]   =   channel;
+  }
 }
 
 void APlayerControl::SetupInactiveStateInputComponent( UInputComponent* InComponent )
@@ -27,211 +44,154 @@ void APlayerControl::SetupInactiveStateInputComponent( UInputComponent* InCompon
   LOG( "APlayerControl::SetupPlayerInputComponent() has %d components", CurrentInputStack.Num() );
 }
 
-ULocalPlayer* APlayerControl::GetLocalPlayer()
+FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const FVector2D& ScreenPosition )
 {
-  ULocalPlayer* LP = Cast<ULocalPlayer>( Player );
-  if( !LP || !LP->ViewportClient || !LP->ViewportClient->Viewport )
-    return NULL; // LocalPlayer not ready, so return NULL
-  return LP;
+  FHitResult hit;
+  Ray ray;
+	if( !UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, ray.start, ray.dir ) )
+	{
+    error( FS( "Could not DeprojectScreenToWorld (%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
+  }
+  ray.SetLen( 1e6f );
+  
+  return hit;
+}
+
+FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const Ray& ray )
+{
+  FHitResult hit;
+  FCollisionQueryParams fcqp( true );
+  if( !component->LineTraceComponent( hit, ray.start, ray.end, fcqp ) )
+  {
+    warning( FS( "TraceAgainst (%s) failed %f %f %f => %f %f %f",
+      *component->GetName(), ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+  }
+
+  return hit;
 }
 
 FHitResult APlayerControl::TraceAgainst( AActor* actor, const FVector2D& ScreenPosition )
 {
   FHitResult hit;
-  ULocalPlayer* LP = GetLocalPlayer();
-  if( !LP ) return hit;
-  FSceneViewFamilyContext ViewFamily( FSceneViewFamily::ConstructionValues(
-    LP->ViewportClient->Viewport, GetWorld()->Scene,
-    LP->ViewportClient->EngineShowFlags ).SetRealtimeUpdate( true ) );
-  FVector viewLoc;
-  FRotator viewRotation;
-  FSceneView* SceneView = LP->CalcSceneView( &ViewFamily, viewLoc, viewRotation, LP->ViewportClient->Viewport );
-
-  if( !SceneView ) {
-    error( "SceneView not ready" );
-    return hit;
-  }
   Ray ray;
   // Get the origin & direction of a ray that corresponds with ScreenPosition according to the sceneview.
-  SceneView->DeprojectFVector2D( ScreenPosition, ray.start, ray.dir );
+  if( !UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, ray.start, ray.dir ) )
+  {
+    error( FS( "Could not DeprojectScreenToWorld(%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
+  }
   ray.SetLen( 1e6f );
-  FCollisionQueryParams fqp( "floor trace", true );
-  actor->ActorLineTraceSingle( hit, ray.start, ray.end, ECollisionChannel::ECC_GameTraceChannel2, fqp );
-  return hit;
+  
+  return TraceAgainst( actor, ray );
 }
 
-FHitResult APlayerControl::TraceAgainst( AActor* actor, const FVector& eye, const FVector& lookDir )
+FHitResult APlayerControl::TraceAgainst( AActor* actor, const Ray& ray )
 {
   FHitResult hit;
-  FCollisionQueryParams fcqp( "floor trace", true );
-  FVector endPt = eye + lookDir*1e6f;
-  if( !actor->ActorLineTraceSingle( hit, eye, endPt, ECollisionChannel::ECC_GameTraceChannel2, fcqp ) )
+  FCollisionQueryParams fcqp( true );
+  if( !actor->ActorLineTraceSingle( hit, ray.start, ray.end, CollisionChannels[ "RayCast" ], fcqp ) )
   {
-    warning( FS( "Trace against %s failed", *actor->GetName() ) );
+    warning( FS( "ActorLineTraceSingle (%s) failed %f %f %f => %f %f %f",
+      *actor->GetName(), ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+  }
+  if( hit.GetActor() )
+  {
+    info( FS( "TraceAgainst (%s) hit %s @ (%f %f %f)",
+      *actor->GetName(),
+      *hit.GetActor()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
+  }
+  else
+  {
+    info( "TraceAgainst: Nothing was hit" );
+  }
+
+  return hit;
+}
+
+FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition )
+{
+  TArray<FHitResult> hits;
+  Ray ray;
+	if( !UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, ray.start, ray.dir ) )
+  {
+    error( FS( "Could not DeprojectScreenToWorld(%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
+  }
+  ray.SetLen( 1e6f );
+  return RayPickSingle( ray );
+}
+
+FHitResult APlayerControl::RayPickSingle( const Ray& ray )
+{
+  FHitResult hit;
+  FCollisionQueryParams fcqp( true );
+  // Returns closest blocking hit, checking all objects
+  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+    FCollisionObjectQueryParams::InitType::AllObjects );
+  if( !GetWorld()->LineTraceSingleByObjectType( hit, ray.start, ray.end, objectTypes, fcqp ) )
+  {
+    error( FS( "LineTraceSingleByObjectType() didn't hit anything, %f %f %f => %f %f %f",
+     ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+  }
+
+  if( hit.GetActor() )
+  {
+    info( FS( "RayPickSingle() hit %s @ (%f %f %f)",
+      *hit.GetActor()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
+  }
+  else
+  {
+    info( "RayPickSingle: Nothing was hit" );
   }
   return hit;
 }
 
-FHitResult APlayerControl::PickClosest( const FVector2D& ScreenPosition )
+vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPosition )
 {
   TArray<FHitResult> hits;
-  FVector Start, Dir;
-	if( UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, Start, Dir ) )
-	{
-    FVector End = Start + Dir*1e6f;
-    GetWorld()->LineTraceMultiByProfile( hits, Start, End, "RayCast" );
-	}
-  
-  for( int i = 0 ; i < hits.Num(); i++ )
-    if( AGameObject* go = Cast<AGameObject>( hits[i].GetActor() ) )
-      if( !go->Dead )
-        return hits[i];
-
-	return FHitResult(); // Null hit
-}
-
-FHitResult APlayerControl::PickClosest( const FVector& eye, const FVector& lookDir )
-{
-  FHitResult res;
-  FVector end = eye + lookDir*1e6f;
-  FCollisionQueryParams fcqp( "floor trace", true );
-  // Returns closest hit
-  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-    FCollisionObjectQueryParams::InitType::AllObjects );
-  GetWorld()->LineTraceSingleByObjectType( res, eye, end, objectTypes, fcqp );
-  return res;
-}
-
-map<float,AGameObject*> APlayerControl::PickNearest( FVector pos, FCollisionShape shape,
-  set<Types> AcceptedTypes, set<Types> NotTypes )
-{
-  map<float, AGameObject*> m;
-
-  vector<AGameObject*> picks = Pick( pos, shape );
-  for( AGameObject* go : picks )
-  {
-    if( AcceptedTypes.size() && !in( AcceptedTypes, go->Stats.Type.GetValue() ) )  skip;
-    if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
-    float d = ( go->Pos - pos ).Size();
-    m[ d ] = go;
-  }
-  
-  return m;
-}
-
-vector<AGameObject*> APlayerControl::Pick( FVector pos, FCollisionShape shape )
-{
-  FCollisionQueryParams fqp;
-  TArray<FOverlapResult> overlaps;
-  FQuat quat( 0.f, 0.f, 0.f, 0.f );
-  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-    FCollisionObjectQueryParams::InitType::AllObjects );
-  // To query using a specific object TYPE, use OverlapMultiByProfile()
-  GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fqp );
-  vector<AGameObject*> intersections;
-  for( int i = 0; i < overlaps.Num(); i++ )
-    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-      if( !go->Dead )
-        intersections += go;
-  return intersections;
-} 
-
-vector<AGameObject*> APlayerControl::Pick( AGameObject* object, UPrimitiveComponent* up )
-{
-  return PickExcept( object, up, {object} );
-}
-
-vector<AGameObject*> APlayerControl::PickExcept( AGameObject* object, UPrimitiveComponent* up, vector<AGameObject*> except )
-{
-  FComponentQueryParams fqp;
-  
-  except += object;
-
-  // this will cause the object to pick itself if you don't put it in the except group
-  for( AGameObject* o : except )
-  {
-    if( !o )
-    {
-      warning( "NULL object in PickExcept()" );
-    }
-    else
-    {
-      fqp.AddIgnoredActor( o );
-    }
-  }
-
-  FQuat quat( 0.f, 0.f, 0.f, 0.f );
-  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-    FCollisionObjectQueryParams::InitType::AllObjects );
-  objectTypes.AddObjectTypesToQuery( ECollisionChannel::ECC_GameTraceChannel3 ); // Channel 3 is
-  // the RESOURCES channel.
-
-  vector<AGameObject*> intersections;
-
-  // grab the hitBounds
-  TArray<FOverlapResult> overlaps;
-
-  FRotator ro = up->GetComponentRotation();
-  FVector ve = up->GetComponentLocation();
-  // We're looking on channel 4 ("CHECKERS" channel)
-  // for objects sitting on CHANNEL 3 ("RESOURCES") channel.
-  GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro,
-    ECollisionChannel::ECC_GameTraceChannel4, fqp, objectTypes );
-  for( int i = 0; i < overlaps.Num(); i++ )
-    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
-      intersections += go;
-  return intersections;
-}
-
-vector<AGameObject*> APlayerControl::Pick( const FVector2D& ScreenPosition )
-{
-  vector<AGameObject*> objects;
-  
-  ULocalPlayer* LP = GetLocalPlayer();
-  if( !LP ) return objects;
-
-  // This can't be refactored into a function because the FSceneViewFamilyContext
-  // self-destructs completely when it goes out of scope.
-  FSceneViewFamilyContext ViewFamily( FSceneViewFamily::ConstructionValues(
-    LP->ViewportClient->Viewport, GetWorld()->Scene,
-    LP->ViewportClient->EngineShowFlags ).SetRealtimeUpdate( true ) );
-  FVector viewLoc;
-  FRotator viewRotation;
-  FSceneView* SceneView = LP->CalcSceneView( &ViewFamily, viewLoc, viewRotation, LP->ViewportClient->Viewport );
-  if( !SceneView ) {
-    error( "SceneView not ready" );
-    return objects;
-  }
   Ray ray;
-  SceneView->DeprojectFVector2D( ScreenPosition, ray.start, ray.dir );
+	if( !UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, ray.start, ray.dir ) )
+	{
+    error( FS( "Could not DeprojectScreenToWorld (%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
+	}
   ray.SetLen( 1e6f );
-  FCollisionQueryParams fqp( "ClickableTrace", true );
-  TArray<FHitResult> res;
-  GetWorld()->LineTraceMultiByChannel( res, ray.start, ray.end, ECollisionChannel::ECC_GameTraceChannel2, fqp );
-  for( int i = 0; i < res.Num(); i++ ) {
-    if( AGameObject *go = Cast< AGameObject >( res[i].GetActor() ) )
+  return RayPickMulti( ray );
+}
+
+vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray )
+{
+  // Casts a ray into the scene
+  FCollisionQueryParams fcqp( true );
+  TArray<FHitResult> hits;
+  if( !GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp ) )
+  {
+    error( FS( "LineTraceMultiByProfile(RayCast) didn't hit anything, %f %f %f => %f %f %f",
+      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+  }
+
+  FCollisionObjectQueryParams objectTypes( FCollisionObjectQueryParams::InitType::AllObjects );
+  FHitResult hres;
+  if( !GetWorld()->LineTraceSingleByObjectType( hres, ray.start, ray.end, objectTypes, fcqp ) )
+  {
+    error( FS( "LineTraceSingleByObjectType() didn't hit anything, %f %f %f => %f %f %f",
+      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+  }
+
+  vector<AGameObject*> objects;
+  for( int i = 0; i < hits.Num(); i++ )
+  {
+    info( FS( "Hit result %s @ %f %f %f", *hits[i].GetActor()->GetName(), hits[i].ImpactPoint.X,hits[i].ImpactPoint.Y,hits[i].ImpactPoint.Z ) );
+    if( AGameObject *go = Cast< AGameObject >( hits[i].GetActor() ) )
       objects += go;
   }
   return objects;
 }
 
-vector<AGameObject*> APlayerControl::Pick( const FVector& eye, const FVector& lookDir )
+vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box )
 {
-  vector<AGameObject*> objects;
-  // Casts a ray into the scene
-  FCollisionQueryParams fqp( "ClickableTrace", true );
-  TArray<FHitResult> res;
-  FVector end = eye + lookDir*1e6f;
-  GetWorld()->LineTraceMultiByChannel( res, eye, end, ECollisionChannel::ECC_GameTraceChannel2, fqp );
-  for( int i = 0; i < res.Num(); i++ ) {
-    if( AGameObject *go = Cast< AGameObject >( res[i].GetActor() ) )
-      objects += go;
-  }
-  return objects;
-}  
+  return FrustumPick( box, {}, {} );
+}
 
 // If InTypes is EMPTY, then it picks any type
-vector<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
+vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
 {
   vector<AGameObject*> objects;
   
@@ -239,20 +199,7 @@ vector<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> Accept
   if( !box.GetArea() ) {
     // use a ray pick
     //info( FS( "Point %f %f using a ray", box.TL().X, box.TL().Y ) );
-    return Pick( box.TL() );
-  }
-
-  ULocalPlayer* LP = GetLocalPlayer();
-  if( !LP ) return objects;
-  FSceneViewFamilyContext ViewFamily( FSceneViewFamily::ConstructionValues(
-    LP->ViewportClient->Viewport, GetWorld()->Scene,
-    LP->ViewportClient->EngineShowFlags ).SetRealtimeUpdate( true ) );
-  FVector viewLoc;
-  FRotator viewRotation;
-  FSceneView* SceneView = LP->CalcSceneView( &ViewFamily, viewLoc, viewRotation, LP->ViewportClient->Viewport );
-  if( !SceneView ) {
-    error( "SceneView not ready" );
-    return objects;
+    return RayPickMulti( box.TL() );
   }
 
   vector<FVector2D> pts = { box.TL(), box.BL(), box.BR(), box.TR() };
@@ -262,12 +209,13 @@ vector<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> Accept
   for( int i = 0; i < pts.size(); i++ )
   {
     Ray ray;
-    SceneView->DeprojectFVector2D( pts[i], ray.start, ray.dir );
-    ray.SetLen( 1e4f );
-    //ray.Print( FS( "box select ray #%d", i ) );
+	  if( !UGameplayStatics::DeprojectScreenToWorld( this, pts[i], ray.start, ray.dir ) )
+	  {
+      error( FS( "Could not DeprojectScreenToWorld to world for %f %f", pts[i].X, pts[i].Y ) );
+    }
+
+    ray.SetLen( 1e4f );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e6f causes imprecision
     rays.push_back( ray );
-    //Game->flycam->Visualize( ray.start, 1.f, FLinearColor::Green );
-    //Game->flycam->Visualize( ray.end, 64.f, FLinearColor::Green );
   }
 
   // Make a frustum with the 6 planes formed by the 8 points
@@ -296,11 +244,80 @@ vector<AGameObject*> APlayerControl::Pick( const FBox2DU& box, set<Types> Accept
       if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
 
       FBox box = go->hitBounds->Bounds.GetBox();
+      
       // Selection by mesh's bounding box is best.
       if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )
       {
         objects += go;
       }
+    }
+  }
+  return objects;
+}
+
+vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape shape )
+{
+  return ShapePickExcept( pos, shape, {}, {} );
+} 
+
+vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionShape shape,
+  set<Types> AcceptedTypes, set<Types> NotTypes )
+{
+  // We use the base shapepick, then filter
+  FCollisionQueryParams fcqp;
+  TArray<FOverlapResult> overlaps;
+  FQuat quat( 0.f, 0.f, 0.f, 0.f );
+  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+    FCollisionObjectQueryParams::InitType::AllObjects );
+  // To query using a specific object TYPE, use OverlapMultiByProfile()
+  GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fcqp );
+  vector<AGameObject*> objects;
+  for( int i = 0; i < overlaps.Num(); i++ )
+  {
+    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
+    {
+      if( go->Dead ) skip;
+      if( AcceptedTypes.size() && !in( AcceptedTypes, go->Stats.Type.GetValue() ) )  skip;
+      if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
+      objects += go;
+    }
+  }
+  return objects;
+}
+
+vector<AGameObject*> APlayerControl::ComponentPickExcept( AGameObject* object, UPrimitiveComponent* up, vector<AGameObject*> except,
+  FString queryObjectType, vector<FString> intersectableTypes )
+{
+  FComponentQueryParams fqp;
+  except += object;
+
+  // this will cause the object to pick itself if you don't put it in the except group
+  for( AGameObject* o : except )
+    if( o )  fqp.AddIgnoredActor( o );
+
+  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
+    FCollisionObjectQueryParams::InitType::AllObjects );
+
+  for( FString channelName : intersectableTypes )
+  {
+    ECollisionChannel channel = CollisionChannels[channelName];
+    objectTypes.AddObjectTypesToQuery( channel ); // Channel 3 is the RESOURCES channel.
+  }
+
+  TArray<FOverlapResult> overlaps;
+  FRotator ro = up->GetComponentRotation();
+  FVector ve = up->GetComponentLocation();
+
+  // QUERY on channel 
+  ECollisionChannel queryChannel = CollisionChannels[queryObjectType];
+  GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro, queryChannel, fqp, objectTypes );
+  
+  vector<AGameObject*> objects;
+  for( int i = 0; i < overlaps.Num(); i++ )
+  {
+    if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
+    {
+      objects += go;
     }
   }
   return objects;

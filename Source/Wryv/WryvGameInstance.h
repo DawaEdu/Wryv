@@ -18,6 +18,7 @@ class APlayerControl;
 class AWryvGameMode;
 class AWryvGameState;
 class AFlyCam;
+class AShape;
 struct Team;
 
 UCLASS()
@@ -28,7 +29,10 @@ public:
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
 
-  int64 ID;
+  // These are the flags by CommandID=>Flag instance, for flag removal
+  map< int64, AShape* > Flags;
+
+  int64 NextObjectID;
   map<Types,FUnitsDataRow> unitsData;
   bool init;
   ATheHUD *hud;
@@ -44,6 +48,9 @@ public:
   void SetCommand( const Command& cmd );
   // Queues a command for an object
   void EnqueueCommand( const Command& cmd );
+  // Clear waypointed flags
+  void ClearFlags();
+  void ClearFlag( int64 cmdId );
   int64 NextId();
   AGameObject* GetUnitById( int64 unitId );
   bool IsReady();

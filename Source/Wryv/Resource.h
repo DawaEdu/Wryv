@@ -23,3 +23,5 @@ public:
   void Harvest( APeasant* peasant );
   float ResourcesFraction() { return AmountRemaining / Stats.Quantity; }
 };
+
+

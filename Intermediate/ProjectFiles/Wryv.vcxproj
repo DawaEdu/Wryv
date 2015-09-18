@@ -344,7 +344,9 @@
     <ClInclude Include="..\..\Source\Wryv\Screen.h" />
     <ClCompile Include="..\..\Source\Wryv\Settings.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Settings.h" />
+    <ClCompile Include="..\..\Source\Wryv\Shape.cpp" />
     <ClCompile Include="..\..\Source\Wryv\SidePanel.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\Shape.h" />
     <ClInclude Include="..\..\Source\Wryv\SidePanel.h" />
     <ClCompile Include="..\..\Source\Wryv\SlotPalette.cpp" />
     <ClInclude Include="..\..\Source\Wryv\SlotPalette.h" />

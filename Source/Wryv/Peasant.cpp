@@ -8,6 +8,7 @@
 #include "AI.h"
 #include "Building.h"
 #include "TheHUD.h"
+#include "PlayerControl.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
@@ -36,6 +37,9 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   Building = 0;
   Carrying = 0;
   Repairing = 0;
+  Shrugging = 0;
+  Mining = NOTHING;
+
   //RepairTarget = 0;
   LastResourcePosition = FVector(0,0,0);
 }
@@ -47,6 +51,16 @@ void APeasant::PostInitializeComponents()
   Capacities[ Types::RESGOLD ] = GoldCarryCapacity;
   Capacities[ Types::RESLUMBER ] = LumberCarryCapacity;
   Capacities[ Types::RESSTONE ] = StoneCarryCapacity;
+}
+
+void APeasant::Build( Types type, FVector pos )
+{
+  if( team->CanAfford( type ) )
+  {
+    // Make the building and ask the peasant to join in building it.
+    ABuilding* building = Game->Make<ABuilding>( type, team, pos );
+    building->PlaceBuilding( this );
+  }
 }
 
 void APeasant::Target( AGameObject* target )
@@ -101,6 +115,21 @@ void APeasant::Repair( float t )
   }
 }
 
+AResource* APeasant::FindNewResource( FVector fromPos, Types type, float searchRadius )
+{
+  vector<AGameObject*> objects = Game->pc->ShapePickExcept( fromPos,
+    FCollisionShape::MakeCapsule( Radius(), 100.f ), { type }, {} );
+  if( objects.size() )
+  {
+    if( AResource* res = Cast<AResource>( objects[0] ) )
+      return res;
+    else
+      error( FS( "%s is not a Resource object", *objects[0]->GetName() ) );
+  }
+  
+  return 0;
+}
+
 void APeasant::AttackCycle()
 {
   if( AResource *MiningTarget = Cast<AResource>( AttackTarget ) )
@@ -115,17 +144,6 @@ void APeasant::AttackCycle()
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTarget->Jiggle = 1; // This jiggles the animation when the attack cycle
       MiningTarget->Harvest( this );
-
-      // If the mining target ran out of resources, find a new one.
-      if( MiningTarget->AmountRemaining <= 0 )
-      {
-        AGameObject *res = GetClosestObjectNear( LastResourcePosition, Stats.SightRange,
-          { Types::RESGOLD, Types::RESLUMBER, Types::RESSTONE }, {} );
-        if( res )
-          Attack( res );
-        else
-          error( "No resource near previously harvested resource" );
-      }
     }
   }
   else
@@ -163,12 +181,6 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
   return lowestHpUnit;
 }
 
-void APeasant::CreateBuilding( Types type, const FVector& pos )
-{
-  ABuilding* building = Game->Make<ABuilding>( type, team, pos );
-  building->PlaceBuilding( this );
-}
-
 void APeasant::ai( float t )
 {
   // already doing something
@@ -183,24 +195,42 @@ void APeasant::ai( float t )
       return;
     }
   }
-  /////////////////////////
-  // Check resource type I'm mining is correct resource type to mine.
-  // Select a resource type to mine, based on need
-  Types neededResType = team->GetNeededResourceType();
-  
-  AResource* MiningTarget = Cast<AResource>( AttackTarget );
+}
 
-  // if the resource type i'm mining changed..
-  if( !MiningTarget   ||   neededResType != MiningTarget->Stats.Type )
+void APeasant::OnResourcesReturned()
+{
+  // Resources returned. If it is AI controlled, then
+  // we may harvest a new type of resources here.
+  if( team->ai.level )
   {
-    // may have changed, but only change mining type after
-    // successful mining operation of this type
-    // Try and find an object of type resType in the level
-    MiningTarget = Cast<AResource>( GetClosestObjectOfType( neededResType, Game->gm->neutralTeam, 1e6f ) );
-    Attack( MiningTarget );
+    Types neededResType = team->GetNeededResourceType();
+
+    // CHANGE resource type being mined.
+    if( neededResType != Mining )
+    {
+      // Try and find something of this new needed type in the vicinity.
+      if( AResource* res = FindNewResource( Pos, neededResType, Stats.SightRange*3.f ) )
+      {
+        Target( res );
+      }
+      else
+      {
+        // go where the resources were at least and seek further cmd
+        GoToGroundPosition( LastResourcePosition );
+      }
+    }
+  }
+
+  // go back to get more resources near where we were previously gathering
+  // If the mining target ran out of resources, find a new one.
+  AResource* res = FindNewResource( LastResourcePosition, Mining, Stats.SightRange );
+  if( res )  Target( res ) ;
+  else {
+    GoToGroundPosition( LastResourcePosition );
   }
 }
 
+// This gameobject hitting another
 void APeasant::Hit( AGameObject* other )
 {
   // if the other building is a townhall, can drop off resources
@@ -212,15 +242,10 @@ void APeasant::Hit( AGameObject* other )
     MinedResources[ Types::RESLUMBER ] = 0;
     team->Stone += MinedResources[ Types::RESSTONE ];
     MinedResources[ Types::RESSTONE ] = 0;
-    Follow( 0 );
-    // go back to get more resources, if the last resource is still present
-    AGameObject *res = GetClosestObjectNear( LastResourcePosition, Stats.SightRange,
-      {Types::RESGOLD,Types::RESLUMBER,Types::RESSTONE}, {} );
-    if( res )
-      Attack( res );
-    else
-      error( FS( "%s: There are no resources near %f %f %f", *GetName(),
-        LastResourcePosition.X, LastResourcePosition.Y, LastResourcePosition.Z ) );
+    Follow( 0 ); // unfollow the townhall
+
+    // The resources have been returned
+    OnResourcesReturned();
   }
 }
 
@@ -238,7 +263,7 @@ void APeasant::ReturnResources()
         if( p.second >= Capacities[ p.first ] )
         {
           // Return to nearest townhall for dropoff
-          AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL, team, 1e6f );
+          AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL );
           if( !returnCenter )
           {
             info( "NO RETURN CENTER" );
@@ -268,6 +293,16 @@ void APeasant::Move( float t )
   // We repair the building that is currently selected
   if( FollowTarget )  Repair( t );
   AUnit::Move( t ); // Calls flush, so we put it last
+
+  if( Idling() )
+  {
+    if( Mining ) // Trying to mine something but couldn't find it.
+    {
+      // go back to where the resource was and shrug
+      Shrugging = 1;
+      Mining = NOTHING;
+    }
+  }
 }
 
 void APeasant::JobDone()

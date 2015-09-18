@@ -28,25 +28,46 @@ void AResource::PostInitializeComponents()
 void AResource::Harvest( APeasant* peasant )
 {
   // Just mined it. Get the resource.
-  if( AmountRemaining > 0 )
+  if( AmountRemaining <= 0 )
   {
-    float dmg = peasant->DamageRoll();
-    set<Types> acceptable = {RESGOLD,RESLUMBER,RESSTONE};
-    if( !in( acceptable, Stats.Type.GetValue() ) )
-    {
-      // This happens when you have a bad entry in BaseStats.
-      error( FS( "Resource object type %s not recognized", *Stats.Name ) );
-      return;
-    }
-    peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
-    AmountRemaining -= dmg;
+    error( FS( "Peasant %s is mining an empty resource", *peasant->GetName() ) );
+    return;
+  }
+  
+  float dmg = peasant->DamageRoll();
+  set<Types> acceptable = {RESGOLD,RESLUMBER,RESSTONE};
+  if( !in( acceptable, Stats.Type.GetValue() ) )
+  {
+    // This happens when you have a bad entry in BaseStats.
+    error( FS( "Resource object type %s not recognized", *Stats.Name ) );
+    return;
+  }
 
-    if( AmountRemaining <= 0 )
+  peasant->Mining = Stats.Type;
+  peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
+  AmountRemaining -= dmg;
+
+  if( AmountRemaining <= 0 )
+  {
+    AmountRemaining = 0.f;
+    ResourcesFinished = 1; // Signal for blueprints to kick-off the animation,
+    // then, this flag is reset from blueprints
+
+    // There's a reason this cannot go in ::Die(): When Die() is called the base
+    // clears the Attackers array, but we need that array to search for new resources.
+    // Tell each peasant harvesting peasant to go find a new resource
+    vector<AGameObject*> Harvesters = Attackers; //Save old collection
+    Die(); // Mark dead (clears Attackers group)
+    //Re-target all attackers to find new resources
+    for( AGameObject * go : Harvesters )
     {
-      AmountRemaining = 0.f;
-      ResourcesFinished = 1; // Signal for blueprints to kick-off the animation,
-      // then, this flag is reset from blueprints
-      Die();
+      if( APeasant *peasant = Cast<APeasant>( go ) )
+      {
+        if( AResource* res = peasant->FindNewResource( Pos, peasant->Mining, peasant->Stats.SightRange ) )
+          peasant->Target( res );
+      }
     }
   }
 }
+
+

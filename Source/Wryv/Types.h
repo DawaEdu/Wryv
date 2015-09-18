@@ -91,11 +91,17 @@ inline bool IsItem( Types b ) {
 inline bool IsProjectile( Types b ) {
   return Between( b, PROJWEAPONARROW, PROJLIGHTNING );
 }
+inline bool IsExplosion( Types b ) {
+  return Between( b, EXPLWHITE, EXPLLIGHTNINGSPLASH );
+}
 inline bool IsAction( Types b ) {
   return Between( b, ACTIONMOVE, ACTIONDOUBLEDAMAGE );
 }
 inline bool IsShape( Types b ) {
   return Between( b, SHAPESPHERE, SHAPEEDGE );
+}
+inline bool IsValidType( Types b ){
+  return Between( b, 0, Types::MAX-1 );
 }
 
 inline FString GetEnumName( TCHAR* enumType, int enumValue )

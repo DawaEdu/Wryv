@@ -29,6 +29,7 @@ class WRYV_API AGameObject : public AActor
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
   static AGameObject* Nothing;
   static float CapDeadTime; // Dead units get cleaned up after this many seconds (time given for dead anim to play out)
+  Command CurrentCommand;
 
   // 
   // Stats.
@@ -62,7 +63,6 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
-  function <void ()> OnReachDestination; // Something to do when reach destination.
 
   // Series of commands.
   deque<Command> commands;
@@ -155,6 +155,7 @@ class WRYV_API AGameObject : public AActor
   void Face( FVector point );
   // time-stepped attack of current target (if any)
   void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
+  void DisplayWaypoints();
   void exec( const Command& cmd );
   virtual void Move( float t );
   bool Idling();
@@ -183,10 +184,10 @@ class WRYV_API AGameObject : public AActor
   // 
   // AI
   AGameObject* GetClosestEnemyUnit();
-  AGameObject* GetClosestObjectNear( FVector pos, float radius, set<Types> AcceptedTypes, set<Types> NotTypes );
-	map<float, AGameObject*> FindEnemyUnitsInSightRange();
-  AGameObject* GetClosestObjectOfType( Types type, Team* onTeam, float searchRadius );
-
+  map<float, AGameObject*> FindEnemyUnitsInSightRange();
+  // Searches for an object of specific type on my TEAM
+  AGameObject* GetClosestObjectOfType( Types type );
+	
   // 
   // Utility
   void OnSelected();
@@ -210,4 +211,7 @@ class WRYV_API AGameObject : public AActor
   void Cleanup();
   virtual void BeginDestroy() override;
 
+  UFUNCTION(BlueprintCallable, Category = Display) FString ToString();
+  UFUNCTION(BlueprintCallable, Category = Display) FString FollowersToString();
+  
 };
