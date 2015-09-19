@@ -1,7 +1,7 @@
 #include "Wryv.h"
+#include "GlobalFunctions.h"
 #include "Item.h"
 #include "Unit.h"
-#include "GlobalFunctions.h"
 
 // Sets default values
 AItem::AItem(const FObjectInitializer& PCIP) : Super(PCIP)

@@ -62,6 +62,8 @@ enum Types
   EXPLICESPLASH         UMETA(DisplayName = "Explosion Ice Splash"),
   EXPLLIGHTNINGSPLASH   UMETA(DisplayName = "Explosion Lightning Splash"),
 
+  FOGOFWAR              UMETA(DisplayName = "The Fog of War"),
+
   MAX                   UMETA(DisplayName = "Max"),
 };
 
@@ -107,7 +109,7 @@ inline bool IsValidType( Types b ){
 inline FString GetEnumName( TCHAR* enumType, int enumValue )
 {
   const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, enumType, true);
-  return EnumPtr->GetDisplayNameText(enumValue).ToString();
+  return EnumPtr->GetEnumText(enumValue).ToString();
 }
 
 inline FString GetTypesName( Types enumValue )
@@ -118,6 +120,6 @@ inline FString GetTypesName( Types enumValue )
     return FS( "Out of bounds type %d", (int)enumValue );
   }
   const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT( "Types" ), true);
-  return EnumPtr->GetDisplayNameText(enumValue).ToString();
+  return EnumPtr->GetEnumText(enumValue).ToString();
 }
 

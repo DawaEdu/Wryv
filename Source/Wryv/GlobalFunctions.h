@@ -175,6 +175,11 @@ template <typename T> inline bool in( const vector<T*>& s, const T* elt )
   return 0;
 }
 
+template <typename T> inline bool in( const deque<T>& d, const T& elt )
+{
+  return find( d.begin(), d.end(), elt ) != d.end();
+}
+
 template <typename T> inline int index( const vector<T>& s, const T& elt )
 {
   for( int i = 0; i < s.size(); i++ )
@@ -188,11 +193,6 @@ template <typename T> inline int index( const vector<T*>& s, const T* elt )
     if( s[i] == elt )
       return i;
   return -1;
-}
-
-template <typename T> inline bool in( deque<T>& s, const T& elt )
-{
-  return find( s.begin(), s.end(), elt ) != s.end();
 }
 
 /// Removes an element t from a vector v
@@ -238,22 +238,33 @@ template <typename T> vector<T*> Intersection( const vector<T*>& A, const vector
 template <typename T> vector<T*>& operator+=( vector<T*>& A, const vector<T*>& B )
 {
   for( T* b : B )
-    if( in( A, b ) ) {
-      LOG( "don't keep: b was in A" );
+    if( !in( A, b ) )
+      A.push_back( b ) ;
+    else {
+      LOG( "DUPLICATE: vector operator+=: don't keep: b was in A" );
     }
-    else A.push_back( b ) ;
   return A;
 }
 
 template <typename T> vector<T>& operator+=( vector<T>& A, const T& b )
 {
-  A.push_back( b );
+  if( !in( A, b ) ) {
+    A.push_back( b ) ;
+  }
+  else {
+    LOG( "DUPLICATE: vector operator+=: don't keep: b was in A" );
+  }
   return A;
 }
 
 template <typename T> vector<T*>& operator+=( vector<T*>& A, const T* b )
 {
-  A.push_back( b );
+  if( !in(A,b) ) {
+    A.push_back( b )
+  }
+  else {
+    LOG( "DUPLICATE: vector operator+=: don't keep: b was in A" );
+  }
   return A;
 }
 
@@ -261,6 +272,19 @@ template <typename T> vector<T*>& operator-=( vector<T*>& A, const vector<T*>& B
 {
   for( T* b : B )
     removeElement( A, b ) ;
+  return A;
+}
+
+template <typename T> deque<T>& operator-=( deque<T>& A, const deque<T>& B )
+{
+  // At each A, check if in B. If in B, remove from A.
+  for( deque<T>::iterator IterA = A.begin(); IterA != A.end(); )
+  {
+    if( in( B, *IterA ) )
+      IterA = A.erase( IterA );
+    else
+      ++IterA;
+  }
   return A;
 }
 
@@ -446,8 +470,10 @@ inline void Print( FString msg, FVector v )
 
 inline void Print( FString msg, FBox box )
 {
-  LOG( "%s [%f %f %f] -> [%f %f %f]", *msg, box.Min.X, box.Min.Y, box.Min.Z,
-    box.Max.X, box.Max.Y, box.Max.Z );
+  LOG( "%s [%f %f %f] -> [%f %f %f], measuring %fx%fx%f, ext=(%fx%fx%f)", *msg, box.Min.X, box.Min.Y, box.Min.Z,
+    box.Max.X, box.Max.Y, box.Max.Z,
+    box.GetSize().X, box.GetSize().Y, box.GetSize().Z,
+    box.GetExtent().X, box.GetExtent().Y, box.GetExtent().Z );
 }
 
 inline FVector& ZERO( FVector & v ) {

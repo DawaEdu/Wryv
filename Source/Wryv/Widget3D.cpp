@@ -1,6 +1,6 @@
 #include "Wryv.h"
-#include "Widget3D.h"
 #include "GlobalFunctions.h"
+#include "Widget3D.h"
 
 AWidget3D::AWidget3D( const FObjectInitializer& PCIP ) : Super( PCIP )
 {

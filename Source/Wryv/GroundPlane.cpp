@@ -12,17 +12,21 @@ AGroundPlane::AGroundPlane( const FObjectInitializer& PCIP ) : Super( PCIP )
 void AGroundPlane::PostInitializeComponents()
 {
   Super::PostInitializeComponents();
-  Box = Mesh->Bounds.GetBox();
   TraceFraction = FMath::Clamp( TraceFraction, 0.25f, 0.85f );
+}
+
+FBox AGroundPlane::GetBox()
+{
+  return GetComponentsBoundingBox();
 }
 
 FBox AGroundPlane::GetReducedBox()
 {
-  FBox box = Box;
-  box.Max.X *= TraceFraction;
-  box.Max.Y *= TraceFraction;
-  box.Min.X *= TraceFraction;
-  box.Min.Y *= TraceFraction;
-  return box;
+  FBox ReducedBox = GetBox();
+  ReducedBox.Max.X *= TraceFraction;
+  ReducedBox.Max.Y *= TraceFraction;
+  ReducedBox.Min.X *= TraceFraction;
+  ReducedBox.Min.Y *= TraceFraction;
+  return ReducedBox;
 }
 

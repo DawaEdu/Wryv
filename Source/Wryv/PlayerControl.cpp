@@ -1,10 +1,10 @@
 #include "Wryv.h"
+#include "FlyCam.h"
+#include "GlobalFunctions.h"
+#include "GroundPlane.h"
 #include "PlayerControl.h"
 #include "WryvGameInstance.h"
-#include "GlobalFunctions.h"
 #include "WryvGameMode.h"
-#include "GroundPlane.h"
-#include "FlyCam.h"
 #include "Runtime/Core/Public/Math/Plane.h"
 
 APlayerControl::APlayerControl( const FObjectInitializer& PCIP ) : Super( PCIP )
@@ -93,11 +93,11 @@ FHitResult APlayerControl::TraceAgainst( AActor* actor, const Ray& ray )
     warning( FS( "ActorLineTraceSingle (%s) failed %f %f %f => %f %f %f",
       *actor->GetName(), ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
   }
+
   if( hit.GetActor() )
   {
-    info( FS( "TraceAgainst (%s) hit %s @ (%f %f %f)",
-      *actor->GetName(),
-      *hit.GetActor()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
+    //info( FS( "ActorLineTraceSingle (%s) hit `[%s/%s]` @ (%f %f %f)",
+    //  *actor->GetName(), *hit.GetActor()->GetName(), *hit.GetComponent()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
   }
   else
   {
@@ -134,8 +134,8 @@ FHitResult APlayerControl::RayPickSingle( const Ray& ray )
 
   if( hit.GetActor() )
   {
-    info( FS( "RayPickSingle() hit %s @ (%f %f %f)",
-      *hit.GetActor()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
+    info( FS( "RayPickSingle() hit [Actor: %s/Component: %s] @ (%f %f %f)",
+      *hit.GetActor()->GetName(), *hit.GetComponent()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
   }
   else
   {

@@ -1,9 +1,9 @@
 #include "Wryv.h"
+#include "FlyCam.h"
+#include "GlobalFunctions.h"
 #include "Projectile.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "GlobalFunctions.h"
-#include "FlyCam.h"
 
 AProjectile::AProjectile(const FObjectInitializer& PCIP) : AGameObject(PCIP)
 {

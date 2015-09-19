@@ -1,12 +1,12 @@
 #include "Wryv.h"
+#include "Command.h"
+#include "FlyCam.h"
+#include "GameObject.h"
+#include "TheHUD.h"
+#include "Shape.h"
+#include "UnitTypeUClassPair.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "GameObject.h"
-#include "Shape.h"
-#include "TheHUD.h"
-#include "FlyCam.h"
-#include "UnitTypeUClassPair.h"
-#include "Command.h"
 
 UWryvGameInstance* Game = 0;
 
@@ -16,12 +16,12 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   NextObjectID = 1;
   // On construction of first game object, initialize game instance
   Game = Cast<UWryvGameInstance>( this );
-  init = 0;
   hud = 0;
   pc = 0;
   gm = 0;
   gs = 0;
   flycam = 0;
+  UClassesLoaded = 0;
   IsDestroyStarted = 0;
 }
 
@@ -30,18 +30,15 @@ void UWryvGameInstance::SetCommand( const Command& cmd )
   ClearFlags(); // Clear waypointed flags
   /// retrieve command list from object
   AGameObject* go = GetUnitById( cmd.srcObjectId );
-
-  /// Remove those commands from global history
-  for( deque<Command>::iterator it = commands.begin(); it != commands.end(); ++it )
+  if( !go )
   {
-    // If this command object is found in the gameobject's locals
-    if( in( go->commands, *it ) )
-    {
-      info( FS( "Erasing old command `%s` from global history", *it->ToString() ) );
-      it = commands.erase( it );
-    }
+    error( FS( "Unit %d doesn't exist", cmd.srcObjectId ) );
+    return ;
   }
-
+  
+  /// Remove old queued from go from global history
+  commands -= go->commands;
+  
   go->commands.clear();
   go->commands.push_back( cmd );
 }
@@ -52,14 +49,13 @@ void UWryvGameInstance::EnqueueCommand( const Command& cmd )
   info( FS( "Enqueued Command %s", *cmd.ToString() ) );
   commands.push_back( cmd );
   AGameObject* unit = GetUnitById( cmd.srcObjectId );
-  if( unit )
-  {
-    unit->commands.push_back( cmd );
-  }
-  else
+  if( !unit )
   {
     error( FS( "Unit %d not found", cmd.srcObjectId ) );
+    return;
   }
+
+  unit->commands.push_back( cmd );
 
   // Add in a waypoint flag when commanded unit is 1st in hud selection 
   if( Game->hud->Selected.size() && unit == Game->hud->Selected[0] )
@@ -99,13 +95,25 @@ AGameObject* UWryvGameInstance::GetUnitById( int64 unitId )
     for( int j = 0; j < gm->teams[i]->units.size(); j++ )
       if( gm->teams[i]->units[j]->ID == unitId )
         return gm->teams[i]->units[j];
+
+  error( FS( "Unit %d doesn't exist", unitId ) );
+  // Dump instance names / ids for debug
+  for( int i = 0; i < gm->teams.size(); i++ )
+    for( int j = 0; j < gm->teams[i]->units.size(); j++ ) {
+      AGameObject* unit = gm->teams[i]->units[j];
+      LOG( "  Unit ID %d is %s", unit->ID, *unit->GetName() );
+    }
+        
+
   return 0;
 }
 
 // A check function. You should avoid using this function whenever possible
 bool UWryvGameInstance::IsReady()
 {
-  if( !IsDestroyStarted && init && hud && pc && gm && gs && flycam && flycam->pathfinder )
+  if( !IsDestroyStarted && // Not shutting down
+       gm && gs && pc && hud && flycam && // stock objects
+       UClassesLoaded ) // Game->unitsData has been loaded.
     return 1;
   else  error( "GAME NOT READY" );
   return 0;
@@ -114,38 +122,8 @@ bool UWryvGameInstance::IsReady()
 void UWryvGameInstance::Init()
 {
   LOG( "UWryvGameInstance::Init()");
+  // Calls more than once per startup.
   Super::Init();
-  init = 1;  //flag for IsReady() to know if instance ready or not
-
-  // Pull up the UnitTypeUClasses. The UnitTypeUClasses mapping just connects each
-  // Types:: object to its UE4 UClass.
-  LoadUClasses();
-
-  // Data table has bugs in it
-  // ------------------------------------------------------------------------------
-  return;
-
-  if( !DataTable )
-  {
-    LOG( "Datatable not initialized");
-    return;
-  }
-  else
-  {
-    // DataTable
-    TArray<FName> rowNames = DataTable->GetRowNames();
-    for( int i = 0 ; i < rowNames.Num(); i++ )
-    {
-      FUnitsDataRow *fud = (FUnitsDataRow *)DataTable->RowMap[ rowNames[i] ];
-      
-      if( fud )
-      {
-        //LOG( "row reads: %s", *fud->ToString() );
-      }
-      
-      unitsData[ fud->Type.GetValue() ] = *fud;
-    }
-  }
 }
 
 void UWryvGameInstance::AssertIntegrity()
@@ -227,6 +205,8 @@ void UWryvGameInstance::LoadUClasses()
       type = NOTHING;
     }
 
+    if( type == Types::FOGOFWAR ) skip; // The fogofwar doesn't inherit from gameobject
+
     // Cannot call Make here since Teams are not ready. We don't want a version of Make
     // that doesn't assign a team since team assignment is vital and easy to forget.
     AGameObject* unit = GetWorld()->SpawnActor<AGameObject>( uClass, FVector(0.f), FRotator(0.f) );
@@ -245,10 +225,14 @@ void UWryvGameInstance::LoadUClasses()
   AssertIntegrity();
 }
 
+// This only happens ONE TIME in the startup (fortunately)
 ULocalPlayer*	UWryvGameInstance::CreateInitialPlayer(FString& OutError)
 {
   LOG( "UWryvGameInstance::CreateInitialPlayer()");
-  Init();
+  // Pull up the UnitTypeUClasses. The UnitTypeUClasses mapping just connects each
+  // Types:: object to its UE4 UClass.
+  LoadUClasses();
+  UClassesLoaded = 1; // This only calls once, so that's why I hit the bool init here
   return Super::CreateInitialPlayer( OutError );
 }
 
@@ -266,8 +250,8 @@ bool UWryvGameInstance::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& O
 
 void UWryvGameInstance::BeginDestroy()
 {
-  Super::BeginDestroy();
   IsDestroyStarted = 1;
+  Super::BeginDestroy();
 }
 
 

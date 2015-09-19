@@ -1,10 +1,10 @@
 #include "Wryv.h"
-#include "Resource.h"
-#include "WryvGameInstance.h"
-#include "WryvGameMode.h"
 #include "FlyCam.h"
 #include "NotifyTreeFinishedFall.h"
 #include "Peasant.h"
+#include "Resource.h"
+#include "WryvGameInstance.h"
+#include "WryvGameMode.h"
 
 AResource::AResource( const FObjectInitializer& PCIP ) : Super( PCIP )
 {

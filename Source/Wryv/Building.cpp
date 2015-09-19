@@ -59,8 +59,9 @@ void ABuilding::Move( float t )
       FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
       if( fmontage )
       {
-        int frames = fmontage->Montage->GetNumberOfFrames();
-        float len = fmontage->Montage->GetTimeAtFrame( frames );
+        //int frames = fmontage->Montage->GetNumberOfFrames();
+        //float len = fmontage->Montage->GetTimeAtFrame( frames );
+        float len = fmontage->Montage->GetPlayLength();
         //info( FS( "fmontage is SET, frames=%d, len=%f", frames, len ) );
         float p = len * PercentBuilt();
         fmontage->SetPosition( p );

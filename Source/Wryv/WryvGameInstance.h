@@ -34,7 +34,7 @@ public:
 
   int64 NextObjectID;
   map<Types,FUnitsDataRow> unitsData;
-  bool init;
+  bool UClassesLoaded;
   ATheHUD *hud;
   APlayerControl *pc;
   AWryvGameMode *gm;

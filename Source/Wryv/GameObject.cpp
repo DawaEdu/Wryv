@@ -1,18 +1,17 @@
 #include "Wryv.h"
+#include "Building.h"
+#include "Explosion.h"
+#include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "GameObject.h"
 #include "TheHUD.h"
+#include "Pathfinder.h"
+#include "Peasant.h"
+#include "PlayerControl.h"
+#include "Projectile.h"
+#include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "FlyCam.h"
-#include "Projectile.h"
-#include "Pathfinder.h"
-#include "GlobalFunctions.h"
-#include "PlayerControl.h"
-#include "Widget3D.h"
-#include "Building.h"
-#include "Explosion.h"
-#include "Peasant.h"
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -137,7 +136,7 @@ bool AGameObject::isChildOf( AGameObject* parent )
 
 void AGameObject::SetSize( FVector size )
 {
-  float maxDimen = GetComponentsBoundingBox().GetExtent().GetMax();
+  float maxDimen = GetComponentsBoundingBox().GetSize().GetMax();
   if( !maxDimen )
   {
     LOG( "::SetSize(): %s had %f size bounding box", *GetName(), maxDimen );
@@ -574,7 +573,13 @@ void AGameObject::Walk( float t )
     }
 
     // Push UP from the ground plane, using the bounds on the actor.
-    if( !Game->flycam->SetOnGround( Pos ) )
+    FVector AboveGround = Pos;
+    AboveGround.Z += 20.f;
+    if( Game->flycam->SetOnGround( AboveGround ) )
+    {
+      Pos = AboveGround;
+    }
+    else
     {
       LOG( "object %s has left the ground plane", *Stats.Name );
     }

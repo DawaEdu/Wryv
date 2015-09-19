@@ -1,7 +1,7 @@
 #include "Wryv.h"
 #include "CooldownCounter.h"
-#include "WryvGameInstance.h"
 #include "GameObject.h"
+#include "WryvGameInstance.h"
 
 CooldownCounter::CooldownCounter()
 {

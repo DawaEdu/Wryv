@@ -1,6 +1,6 @@
 #include "Wryv.h"
-#include "Settings.h"
 #include "GlobalFunctions.h"
+#include "Settings.h"
 
 ASettings::ASettings( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
@@ -9,6 +9,7 @@ ASettings::ASettings( const FObjectInitializer& PCIP ) : Super( PCIP )
 
 void ASettings::NotifyBeginPlay()
 {
-  LOG( "ASettings::BeginPlay()" );
+  Super::NotifyBeginPlay();
+  LOG( "ASettings::NotifyBeginPlay()" );
 }
 

@@ -1,7 +1,7 @@
 #include "Wryv.h"
-#include "WryvGameState.h"
-#include "WryvGameInstance.h"
 #include "GlobalFunctions.h"
+#include "WryvGameInstance.h"
+#include "WryvGameState.h"
 
 AWryvGameState::AWryvGameState(const FObjectInitializer& PCIP) : Super(PCIP)
 {

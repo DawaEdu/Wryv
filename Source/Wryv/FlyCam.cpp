@@ -1,20 +1,20 @@
 #include "Wryv.h"
-#include "TheHUD.h"
-#include "FlyCam.h"
-#include "Resource.h"
-#include "PlayerControl.h"
-#include "GameObject.h"
 #include "Building.h"
+#include "FlyCam.h"
+#include "GameObject.h"
 #include "GlobalFunctions.h"
-#include "WryvGameInstance.h"
-#include "WryvGameMode.h"
-#include "Pathfinder.h"
-#include "Shape.h"
-#include "Peasant.h"
-#include "Projectile.h"
 #include "GroundPlane.h"
+#include "Pathfinder.h"
+#include "Peasant.h"
+#include "PlayerControl.h"
+#include "Projectile.h"
+#include "Resource.h"
+#include "Shape.h"
+#include "TheHUD.h"
 #include "Types.h"
 #include "UISounds.h"
+#include "WryvGameInstance.h"
+#include "WryvGameMode.h"
 #include "GameFramework/PlayerInput.h"
 
 // Sets default values
@@ -36,8 +36,6 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>( this, ADefaultPawn::MovementComponentName );
   MovementComponent->SetTickableWhenPaused( true );
 
-
-  
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
   MainCamera = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "MainCamera" );
@@ -46,6 +44,8 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   OrthoCam->AttachTo( DummyRoot );
   
   CameraMovementSpeed = 1000.f;
+  VizGrid = 0;
+  VizPassibles = 0;
 }
 
 // Called when the game starts or when spawned
@@ -53,6 +53,9 @@ void AFlyCam::BeginPlay()
 {
   LOG( "AFlyCam::BeginPlay()" );
 	Super::BeginPlay();
+
+  // Keep checkersphere bonus to below 1.f
+  CheckerSphereRadius = FMath::Clamp( CheckerSphereRadius, 0.25f, 1.f );
 }
 
 void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
@@ -131,6 +134,7 @@ void AFlyCam::ClearGhost()
 
 void AFlyCam::LoadLevel( FName levelName )
 {
+  LOG( "AFlyCam::LoadLevel(%s)", *levelName.ToString() );
   Game->gm->state = Running;
 
   // synchrononously loads level
@@ -148,10 +152,7 @@ void AFlyCam::LoadLevel( FName levelName )
 
 void AFlyCam::OnLevelLoaded()
 {
-  // retrieves pointers to main objects for this frame
-  // Frame setup. Runs at beginning of game frame.
-  Game->hud->Setup(); // init selectors and renderers
-
+  LOG( "AFlyCam::OnLevelLoaded()" );
   FindFloor();
   if( !floor ) {
     LOG( "No floor!" );
@@ -160,6 +161,16 @@ void AFlyCam::OnLevelLoaded()
   
   RetrievePointers();
   InitializePathfinding();
+
+  float IMAX = 1000.f;
+  for( int i = 0; i <= IMAX; i += 100 )
+  {
+    FVector v( 1000, 1000, i );
+    FLinearColor color = FLinearColor::LerpUsingHSV( FLinearColor::Black, FLinearColor::White, i/IMAX );
+    AShape* s = Game->Make<AShape>( Types::SHAPESPHERE, Game->gm->neutralTeam, v );
+    s->SetColor( color );
+    s->text = FS( "%d", i );
+  }
 
   setupLevel = 1;
 }
@@ -174,13 +185,19 @@ void AFlyCam::SetObjectsOnGround()
     AGameObject* go = Cast<AGameObject>( actors[i] );
     if( !go ) skip;
 
+    if( Cast<AGroundPlane>( go ) )
+    {
+      info( "NOT PUTTING THE GROUND PLANE ON THE FLOOR.." );
+      skip;
+    }
+
     FVector pos = go->Pos;
-    info( FS( "Object %s started @ %f %f %f", *go->GetName(), pos.X, pos.Y, pos.Z ) );
+    //info( FS( "Object %s started @ %f %f %f", *go->GetName(), pos.X, pos.Y, pos.Z ) );
     if( SetOnGround( pos ) )
     {
       // Pos & Dest must be set on the ground
       go->SetPosition( pos );
-      info( FS( "Object %s moved down to @ %f %f %f", *go->GetName(), pos.X, pos.Y, pos.Z ) );
+      //info( FS( "Object %s moved down to @ %f %f %f", *go->GetName(), pos.X, pos.Y, pos.Z ) );
     }
     else
     {
@@ -210,10 +227,14 @@ void AFlyCam::InitializePathfinding()
   
   // get the actual spacing between nodes, then divide by 2
   // use 95% prox to ensure that
-  FVector radiusScale = 0.5f * CheckerSphereRadius * floorBox.GetSize() / FVector( Rows, Cols, 1.f );
-  radiusScale.Z = radiusScale.X; // Keep it rounder
+  FBox floorBox = floor->GetBox();
+  FBox reducedBox = floor->GetReducedBox();
 
-  FBox floorBox = floor->GetReducedBox();
+  // Radius of spheres is based on reduced box size.
+  FVector diameterScale = reducedBox.GetSize() / FVector( Rows, Cols, 1.f );
+  diameterScale *= CheckerSphereRadius; //CheckerSphereRadius is typically 1.f.. if you make it smaller,
+  // then the test-spheres get smaller, making the pathfinder more capable of finding cracks.
+  diameterScale.Z = diameterScale.X; // Keep it rounder
 
   // adjacent spheres don't overlap
   for( int row = 0; row < Rows; row++ )
@@ -224,8 +245,8 @@ void AFlyCam::InitializePathfinding()
       FVector fraction( (row + .5f)/Rows, (col + .5f)/Cols, 1.f );
 
       // For the landscape, the lower left is actually box.Min + ext.XY0.
-      FVector p = FMath::Lerp( floorBox.Min, floorBox.Max, fraction );
-      p.Z = floor->Box.Max.Z + 1.f;
+      FVector p = FMath::Lerp( reducedBox.Min, reducedBox.Max, fraction );
+      p.Z = reducedBox.Max.Z + 1.f;
       Coord coord( row, col );
       int idx = coord.index();
       pathfinder->nodes[ idx ]->index = idx;
@@ -245,7 +266,7 @@ void AFlyCam::InitializePathfinding()
           error( "Couldn't make intersection sphere" );
           skip;
         }
-        sphere->SetSize( radiusScale );
+        sphere->SetSize( diameterScale );
         
         // Pick objects intersecting with the sphere. If anything intersects, then
         // the node is regarded as impassible.
@@ -289,8 +310,17 @@ void AFlyCam::InitializePathfinding()
     GraphNode *node = pathfinder->nodes[i];
     if( node->terrain == Passible )
     {
+      if( VizPassibles )
+      {
+        AShape *vizSphere = Game->Make<AShape>( SHAPESPHERE, Game->gm->neutralTeam, node->point );
+        vizSphere->SetSize( diameterScale );
+      }
+    }
+    else
+    {
       AShape *vizSphere = Game->Make<AShape>( SHAPESPHERE, Game->gm->neutralTeam, node->point );
-      vizSphere->SetSize( radiusScale );
+      vizSphere->SetColor( FLinearColor::Red );
+      vizSphere->SetSize( diameterScale );
     }
     // create a node and edge connections
     for( int j = 0; j < node->edges.size(); j++ )
@@ -342,7 +372,8 @@ void AFlyCam::SetCameraPosition( FVector2D perc )
   // Extents are HALF extents
 
   // Normal object (with centered origin)
-  FVector G = floorBox.Min + floorBox.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
+  FBox reducedBox = floor->GetReducedBox();
+  FVector G = reducedBox.Min + reducedBox.GetExtent() * 2.f * FVector( 1.f-perc.Y, perc.X, 0 );
   
   //FVector ext = box.GetExtent();
   //ext.Z = 0; // no z-measure
@@ -468,13 +499,21 @@ bool AFlyCam::SetOnGround( FVector& v )
     return 0;
   }
 
+  //ClearViz();
   // Get ray hit with ground
-  FVector v2 = v + FVector(0,0,floorBox.GetSize().Z);
   //Visualize( Types::SHAPESPHERE, v, 10.f, FLinearColor::Green );
+  //Print( "v:", v );
+  
+  FVector v2 = v;
+  v2.Z += floor->GetBox().GetSize().Z; /// Pick up far above the floor
+  //Print( "v2:", v2 );
+  //Visualize( Types::SHAPESPHERE, v2, 10.f, FLinearColor::Blue );
+
   FHitResult hit = Game->pc->TraceAgainst( floor, Ray(v2, FVector( 0, 0, -1 ), 1e4f) );
   if( hit.GetActor() )
   {
     v = hit.ImpactPoint;
+    //Print( "impact @:", v2 );
     //Visualize( Types::SHAPESPHERE, v, 10.f, FLinearColor::Red );
     return 1;
   }
@@ -482,6 +521,7 @@ bool AFlyCam::SetOnGround( FVector& v )
   {
     // no hit, no change
     warning( FS( "Point %f %f %f cannot hit the ground", v.X, v.Y, v.Z ) );
+    Visualize( Types::SHAPESPHERE, v, 50.f, FLinearColor::Blue );
     return 0;
   }
 }
@@ -492,34 +532,58 @@ void AFlyCam::FindFloor()
   ULevel* level = GetWorld()->GetLevel(0);
   TTransArray<AActor*>& actors = level->Actors;
 
-  // First try and find a Landscape object representing the floor.
-  //for( int i = 0; i < actors.Num() && !floor; i++ )
-  //{
-  //  AActor* a = actors[i];
-  //  if( !a )  continue;
-  //  ALandscape* landscape = Cast< ALandscape >( a );
-  //  if( landscape )  floor = a;
-  //}
-  
   // Here, the floor wasn't found above, so search by name.
+  for( int i = 0; i < actors.Num() && !floor; i++ )
+    if( AGroundPlane* gp = Cast<AGroundPlane>( actors[i] ) )
+      floor = gp;
+
+  // Form the world bounds. You cannot use 
+  // FBox box = ALevelBounds::CalculateLevelBounds( level );
+  // because it will be too huge if you're using a skydome
+  FBox box(0);
+  for( int i = 0; i < actors.Num(); i++ )
+    if( AGameObject* go = Cast<AGameObject>( actors[i] ) )
+      box += go->GetComponentsBoundingBox();
+
   if( !floor )
   {
-    for( int i = 0; i < actors.Num() && !floor; i++ )
+    error( "Floor not found" );
+    // Create a cubic floor underneath level bounds.
+    //FBox box = level->LevelBoundsActor->GetComponentsBoundingBox(); X
+    //FBox box = ALevelBounds::CalculateLevelBounds( level ); X
+    Print( "level bounds", box );
+    FVector size = box.GetSize();
+    
+    //{
+    //  AShape* shape = Game->Make<AShape>( SHAPECUBE, Game->gm->neutralTeam );
+    //  shape->SetSize( FVector( size.X, size.Y, 100.f ) );
+    //  shape->SetColor( FLinearColor::Blue );
+    //  //shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
+    //  shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - box.GetSize().Z - 100.f ) );
+    //}
+
     {
-      if( AGroundPlane* gp = Cast<AGroundPlane>( actors[i] ) )
-      {
-        floor = gp;
-      }
+      AShape* shape = Game->Make<AShape>( SHAPECUBE, Game->gm->neutralTeam );
+      shape->SetSize( FVector( size.X, size.Y, 100.f ) );
+      shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
+      shape->SetColor( FLinearColor::Yellow );
+
+      AGroundPlane *f2 = GetWorld()->SpawnActor<AGroundPlane>( AGroundPlane::StaticClass() );
+      f2->Mesh = shape->Mesh;
+      shape->Mesh->AttachTo( f2->GetRootComponent(), NAME_None, EAttachLocation::KeepWorldPosition );
+      shape->RemoveOwnedComponent( shape->Mesh );
+      //f2->AddOwnedComponent( shape->Mesh ); // This is not allowed.., the owner is not f2
+      // so you can't call AddOwnedComponent(), but on top of that 
+      // Transferring a component from one actor to another is not allowed
+      //shape->Dead = 1;
+      //shape->MaxDeadTime = 2.f;
+      //shape->Cleanup();
     }
   }
 
-  if( !floor ) {
-    error( "Floor not found" );
-  }
-
   // create the fog of war now
-  fogOfWar = GetWorld()->SpawnActor<AFogOfWar>( AFogOfWar::StaticClass() );
-  fogOfWar->Init( floorBox );
+  ////fogOfWar = Game->Make<AFogOfWar>( FOGOFWAR, Game->gm->neutralTeam );
+  ////fogOfWar->Init( floor->GetBox() );
 }
 
 void AFlyCam::MouseUpLeft()
@@ -681,9 +745,10 @@ void AFlyCam::MoveCameraPitchUp( float amount )
 {
   if( Controller && amount )
   {
+    Game->pc->AddPitchInput( -1.f );
     //AddControllerPitchInput( amount );
     //MainCamera->AddRelativeRotation( FQuat( FVector(0,1,0), 0.5f ) );
-    MainCamera->RelativeRotation.Add( -1.f, 0.f, 0.f );
+    //MainCamera->RelativeRotation.Add( -1.f, 0.f, 0.f );
   }
 }
 
@@ -692,10 +757,10 @@ void AFlyCam::MoveCameraPitchDown( float amount )
   if( Controller && amount )
   {
     //AddControllerPitchInput( amount );
-    MainCamera->RelativeRotation.Add( 1.f, 0.f, 0.f );
-    LOG( "Camera rotation %f %f %f", 
-      MainCamera->RelativeRotation.Pitch, MainCamera->RelativeRotation.Yaw,
-      MainCamera->RelativeRotation.Roll );
+    Game->pc->AddPitchInput( 1.f );
+    //MainCamera->RelativeRotation.Add( 1.f, 0.f, 0.f );
+    //LOG( "Camera rotation %f %f %f", MainCamera->RelativeRotation.Pitch, MainCamera->RelativeRotation.Yaw,
+    //  MainCamera->RelativeRotation.Roll );
     //MainCamera->AddRelativeRotation( FQuat( FVector(0,1,0), 0.5f ) );
   }
 }

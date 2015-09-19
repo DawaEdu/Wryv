@@ -1,23 +1,26 @@
 #include "Wryv.h"
-#include "FogOfWar.h"
 #include "FlyCam.h"
-#include "WryvGameInstance.h"
-#include "GlobalFunctions.h"
-#include "TheHUD.h"
+#include "FogOfWar.h"
 #include "GameObject.h"
+#include "GlobalFunctions.h"
+#include "GroundPlane.h"
+#include "TheHUD.h"
+#include "WryvGameInstance.h"
 
-AFogOfWar::AFogOfWar( const FObjectInitializer& PCIP )
+AFogOfWar::AFogOfWar( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
   PrimaryActorTick.bCanEverTick = 1;
   CRTFogOfWar = 0;
   FogInverter = 0;
   FogMesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "Fog Mesh" );
+  SetRootComponent( FogMesh );
 }
 
 // we'll start with the fogofwar covering the entire scene.
 // then minimize its size to increase resolution
 void AFogOfWar::BeginPlay()
 {
+  Super::BeginPlay();
   LOG( "AFogOfWar::BeginPlay()" );
   CRTFogOfWar = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D( GetWorld(),
     UCanvasRenderTarget2D::StaticClass(), 128, 128 );
@@ -57,9 +60,9 @@ void AFogOfWar::DrawFogOfWar( UCanvas* canvas, int32 Width, int32 Height )
   // It will move with the camera (attached to the FlyCam object). We'll use a small quad instead
   // of a very large quad so that the texture resolution is good.
   FVector2D CanvasSize( Width, Height );
-  FBox floorBox = Game->flycam->floorBox;
-  FVector2D floorBoxSize( floorBox.GetSize().X, floorBox.GetSize().Y );
-  FVector2D floorOrigin( floorBox.Min.X, floorBox.Min.Y );
+  FBox Box = Game->flycam->floor->GetBox();
+  FVector2D floorBoxSize( Box.GetSize().X, Box.GetSize().Y );
+  FVector2D floorOrigin( Box.Min.X, Box.Min.Y );
   float r = 25.f;
   
   // Just use the X value (width) (or possibly maximum extent) to find the worldScale

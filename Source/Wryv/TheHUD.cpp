@@ -1,20 +1,22 @@
 #include "Wryv.h"
-#include "FlyCam.h"
-#include "Resource.h"
+
 #include "Building.h"
+#include "CombatUnit.h"
+#include "DrawDebugHelpers.h"
+#include "FlyCam.h"
+#include "GlobalFunctions.h"
+#include "GroundPlane.h"
+#include "ItemShop.h"
 #include "PlayerControl.h"
+#include "Projectile.h"
+#include "Resource.h"
 #include "TheHUD.h"
 #include "Unit.h"
-#include "ItemShop.h"
 #include "UnitsData.h"
+#include "Widget.h"
+#include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "Projectile.h"
-#include "GlobalFunctions.h"
-#include "Widget.h"
-#include "DrawDebugHelpers.h"
-#include "CombatUnit.h"
-#include "Widget3D.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
@@ -30,10 +32,77 @@ ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   // in first call to draw.
 }
 
+void ATheHUD::PostInitializeComponents()
+{
+  Super::PostInitializeComponents();
+  LOG( "ATheHUD::PostInitializeComponents()");
+  rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" );
+  rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" );
+}
+
 void ATheHUD::BeginPlay()
 {
   Super::BeginPlay();
   LOG( "ATheHUD::BeginPlay()");
+}
+
+void ATheHUD::InitWidgets()
+{
+  if( Init ) return;
+  Init = 1;
+  LOG( "InitWidgets()" );
+
+  // Initialize the widgets that show the player gold, lumber, stone counts.
+  ResourcesWidget::GoldTexture = GoldIconTexture;
+  ResourcesWidget::LumberTexture = LumberIconTexture;
+  ResourcesWidget::StoneTexture = StoneIconTexture;
+  SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
+  SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
+  StackPanel::StackPanelTexture = StackPanelTexture;
+  AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
+  ImageWidget::NoTextureTexture = NoTextureTexture;
+  GameCanvas::MouseCursorHand = MouseCursorHand;
+  GameCanvas::MouseCursorCrossHairs = MouseCursorCrossHairs;
+  Controls::PauseButtonTexture = PauseButtonTexture;
+  Controls::ResumeButtonTexture = ResumeButtonTexture;
+  SidePanel::RightPanelTexture = RightPanelTexture;
+  Minimap::MinimapTexture = MinimapTexture;
+  CostWidget::CostWidgetBackground = TooltipBackgroundTexture;
+  Tooltip::TooltipBackgroundTexture = TooltipBackgroundTexture;
+
+  FVector2D canvasSize( Canvas->SizeX, Canvas->SizeY );
+  ui = new UserInterface( canvasSize );
+
+  // Create the panel for containing items/inventory
+  // Map selection screen
+  MapSelectionScreen *mss = ui->mapSelectionScreen = 
+    new MapSelectionScreen( TitleLogoTexture, SolidWhiteTexture,
+      MapSlotEntryBackgroundTexture, PortraitTexture,
+      canvasSize, FVector2D( 120, 24 ), largeFont );
+  ui->titleScreen = new TitleScreen( TitleScreenTexture, canvasSize );
+  ui->Add( mss );
+  mss->OKButton->OnMouseDownLeft = [mss](FVector2D mouse) -> EventCode {
+    // OK button clicked, so load the map if there is a selected widget
+    // else display error message
+    if( mss->Selected )
+      Game->flycam->LoadLevel( FName( *mss->Selected->GetText() ) );
+    else
+      Game->hud->ui->statusBar->Set( "Select a map to load first" ) ;
+    return NotConsumed;
+  };
+
+  /////
+  // List the maps in the folder at the left side
+  TArray<FAssetData> maps = ScanFolder( "/Game/Maps" );
+  for( int i = 0; i < maps.Num(); i++ )
+    ui->mapSelectionScreen->AddText( maps[i].AssetName.ToString(), CenterCenter );
+  ui->missionObjectivesScreen = new MissionObjectivesScreen(
+    MapSlotEntryBackgroundTexture, MapSlotEntryBackgroundTexture, canvasSize,
+    FVector2D( 300, 100 ), FVector2D( 8, 8 ) );
+  ui->Add( ui->missionObjectivesScreen );
+
+  /// Set the screen's to correct one for the gamestate
+  ui->SetScreen( Game->gm->state );
 }
 
 TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
@@ -229,72 +298,6 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
   object->AddChild( widget );
 }
 
-void ATheHUD::InitWidgets()
-{
-  if( Init ) return;
-  Init = 1;
-  LOG( "InitWidgets()" );
-
-  // Initialize the widgets that show the player gold, lumber, stone counts.
-  ResourcesWidget::GoldTexture = GoldIconTexture;
-  ResourcesWidget::LumberTexture = LumberIconTexture;
-  ResourcesWidget::StoneTexture = StoneIconTexture;
-  SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
-  SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
-  StackPanel::StackPanelTexture = StackPanelTexture;
-  AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
-  ImageWidget::NoTextureTexture = NoTextureTexture;
-  GameCanvas::MouseCursorHand = MouseCursorHand;
-  GameCanvas::MouseCursorCrossHairs = MouseCursorCrossHairs;
-  Controls::PauseButtonTexture = PauseButtonTexture;
-  Controls::ResumeButtonTexture = ResumeButtonTexture;
-  SidePanel::RightPanelTexture = RightPanelTexture;
-  Minimap::MinimapTexture = MinimapTexture;
-  CostWidget::CostWidgetBackground = TooltipBackgroundTexture;
-  Tooltip::TooltipBackgroundTexture = TooltipBackgroundTexture;
-
-  FVector2D canvasSize( Canvas->SizeX, Canvas->SizeY );
-  ui = new UserInterface( canvasSize );
-
-  // Create the panel for containing items/inventory
-  // Map selection screen
-  MapSelectionScreen *mss = ui->mapSelectionScreen = 
-    new MapSelectionScreen( TitleLogoTexture, SolidWhiteTexture,
-      MapSlotEntryBackgroundTexture, PortraitTexture,
-      canvasSize, FVector2D( 120, 24 ), largeFont );
-  ui->titleScreen = new TitleScreen( TitleScreenTexture, canvasSize );
-  ui->Add( mss );
-  mss->OKButton->OnMouseDownLeft = [mss](FVector2D mouse) -> EventCode {
-    // OK button clicked, so load the map if there is a selected widget
-    // else display error message
-    if( mss->Selected )
-      Game->flycam->LoadLevel( FName( *mss->Selected->GetText() ) );
-    else
-      Game->hud->ui->statusBar->Set( "Select a map to load first" ) ;
-    return NotConsumed;
-  };
-
-  /////
-  // List the maps in the folder at the left side
-  TArray<FAssetData> maps = ScanFolder( "/Game/Maps" );
-  for( int i = 0; i < maps.Num(); i++ )
-    ui->mapSelectionScreen->AddText( maps[i].AssetName.ToString(), CenterCenter );
-  ui->missionObjectivesScreen = new MissionObjectivesScreen(
-    MapSlotEntryBackgroundTexture, MapSlotEntryBackgroundTexture, canvasSize,
-    FVector2D( 300, 100 ), FVector2D( 8, 8 ) );
-  ui->Add( ui->missionObjectivesScreen );
-
-  /// Set the screen's to correct one for the gamestate
-  ui->SetScreen( Game->gm->state );
-}
-
-void ATheHUD::Setup()
-{
-  LOG( "ATheHUD::Setup()");
-  rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" );
-  rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" );
-}
-
 void ATheHUD::UpdateDisplayedResources()
 {
   // spent=200, diff=-200
@@ -381,7 +384,7 @@ void ATheHUD::DrawHUD()
   DrawPortrait();
   
   // Render the minimap, only if the floor is present
-  FBox box = Game->flycam->floorBox;
+  FBox box = Game->flycam->floor->GetBox();
   FVector p = box.GetCenter();
   RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
   

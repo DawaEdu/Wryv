@@ -1,12 +1,12 @@
 #include "Wryv.h"
-#include "Team.h"
+#include "CombatUnit.h"
 #include "GameObject.h"
+#include "FlyCam.h"
 #include "GlobalFunctions.h"
+#include "Peasant.h"
+#include "Team.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "Peasant.h"
-#include "CombatUnit.h"
-#include "FlyCam.h"
 
 Team::Team()
 {
@@ -212,7 +212,7 @@ void Team::runAI( float t )
       if( !units[i]->AttackTarget )
         group.push_back( units[i] );
     // Find a random location on the map, and send the group off towards it
-    FBox box = Game->flycam->floorBox;
+    FBox box = Game->flycam->floor->GetBox();
     FVector randomLocation = Rand( box.Min, box.Max );
     randomLocation.Z = box.Max.Z;
 

@@ -33,6 +33,10 @@ Command::Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId, FV
 {
 }
 
+bool Command::operator==( const Command& cmd ) const {
+  return CommandID == cmd.CommandID;
+}
+
 FString Command::ToString() const
 {
   map<CommandType, FString> cmds = { { CommandType::Target, "Target" },

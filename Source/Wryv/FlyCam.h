@@ -31,7 +31,6 @@ class WRYV_API AFlyCam : public APawn
 	GENERATED_BODY()
 public:
   AGroundPlane* floor; // Every level must have an object called the floor.
-  FBox floorBox;       // we only find the floor's box once (at level start).
   ABuilding* ghost;    // ghosts of pending buildings being set for placement
   //vector<ABuilding*> ghosts; // Shift+Click allows series of buildings for placement
 
@@ -44,6 +43,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizPassibles;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CheckerSphereRadius;
 
   // Use a TARRAY to keep sfx organized, includes music & effects

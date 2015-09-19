@@ -23,8 +23,7 @@ struct Command
   Command( CommandType cmd, int64 iSrcObjectId, FVector iLocation );
   Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId );
   Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId, FVector iLocation );
-  bool operator==( const Command& cmd ) {
-    return CommandID == cmd.CommandID;
-  }
+  // Equality by ID only.
+  bool operator==( const Command& cmd ) const;
   FString ToString() const;
 };

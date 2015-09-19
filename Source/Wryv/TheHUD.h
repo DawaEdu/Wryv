@@ -88,7 +88,10 @@ public:
   float displayedGold, displayedLumber, displayedStone;
   
   ATheHUD(const FObjectInitializer& PCIP);
+  virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
+  void InitWidgets();
+
   TArray<FAssetData> ScanFolder( FName folder );
   
   HotSpot* MouseMoved( FVector2D mouse );
@@ -101,9 +104,6 @@ public:
   void MarkAsSelected( AGameObject* object );
   void MarkAsFollow( AGameObject* object );
   void MarkAsAttack( AGameObject* object );
-  
-  void InitWidgets();
-  void Setup();
   
   void UpdateDisplayedResources();
   void UpdateMouse();
