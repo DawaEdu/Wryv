@@ -6,8 +6,8 @@ using namespace std;
 #include "Unit.h"
 #include "Peasant.generated.h"
 
-class AResource;
 class ABuilding;
+class AResource;
 
 UCLASS()
 class WRYV_API APeasant : public AUnit
@@ -27,13 +27,15 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 LumberCarryCapacity;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 StoneCarryCapacity;
 
+  // The unit is carrying something
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Carrying;
+  // Plays the shrug animation
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Shrugging;
-  ABuilding* Building;
-  //ABuilding* RepairTarget;
+
+  // These are set when the peasant is repairing a building or unit.
+  ABuilding* RepairTarget;  // The building we are repairing.
   FVector LastResourcePosition;
   Types Mining;   // The type of resource that I'm mining
-  bool Repairing; // Is the unit repairing something
 
   // [The resource type I'm mining] => The amount of resource I'm holding.
   map< Types, int32 >  MinedResources;
@@ -44,9 +46,12 @@ public:
   void PostInitializeComponents();
   void Build( Types type, FVector pos );
   virtual void Target( AGameObject* target ) override;
+  virtual void StopAttackingAndFollowing() override;
   void Repair( float t );
   AResource* FindNewResource( FVector fromPos, Types type, float searchRadius );
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
+  // Is the unit repairing something, so play the repair animation
+  UFUNCTION( BlueprintCallable, Category = Stats )  bool IsRepairing();
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   void ReturnResources();
   virtual void Move( float t );
@@ -54,5 +59,7 @@ public:
   void OnResourcesReturned();
   virtual void Hit( AGameObject* other );
   bool isBusy(){ return AttackTarget || FollowTarget || Waypoints.size(); }
+  // We are the primary builder if the building is set to have it as primary
   void JobDone();
+  virtual void Die();
 };

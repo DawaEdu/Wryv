@@ -34,9 +34,8 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   MinedPieces[ Types::RESLUMBER ] = LumberPiece;
   MinedPieces[ Types::RESSTONE ] = StonePiece;
 
-  Building = 0;
+  RepairTarget = 0;
   Carrying = 0;
-  Repairing = 0;
   Shrugging = 0;
   Mining = NOTHING;
 
@@ -65,6 +64,7 @@ void APeasant::Build( Types type, FVector pos )
 
 void APeasant::Target( AGameObject* target )
 {
+  RepairTarget = 0;
   if( AResource *resource = Cast<AResource>( target ) )
   {
     // "attack" the resource to mine it.
@@ -72,12 +72,19 @@ void APeasant::Target( AGameObject* target )
     Attack( resource );
     return;
   }
-
   else if( ABuilding *building = Cast<ABuilding>( target ) )
   {
-    if( building->isAllyTo( this ) ) {
+    if( building->isAllyTo( this ) )
+    {
       info( FS( "%s repairing %s", *GetName(), *target->GetName() ) );
-      Repairing = 1;
+
+      if( !building->PrimaryPeasant ) {
+        building->PrimaryPeasant = this;
+        info( FS( "%s has been set as the primary builder on building %s", *Stats.Name, *building->Stats.Name ) );
+      }
+      
+      Follow( building ); // The peasant will start repairing it when it gets there.
+      RepairTarget = building; // Don't forget to set the repair target! Above line sets attackers and followers to nuls again.
       return;
     }
   }
@@ -85,12 +92,33 @@ void APeasant::Target( AGameObject* target )
   AUnit::Target( target );
 }
 
+void APeasant::StopAttackingAndFollowing()
+{
+  Super::StopAttackingAndFollowing();
+  // Drop the RepairTarget.
+  if( RepairTarget )
+  {
+    // tell the repairtarget it lost its repairer
+    RepairTarget->LosePeasant( this );
+    RepairTarget = 0;
+  }
+}
+
 void APeasant::Repair( float t )
 {
   // If no building was found for repair, don't try and repair null object
-  if( FollowTarget && FollowTarget->isBuilding() )
+  if( RepairTarget )
   {
-    AGameObject* RepairTarget = FollowTarget;
+    if( RepairTarget->PrimaryPeasant == this )
+    {
+      return; // This is the primary builder, so he uses no additional resources when building.
+    }
+
+    if( !in( Overlaps, (AGameObject*)RepairTarget ) )
+    {
+      info( FS( "Peasant %s is too far from building to be repairing it", *Stats.Name ) );
+      return;
+    }
 
     // repairs Hp gradually to a building at a fraction of the building's original construction cost.
     // cost the team resources for Repairing this building.
@@ -98,19 +126,28 @@ void APeasant::Repair( float t )
     float goldCost    = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.GoldCost;
     float lumberCost  = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.LumberCost;
     float stoneCost   = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.StoneCost;
-
+    
     // Can only repair if won't dip values below zero
     if( team->Gold >= goldCost   &&   team->Lumber >= lumberCost   &&   team->Stone >= stoneCost )
     {
       team->Gold   -= goldCost;
       team->Lumber -= lumberCost;
       team->Stone  -= stoneCost;
-      RepairTarget->Hp   += hpRecovered;
+      RepairTarget->Hp += hpRecovered;
+      info( FS( "Peasant %s has repaired building %s for %f units of hp", *Stats.Name,
+        *RepairTarget->Stats.Name, hpRecovered ) );
     }
     else
     {
       // Stop repairing
       Game->hud->Status( "Need more resources to continue repair" );
+      Target( 0 );
+    }
+
+    if( RepairTarget->HpFraction() >= 1.f )
+    {
+      Game->hud->Status( "Building has been fully repaired" );
+      Target( 0 );
     }
   }
 }
@@ -138,19 +175,27 @@ void APeasant::AttackCycle()
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
-    float distance = outerDistance( MiningTarget );
-    if( distance   <=   Stats.AttackRange )
+    if( outerDistance( MiningTarget )   <=   Stats.AttackRange )
     {
       StopMoving();      // Can stop moving, as we mine the resource
       MiningTarget->Jiggle = 1; // This jiggles the animation when the attack cycle
       MiningTarget->Harvest( this );
     }
   }
+  else if( RepairTarget )
+  {
+    info( FS( "Repairing %s, no attack is done", *RepairTarget->Stats.Name ) );
+  }
   else
   {
     // Its a regular attack target, pass to AttackCycle to roll the usual attack
     AGameObject::AttackCycle();
   }
+}
+
+bool APeasant::IsRepairing()
+{
+  return RepairTarget != NULL   &&   !Speed;
 }
 
 AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
@@ -191,7 +236,7 @@ void APeasant::ai( float t )
   {
     if( go->isBuilding() && go->HpFraction() < .5f )
     {
-      Follow( go ) ; // repair it
+      Target( go ) ; // repair it
       return;
     }
   }
@@ -201,7 +246,7 @@ void APeasant::OnResourcesReturned()
 {
   // Resources returned. If it is AI controlled, then
   // we may harvest a new type of resources here.
-  if( team->ai.level )
+  if( team->ai.aiLevel )
   {
     Types neededResType = team->GetNeededResourceType();
 
@@ -242,7 +287,7 @@ void APeasant::Hit( AGameObject* other )
     MinedResources[ Types::RESLUMBER ] = 0;
     team->Stone += MinedResources[ Types::RESSTONE ];
     MinedResources[ Types::RESSTONE ] = 0;
-    Follow( 0 ); // unfollow the townhall
+    Target( 0 ); // unfollow the townhall
 
     // The resources have been returned
     OnResourcesReturned();
@@ -251,6 +296,7 @@ void APeasant::Hit( AGameObject* other )
 
 void APeasant::ReturnResources()
 {
+  Carrying = 0; // Assume not carrying resources
   // Attempt to return resources if full-up on any type.
   if( !FollowTarget )
   {
@@ -273,7 +319,7 @@ void APeasant::ReturnResources()
             //info( FS( "Peasant %s returning to town center %s with %d %s",
             //  *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
             // Check if the resource is exhausted. If so, look for a similar resource
-            Follow( returnCenter ); // Keep the attacktarget (miningtarget) set.
+            Target( returnCenter ); // Keep the attacktarget (miningtarget) set.
           }
         }
       }
@@ -287,11 +333,10 @@ void APeasant::ReturnResources()
 
 void APeasant::Move( float t )
 {
-  Carrying = 0;
   ReturnResources();
 
   // We repair the building that is currently selected
-  if( FollowTarget )  Repair( t );
+  Repair( t );
   AUnit::Move( t ); // Calls flush, so we put it last
 
   if( Idling() )
@@ -313,3 +358,12 @@ void APeasant::JobDone()
     info( FS( "%s: Job done sound not set", *Stats.Name ) );
 }
 
+void APeasant::Die()
+{
+  if( RepairTarget )
+  {
+    RepairTarget->LosePeasant( this );
+  }
+
+  AUnit::Die();
+}

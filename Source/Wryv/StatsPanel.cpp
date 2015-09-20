@@ -52,11 +52,11 @@ void StatsPanel::Set( AGameObject* go )
   if( !go )  return;
   
   // set the text inside with gameobject
+  hpBar->Show();
   if( AResource* res = Cast<AResource>( go ) )
   {
     unitName->Set( res->Stats.Name );
     hpBar->Set( res->ResourcesFraction() ); // Instead of using HP, use amount of resources remaining
-    hpBar->Show();
     hpText -> Set( FS( "%.0f / %d", res->AmountRemaining, res->Stats.Quantity ) );
     hpText -> Color = FLinearColor::LerpUsingHSV( FLinearColor(0.639f, 0.f, 0.192f), 
       FLinearColor(0.f, 0.7f, 0.f), res->ResourcesFraction() );

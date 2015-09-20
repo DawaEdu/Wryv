@@ -1,8 +1,10 @@
 #include "Wryv.h"
 #include "ActionsPanel.h"
+#include "Building.h"
 #include "Clock.h"
-#include "WryvGameInstance.h"
+#include "FlyCam.h"
 #include "GameObject.h"
+#include "WryvGameInstance.h"
 
 UTexture* AbilitiesPanel::BuildButtonTexture = 0;
 
@@ -72,10 +74,21 @@ void AbilitiesPanel::Set( AGameObject *go )
     // Attach button with invokation of i'th ability
     clock->OnMouseDownLeft = [go,i]( FVector2D mouse ) {
       // Invoke I'th action of the object
-      Game->EnqueueCommand( // Network cmd.
-        Command( Command::CommandType::UseAbility, go->ID, i )
-      );
-      //go->UseAbility( i );
+      Types type = go->AbilityCooldowns[i].Type;
+      if( IsBuilding( type ) )
+      {
+        // HUD change to show creating a building. This is done here to prevent
+        // command delay, since this command doesn't do anything yet
+        info( FS( "Ghosting %s", *GetTypesName( type ) ) );
+        Game->flycam->ghost = Game->Make< ABuilding >( type, go->team );
+      }
+      else
+      {
+        Game->EnqueueCommand( // Network cmd.
+          Command( Command::CommandType::UseAbility, go->ID, i )
+        );
+        //go->UseAbility( i );// C++ cmd.
+      }
       return Consumed;
     };
   }

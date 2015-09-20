@@ -1,24 +1,26 @@
 #pragma once
 
-#include <vector>
-#include <set>
-#include <map>
 #include <deque>
-#include <List.h>
+#include <map>
+#include <set>
+#include <vector>
 #include <Array.h>
+#include <List.h>
 using namespace std;
 
-#include "Types.h"
-#include "UnitsData.h"
+#include "Command.h"
 #include "CooldownCounter.h"
 #include "SoundEffect.h"
-#include "Command.h"
+#include "Types.h"
+#include "UnitsData.h"
 #include "GameFramework/Actor.h"
+
 #include "GameObject.generated.h"
 
 class AItem;
 class AGameObject;
 class AResource;
+class AShape;
 struct Team;
 
 UCLASS()
@@ -46,9 +48,11 @@ class WRYV_API AGameObject : public AActor
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
-  bool Repairing;       // If the building/unit is Repairing
   UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UnitProperties)  bool Dead;            // Whether unit is dead or not.
   float DeadTime, MaxDeadTime; // how long the object has been dead for
+  FLinearColor vizColor;
+  float vizSize;
+  bool Recovering;
   vector< CooldownCounter > AbilityCooldowns;
   vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
@@ -63,6 +67,7 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
+  vector<AShape*> NavFlags; // Debug info for navigation flags
 
   // Series of commands.
   deque<Command> commands;
@@ -81,8 +86,12 @@ class WRYV_API AGameObject : public AActor
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
+  
+  // Net
   // Hashes the object (checking for network state desync)
   float Hash();
+  void EnqueueCommand( Command task );
+  void SetCommand( Command task );
 
   // 
   // Scenegraph management.
@@ -107,6 +116,7 @@ class WRYV_API AGameObject : public AActor
   float centroidDistance( AGameObject *go );
   float outerDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  bool isFollowTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float HpFraction();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
   // Pass thru to stats structure property
@@ -147,16 +157,19 @@ class WRYV_API AGameObject : public AActor
   void OnRepulsionContactEnd( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex );
   
   void AddRepulsionForcesFromOverlappedUnits();
+  // Walks towards Dest.
   void Walk( float t );
-  void GoToGroundPosition( FVector groundPos );
-  void SetDestination( FVector d );
-  void StopMoving();
-  void Stop();
+  // Points Actor to face particular 3-space point
   void Face( FVector point );
   // time-stepped attack of current target (if any)
   void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
   void DisplayWaypoints();
   void exec( const Command& cmd );
+  // Base Movement function. Called each frame.
+  //   * Fixed time step
+  //   * Predictable call order
+  // This function is provided INSTEAD of ::Tick(), which has variable timestep value 
+  // and unpredicatable call order.
   virtual void Move( float t );
   bool Idling();
   virtual void ai( float t );
@@ -164,20 +177,27 @@ class WRYV_API AGameObject : public AActor
   virtual void Hit( AGameObject* other );
   float Radius();
 
+  // Sets a new ground destination, dropping Follow/Attack targets.
+  virtual void GoToGroundPosition( FVector groundPos );
+  // Moves towards d using pathfinder, WITHOUT losing Follow/Attack targets.
+  void SetDestination( FVector d );
+  // Stops unit from moving, WITHOUT losing Follow/Attack targets.
+  void StopMoving();
+  
   // 
   // Unit relationship functions
   bool isAllyTo( AGameObject* go );
   bool isEnemyTo( AGameObject* go );
 
+  // Sets a particular object as a Target (due to generic right click).
+  // Resolves if target is ally (follow) or opponent (attack).
   virtual void Target( AGameObject* target );
   void Follow( AGameObject* go );
   void Attack( AGameObject* go );
-  // Drop attack & follow targets
-  void DropAttackAndFollowTargets();
 
-  // If you call while iterating the Followers set, set removeFromFollowerSet to false!
+  // Stop my attack and follow.
+  virtual void StopAttackingAndFollowing();
   void LoseFollower( AGameObject* formerFollower );
-  // Do not call while iterating the Attackers set, set removeFromAttackersSet to false!
   void LoseAttacker( AGameObject* formerAttacker );
   void LoseAttackersAndFollowers();
 
@@ -190,6 +210,7 @@ class WRYV_API AGameObject : public AActor
 	
   // 
   // Utility
+  void Viz( FVector pt );
   void OnSelected();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );

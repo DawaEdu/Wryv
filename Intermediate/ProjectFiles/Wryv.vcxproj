@@ -261,7 +261,9 @@
     <ClInclude Include="..\..\Source\Wryv\ActionsPanel.h" />
     <ClCompile Include="..\..\Source\Wryv\AI.cpp" />
     <ClInclude Include="..\..\Source\Wryv\AI.h" />
+    <ClCompile Include="..\..\Source\Wryv\AIProfile.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Border.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\AIProfile.h" />
     <ClInclude Include="..\..\Source\Wryv\Border.h" />
     <ClCompile Include="..\..\Source\Wryv\Box2DU.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Box2DU.h" />

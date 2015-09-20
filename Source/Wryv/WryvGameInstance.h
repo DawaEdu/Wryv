@@ -4,13 +4,13 @@
 using namespace std;
 
 #include "Engine/GameInstance.h"
-#include "UnitsData.h"
-#include "Types.h"
-#include "AI.h"
-#include "Team.h"
-#include "UnitTypeUClassPair.h"
-#include "GlobalFunctions.h"
 #include "Command.h"
+#include "AI.h"
+#include "GlobalFunctions.h"
+#include "Team.h"
+#include "Types.h"
+#include "UnitTypeUClassPair.h"
+#include "UnitsData.h"
 #include "WryvGameInstance.generated.h"
 
 class ATheHUD;

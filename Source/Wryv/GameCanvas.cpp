@@ -33,7 +33,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     else
     {
       // Places the selected object without forming a new selection.
-      ABuilding *g = Game->flycam->ghost;
+      ABuilding *ghost = Game->flycam->ghost;
 
       // the src peasant must be present
       APeasant *peasant = 0;
@@ -41,7 +41,6 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
       {
         peasant = Cast<APeasant>( Game->hud->Selected[0] );
       }
-
       if( !peasant )
       {
         error( FS( "A peasant wasn't selected to place the building.", *peasant->GetName() ) );
@@ -50,11 +49,12 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
 
       // If the user has UI-placed the building in an acceptable spot,
       // then we should place the building here.
-      if( g->CanBePlaced() )
+      if( ghost->CanBePlaced() )
       {
         // Build a building @ location. The peasant will pick up this command next frame.
-        Game->EnqueueCommand( Command( Command::CommandType::CreateBuilding,
-          peasant->ID, g->Stats.Type, g->Pos ) );
+        Command cmd( Command::CommandType::CreateBuilding,
+          peasant->ID, ghost->Stats.Type, ghost->Pos );
+        Game->EnqueueCommand( cmd );
         Game->flycam->ClearGhost();
       }
       else

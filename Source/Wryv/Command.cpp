@@ -29,7 +29,7 @@ Command::Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId ) :
 Command::Command( CommandType cmd, int64 iSrcObjectId, int64 iTargetObjectId, FVector iLocation ) :
   CommandID( NextCommandID++ ), FrameID( Game->gm->tick ),
   commandType( cmd ), srcObjectId( iSrcObjectId ), 
-  targetObjectId( iTargetObjectId ), pos(0,0,0)
+  targetObjectId( iTargetObjectId ), pos( iLocation )
 {
 }
 
@@ -39,14 +39,19 @@ bool Command::operator==( const Command& cmd ) const {
 
 FString Command::ToString() const
 {
-  map<CommandType, FString> cmds = { { CommandType::Target, "Target" },
+  map<CommandType, FString> cmds = { 
+    { CommandType::CreateBuilding, "CreateBuilding" },
+    { CommandType::CreateUnit, "CreateUnit" },
     { CommandType::GoToGroundPosition, "GoToGroundPosition" },
-    { CommandType::CreateBuilding, "CreateBuilding" } };
-  FString str = FS( "[%d] [CMDID=%d] Type=`%s` srcObjectId=%d", 
+    { CommandType::Target, "Target" },
+    { CommandType::UseAbility, "UseAbility" },
+  };
+
+  FString str = FS( "[%d] [CMDID=%d] Type=`%s` srcObjectId=%d ", 
     FrameID, CommandID, *cmds[ commandType ], srcObjectId );
   if( commandType == CommandType::CreateBuilding )
-    str += FS( "%s", *GetTypesName( (Types)targetObjectId ) );
-  str += FS( " (%f, %f, %f)", pos.X, pos.Y, pos.Z );
+    str += FS( "%s ", *GetTypesName( (Types)targetObjectId ) );
+  str += FS( "(%f, %f, %f)", pos.X, pos.Y, pos.Z );
   return str;
 }
 

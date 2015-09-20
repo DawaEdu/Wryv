@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "CombatUnit.h"
 #include "GameObject.h"
 #include "FlyCam.h"
@@ -172,12 +173,13 @@ FVector Team::GetTownCentroid()
 bool Team::isNeedsFood()
 {
   float ratio = (float)computeFoodUsage() / computeFoodSupply();
-  return ratio > ai.foodPercentage ;
+  return ratio > ai.foodFraction;
 }
 
 Types Team::GetNeededResourceType()
 {
-  return ai.GetNeededResourceType( *this );
+  return Types::RESGOLD;
+  //return ai.GetNeededResourceType( *this );
 }
 
 void Team::runAI( float t )

@@ -25,7 +25,7 @@ struct Team
   FString Name;
   // Alliance for this team wrt the local player.
   Alliances alliance;
-  AI ai;  // The AI controller for this team.
+  FAI ai;  // The AI controller for this team.
   FLinearColor Color;
   float Gold, Lumber, Stone;
   // How much damage an object should have before starting repair on it
@@ -69,4 +69,10 @@ struct Team
 struct Alliance
 {
   vector<Team*> teams;
+  Alliances alliance;
+
+  Alliance()
+  {
+    alliance = Alliances::Neutral;
+  }
 };

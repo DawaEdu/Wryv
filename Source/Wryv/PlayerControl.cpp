@@ -19,12 +19,10 @@ void APlayerControl::SetupInputComponent()
   PlayerInput->AddActionMapping( FInputActionKeyMapping( "KKey", EKeys::K, 0, 0, 0, 0 ) );
   static const FName InputComponentName( TEXT( "PlayerControllerInputComponent" ) );
   InputComponent = NewObject<UInputComponent>( this, InputComponentName );
-  //InputComponent->BindAction( TEXT("KKey"), EInputEvent::IE_Pressed, this, &APlayerControl::K );
 
   // Read collision profiles
   TArray< TSharedPtr< FName > > profileNames;
   UCollisionProfile::GetProfileNames( profileNames );
-
   for( int i = 0; i < profileNames.Num(); i++ )
   {
     if( !profileNames[i].Get() )  skip;
@@ -46,7 +44,6 @@ void APlayerControl::SetupInactiveStateInputComponent( UInputComponent* InCompon
 
 FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const FVector2D& ScreenPosition )
 {
-  FHitResult hit;
   Ray ray;
 	if( !UGameplayStatics::DeprojectScreenToWorld( this, ScreenPosition, ray.start, ray.dir ) )
 	{
@@ -54,7 +51,7 @@ FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const F
   }
   ray.SetLen( 1e6f );
   
-  return hit;
+  return TraceAgainst( component, ray );
 }
 
 FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const Ray& ray )
@@ -121,27 +118,20 @@ FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition )
 
 FHitResult APlayerControl::RayPickSingle( const Ray& ray )
 {
-  FHitResult hit;
+  TArray<FHitResult> hits;
   FCollisionQueryParams fcqp( true );
   // Returns closest blocking hit, checking all objects
-  FCollisionObjectQueryParams objectTypes = FCollisionObjectQueryParams( 
-    FCollisionObjectQueryParams::InitType::AllObjects );
-  if( !GetWorld()->LineTraceSingleByObjectType( hit, ray.start, ray.end, objectTypes, fcqp ) )
+  if( !GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp ) )
   {
-    error( FS( "LineTraceSingleByObjectType() didn't hit anything, %f %f %f => %f %f %f",
-     ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+    error( FS( "LineTraceMultiByProfile(RayCast) didn't hit anything, %f %f %f => %f %f %f",
+      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
   }
 
-  if( hit.GetActor() )
-  {
-    info( FS( "RayPickSingle() hit [Actor: %s/Component: %s] @ (%f %f %f)",
-      *hit.GetActor()->GetName(), *hit.GetComponent()->GetName(), hit.ImpactPoint.X, hit.ImpactPoint.Y, hit.ImpactPoint.Z ) );
-  }
-  else
-  {
-    info( "RayPickSingle: Nothing was hit" );
-  }
-  return hit;
+  // You get the first result.
+  FHitResult result;
+  if( hits.Num() )
+    result = hits[0];
+  return result;
 }
 
 vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPosition )
@@ -167,18 +157,12 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray )
       ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
   }
 
-  FCollisionObjectQueryParams objectTypes( FCollisionObjectQueryParams::InitType::AllObjects );
-  FHitResult hres;
-  if( !GetWorld()->LineTraceSingleByObjectType( hres, ray.start, ray.end, objectTypes, fcqp ) )
-  {
-    error( FS( "LineTraceSingleByObjectType() didn't hit anything, %f %f %f => %f %f %f",
-      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
-  }
-
   vector<AGameObject*> objects;
   for( int i = 0; i < hits.Num(); i++ )
   {
-    info( FS( "Hit result %s @ %f %f %f", *hits[i].GetActor()->GetName(), hits[i].ImpactPoint.X,hits[i].ImpactPoint.Y,hits[i].ImpactPoint.Z ) );
+    FVector v = hits[i].ImpactPoint;
+    info( FS( "  - Hit result [%s/%s] @ %f %f %f", 
+      *hits[i].GetActor()->GetName(), *hits[i].GetComponent()->GetName(), v.X, v.Y, v.Z ) );
     if( AGameObject *go = Cast< AGameObject >( hits[i].GetActor() ) )
       objects += go;
   }

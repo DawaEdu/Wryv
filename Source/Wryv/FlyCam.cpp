@@ -487,8 +487,11 @@ void AFlyCam::debug( int slot, FColor color, FString mess )
 
 FVector2D AFlyCam::getMousePos()
 {
-  FVector2D mouse;
-  Game->pc->GetMousePosition( mouse.X, mouse.Y ); 
+  FVector2D mouse(0,0);
+  if( !Game->pc->GetMousePosition( mouse.X, mouse.Y ) )
+  {
+    // Mouse offscreen
+  }
   return mouse;
 }
 
@@ -567,7 +570,6 @@ void AFlyCam::FindFloor()
       shape->SetSize( FVector( size.X, size.Y, 100.f ) );
       shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
       shape->SetColor( FLinearColor::Yellow );
-
       AGroundPlane *f2 = GetWorld()->SpawnActor<AGroundPlane>( AGroundPlane::StaticClass() );
       f2->Mesh = shape->Mesh;
       shape->Mesh->AttachTo( f2->GetRootComponent(), NAME_None, EAttachLocation::KeepWorldPosition );
@@ -689,7 +691,7 @@ void AFlyCam::MouseMoved()
   {
     // hover event. move the building ghost around etc.
     FHitResult hit = Game->pc->TraceAgainst( floor->Mesh, mouse );
-    
+
     // If you're sliding the mouse along the floor, move the building along with if its set
     if( ghost )
     {
@@ -745,7 +747,8 @@ void AFlyCam::MoveCameraPitchUp( float amount )
 {
   if( Controller && amount )
   {
-    Game->pc->AddPitchInput( -1.f );
+    //Game->pc->AddPitchInput( -1.f );
+    AddControllerPitchInput( amount );
     //AddControllerPitchInput( amount );
     //MainCamera->AddRelativeRotation( FQuat( FVector(0,1,0), 0.5f ) );
     //MainCamera->RelativeRotation.Add( -1.f, 0.f, 0.f );
@@ -757,7 +760,8 @@ void AFlyCam::MoveCameraPitchDown( float amount )
   if( Controller && amount )
   {
     //AddControllerPitchInput( amount );
-    Game->pc->AddPitchInput( 1.f );
+    AddControllerPitchInput( -amount );
+    //Game->pc->AddPitchInput( 1.f );
     //MainCamera->RelativeRotation.Add( 1.f, 0.f, 0.f );
     //LOG( "Camera rotation %f %f %f", MainCamera->RelativeRotation.Pitch, MainCamera->RelativeRotation.Yaw,
     //  MainCamera->RelativeRotation.Roll );
@@ -770,7 +774,7 @@ void AFlyCam::MoveForward( float amount )
   // Gets called EACH FRAME (even if there's no input)
   if( Controller && amount )
   {
-    FVector fwd = MainCamera->GetForwardVector();
+    FVector fwd = Game->pc->GetActorForwardVector(); //MainCamera->GetForwardVector();
     fwd.Z = 0.f;
     if( !fwd.SizeSquared() )  fwd.Y = -1.f;
     fwd.Normalize();
@@ -782,7 +786,7 @@ void AFlyCam::MoveBack( float amount )
 {
   if( Controller && amount )
   {
-    FVector back = -MainCamera->GetForwardVector();
+    FVector back = -Game->pc->GetActorForwardVector(); //-MainCamera->GetForwardVector();
     back.Z = 0.f;
     if( !back.SizeSquared() )  back.Y = 1.f;
     back.Normalize();
@@ -794,7 +798,7 @@ void AFlyCam::MoveLeft( float amount )
 {
   if( Controller && amount )
   {
-    FVector left = -MainCamera->GetRightVector();
+    FVector left = -Game->pc->GetActorRightVector(); //-MainCamera->GetRightVector();
     left.Z = 0.f;
     if( !left.SizeSquared() )  left.X = -1.f;
     left.Normalize();
@@ -806,7 +810,7 @@ void AFlyCam::MoveRight( float amount )
 {
   if( Controller && amount )
   {
-    FVector right = MainCamera->GetRightVector();
+    FVector right = Game->pc->GetActorRightVector(); //MainCamera->GetRightVector();
     right.Z = 0.f;
     if( !right.SizeSquared() )  right.X = -1.f;
     right.Normalize();

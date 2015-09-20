@@ -72,9 +72,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Source\Wryv\AI.h">
-      <Filter>Source\Wryv\GameObject\Team</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Border.h">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClInclude>
@@ -285,11 +282,14 @@
     <ClInclude Include="..\..\Source\Wryv\Widget3D.h">
       <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\AI.h">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\AIProfile.h">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Source\Wryv\AI.cpp">
-      <Filter>Source\Wryv\GameObject\Team</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Border.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClCompile>
@@ -466,6 +466,12 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Widget3D.cpp">
       <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\AI.cpp">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\AIProfile.cpp">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -18,13 +18,7 @@ void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FS
   Super::InitGame( MapName, Options, ErrorMessage );
   LOG( "AWryvGameMode::InitGame(%s, %s, %s)", *MapName, *Options, *ErrorMessage );
   
-  // Push 3 alliances into teams collection
-  //teams.push_back( vector<Team*>() );  // teams[0]==teams[Alliances::Neutral]
-  //teams.push_back( vector<Team*>() );  // teams[1]==teams[Alliances::Friendly]
-  //teams.push_back( vector<Team*>() );  // teams[2]==teams[Alliances::Enemy]
-
-  // Create Teams required for this map.
-  // This happens before AActor::BeginPlay().
+  // Create Teams required for this map. This happens before AActor::BeginPlay().
   Game->gm = this;
   neutralTeam = new Team( 0, "Neutral", Alliances::Neutral, FLinearColor::White );
   teams.push_back( neutralTeam ); 
@@ -48,6 +42,18 @@ void AWryvGameMode::StartPlay()
     teams[i]->OnMapLoaded();
   }
 
+  LOG( "The aiLevel class is %s", *aiLevel.ToString() );
+  UClass* uclass = aiLevel.ResolveClass(); // Use ResolveClass() to get the currently loaded class from editor
+  if( uclass )
+  {
+    LOG( "The UClass is %s", *uclass->GetName() );
+    UAIProfile* profile = NewObject<UAIProfile>( this, uclass );
+    LOG( "The instantiated object %s", *profile->ToString() );
+  }
+  else
+  {
+    LOG( "The UCLASS failed to load" );
+  }
 }
 
 void AWryvGameMode::StartMatch()
@@ -99,6 +105,17 @@ vector<AGameObject*> AWryvGameMode::GetObjectsOfType( Types type )
   }
 
   return v;
+}
+
+Alliance AWryvGameMode::GetAlliance( Alliances alliance )
+{
+  Alliance all;
+  all.alliance = alliance;
+  // throw in all teams with same alliance
+  for( Team* team : teams )
+    if( team->alliance == alliance )
+      all.teams.push_back( team );
+  return all;
 }
 
 AActor* AWryvGameMode::Find( FString name )

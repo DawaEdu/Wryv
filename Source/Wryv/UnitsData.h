@@ -70,6 +70,7 @@ public:
   //   * For a Spell, its the range of the spell itself.
   //   * For a Peasant, this is the range from which he mines
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AttackRange;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float FollowFallbackDistance;
   // The range this unit can pick things up from.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float PickupRange;
   // TeamId id it belongs to
@@ -112,6 +113,7 @@ public:
     AttackSpeedMultiplier = 1.f;
     AttackRange = 100.f;
     PickupRange = 100.f;
+    FollowFallbackDistance = 50.f;
     TeamId = 0;
     FoodProvided = 0;
     FoodUsed = 1;

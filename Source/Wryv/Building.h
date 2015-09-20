@@ -23,12 +23,13 @@ class WRYV_API ABuilding : public AGameObject
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveForce;
 
   //ABuilding(const FObjectInitializer& PCIP);
-  APeasant* peasant;      // The peasant building, inside the building.
+  APeasant* PrimaryPeasant;      // The main peasant creating the building ( doesn't use resource to build )
   float TimeBuilding;     // When a unit is building, this is the % progress it is to completion.
   bool Complete;          // Set to true when the building is complete.
   float ExplodedTime;     // The length of time the building has been exploded for
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
+  void LosePeasant( APeasant* peasant );
   virtual void Move( float t ) override;
   virtual void Tick( float t ) override;
   // Tell you if building can be placed @ Pos
@@ -41,5 +42,9 @@ class WRYV_API ABuilding : public AGameObject
   UFUNCTION(BlueprintCallable, Category = Building)  float PercentBuilt() { return TimeBuilding / Stats.TimeLength; }
   UFUNCTION(BlueprintCallable, Category = Building)  float BuildTime() { return Stats.TimeLength; }
   UFUNCTION(BlueprintCallable, Category = Building)  bool BuildingDone() { return TimeBuilding >= Stats.TimeLength; }
+  // Tells you if the building needs a peasant or not.
+  UFUNCTION(BlueprintCallable, Category = Building)  bool NeedsPeasant() {
+    return !PrimaryPeasant && !Complete;
+  }
   virtual void Die();
 };

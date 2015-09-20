@@ -1,18 +1,20 @@
 #include "Wryv.h"
+
 #include "Building.h"
-#include "GlobalFunctions.h"
-#include "WryvGameInstance.h"
-#include "FlyCam.h"
 #include "Explosion.h"
+#include "FlyCam.h"
+#include "GlobalFunctions.h"
 #include "Peasant.h"
 #include "PlayerControl.h"
+#include "TheHUD.h"
+#include "WryvGameInstance.h"
+
 #include "Animation/AnimNode_StateMachine.h"
 #include "Animation/AnimNode_AssetPlayerBase.h"
 #include "Runtime/Engine/Classes/Particles/ParticleEmitter.h"
 
 ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
-  peasant = 0;
   Complete = 0;
   TimeBuilding = FLT_MAX; // So the building starts complete.
   ExplodedTime = 0.f;
@@ -46,47 +48,68 @@ void ABuilding::BeginPlay()
   Hp = Stats.HpMax;//  Start with 1 hp so that the building doesn't bust immediately
 }
 
+void ABuilding::LosePeasant( APeasant* peasant )
+{
+  //Game->hud->Status( FS( "Building %s lost PrimaryPeasant builder %s", *Stats.Name, *peasant->Stats.Name ) );
+  
+  // The building loses its peasant builder.
+  if( peasant == PrimaryPeasant )
+  {
+    // Need to try to replace primary peasant from among other builders
+    PrimaryPeasant = 0;
+  
+    // Take the first available peasant follower/builder and make it the primary
+    for( int i = 0; i < Followers.size(); i++ )
+    {
+      if( APeasant* peasant = Cast<APeasant>( Followers[i] ) )
+      {
+        PrimaryPeasant = peasant;
+        break;
+      }
+    }
+  }
+}
+
 void ABuilding::Move( float t )
 {
   AGameObject::Move( t ); // Updates Dead variable
-
   // Peasant's required to continue the building.
-  if( peasant && TimeBuilding < Stats.TimeLength )
+
+  if( TimeBuilding < Stats.TimeLength )
   {
-    TimeBuilding += t;
-    if( UAnimInstance* anim = Mesh->GetAnimInstance() )
+    // If the Primary Peasant is within building distance, contribute to building.
+    // Other units repair the building.
+    if( PrimaryPeasant && PrimaryPeasant->isFollowTargetWithinRange() )
     {
-      FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
-      if( fmontage )
+      TimeBuilding += t;
+      if( UAnimInstance* anim = Mesh->GetAnimInstance() )
       {
-        //int frames = fmontage->Montage->GetNumberOfFrames();
-        //float len = fmontage->Montage->GetTimeAtFrame( frames );
-        float len = fmontage->Montage->GetPlayLength();
-        //info( FS( "fmontage is SET, frames=%d, len=%f", frames, len ) );
-        float p = len * PercentBuilt();
-        fmontage->SetPosition( p );
+        FAnimMontageInstance* fmontage = anim->GetActiveMontageInstance();
+        if( fmontage )
+        {
+          float len = fmontage->Montage->GetPlayLength();
+          float p = len * PercentBuilt();
+          fmontage->SetPosition( p );
+        }
+        else
+        {
+          error( FS( "there is No fmontage" ) );
+        }
       }
-      else
-      {
-        error( FS( "there is No fmontage" ) );
-      }
+      // keep the dust on while the building is being built.
+      buildingDust->SetActive( true );
+      // Building not complete yet, so increase HP and increase HP by a fraction
+      Hp += t / Stats.TimeLength * Stats.HpMax;// hp increases because building may be attacked while being built.
+      // The building cannot do anything else while building.
+      Clamp( Hp, 0.f, Stats.HpMax );
     }
 
-    // keep the dust on while the building is being built.
-    buildingDust->SetActive( true );
-
-    // Building not complete yet, so increase HP and increase HP by a fraction
-    Hp += t / Stats.TimeLength * Stats.HpMax;// hp increases because building may be attacked while being built.
-
-    // The building cannot do anything else while building.
-    Clamp( Hp, 0.f, Stats.HpMax );
+    if( !PrimaryPeasant )
+    {
+      // Visually indicate the building has no primary peasant builder
+    }
   }
-  else if( Complete )
-  {
-    buildingDust->SetActive( false );
-    //buildingDust->SetVisibility( false );
-  }
-  else if( !Complete )
+  else if( !Complete )// Building time up, but not marked as complete yet
   {
     // Building complete. Send building peasant outside of building & notify
     OnBuildingComplete();
@@ -116,55 +139,51 @@ void ABuilding::montageStarted_Implementation( UAnimMontage* Montage )
 
 bool ABuilding::CanBePlaced()
 {
-  vector<AGameObject*> objs;
-  if( peasant )
+  // Required AGameObject* for collision check, not APeasant*
+  vector<AGameObject*> objs = Game->pc->ComponentPickExcept(
+    this, hitBounds, { PrimaryPeasant }, "Checkers", {"SolidObstacle"} );
+  for( AGameObject* go : objs )
   {
-    objs = Game->pc->ComponentPickExcept( this, hitBounds, {peasant}, "Checkers", {"SolidObstacle"} );
-    for( AGameObject* go : objs )
-    {
-      LOG( "Building %s hits object %s", *GetName(), *go->GetName() );
-    }
+    LOG( "Building %s hits object %s", *GetName(), *go->GetName() );
   }
-
-  for( AGameObject* o : objs )
-  {
-    LOG( "building %s intersects with %s, so it could not be placed", *Stats.Name, *o->Stats.Name );
-  }
-
   return !objs.size();
 }
 
 void ABuilding::PlaceBuilding( APeasant *p )
 {
+  p->Target( this );
+
   SetMaterialColors( "Multiplier", FLinearColor( 1,1,1,1 ) );
   TimeBuilding = 0; // Reset the build counter.
   Hp = 1.f;
   // move the selected peasant to work with the building.
   //PlaySound( UISounds::BuildingPlaced );
   // Selected objects will go build it send the peasant to build the building
-  if( !p )
+  if( !PrimaryPeasant )
   {
     warning( FS( "Building %s is building itself", *Stats.Name ) );
     return;
   }
 
-  // start the building MONTAGE
+  // Start the building MONTAGE
   UAnimInstance* anim = Mesh->GetAnimInstance();
-  anim->Montage_Play( buildingMontage, 0.01f );
+  anim->Montage_Play( buildingMontage, 0.001f );
 
-  // Move the peasant inside the building, then hide.
-  // The peasant must be allowed inside the hitbounds.
-  Game->EnqueueCommand( Command( Command::RepairBuilding, p->ID, ID ) );
+  // Target the building to "repair it" until it is complete.
+  if( PrimaryPeasant )
+    Game->EnqueueCommand( Command( Command::Target, PrimaryPeasant->ID, ID ) );
 }
 
 void ABuilding::OnBuildingComplete()
 {
-  LOG( "Job's done" );
-  if( peasant )
+  if( PrimaryPeasant )
   {
-    peasant->JobDone();
-    peasant->SetPosition( ExitPosition->GetComponentLocation() );
+    PrimaryPeasant->JobDone();
+    PrimaryPeasant->SetPosition( ExitPosition->GetComponentLocation() );
   }
+
+  // Turn off the dust
+  buildingDust->SetActive( false );
   Complete = 1;
 }
 
@@ -173,6 +192,13 @@ void ABuilding::Die()
   Mesh->SetVisibility( false ); // hide the normal mesh
   destructableMesh->SetVisibility( true ); // use destructible mesh
   destructableMesh->ApplyRadiusDamage( 111, Pos, 10.f, 50000.f, 1 ); // Shatter the destructable.
+
+  // If the building peasant was still there, let him discontinue building the building
+  if( PrimaryPeasant )
+  {
+    PrimaryPeasant->Target( 0 );
+    PrimaryPeasant = 0;
+  }
 
   AGameObject::Die();
 }

@@ -21,6 +21,7 @@ DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 #define LOG(x, ...) UE_LOG( LogTemp, Warning, TEXT( x ), __VA_ARGS__ )
 
 #define skip continue
+#define self this
 
 __forceinline void fatal( FString message )
 {

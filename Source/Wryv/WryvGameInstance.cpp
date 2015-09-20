@@ -23,6 +23,11 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   flycam = 0;
   UClassesLoaded = 0;
   IsDestroyStarted = 0;
+
+  if( UClass* res = FindObject< UClass >( ANY_PACKAGE, TEXT( "BP_Mage" ) ) )
+  {
+    LOG( "BP_Mage class maps to %s", *res->GetName() );
+  }
 }
 
 void UWryvGameInstance::SetCommand( const Command& cmd )

@@ -5,23 +5,26 @@
 #include <map>
 using namespace std;
 
-#include "Types.h"
-#include "Team.h"
 #include "GameFramework/GameMode.h"
+#include "AIProfile.h"
+#include "Team.h"
+#include "Types.h"
 #include "WryvGameMode.generated.h"
 
 // We'll use the GameMode object to store all information about
 // the currently loaded game instance.
-
-class ALandscape;
-
+class UAIProfile;
+class ACombatUnit;
 UCLASS()
 class WRYV_API AWryvGameMode : public AGameMode
 {
   GENERATED_BODY()
 public:
   // Launch state
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TEnumAsByte< GameStates > state;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = GameMode ) TEnumAsByte< GameStates > state;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = GameMode ) UAIProfile* enemyAILevel;
+  UPROPERTY( EditAnywhere, meta=(MetaClass="AIProfile") ) FStringClassReference aiLevel;
+
   // VIRTUAL SECOND: RTS uses a virtual second to get deterministic play.
   float T; // The Timestep size of each frame.
   int GameSpeed; // Number of Ticks per frame. (increase sim speed).
@@ -29,9 +32,9 @@ public:
   // Gets you the timestep size given current game speed.
   uint64 tick; // The tick number.
   // Groups of teams.. this is the stock location for the Team objects.
+  //vector< Alliance > alliances;
   vector< Team* > teams;
   Team *neutralTeam, *playersTeam, *enemyTeam;
-  //vector< vector< Team* > > teams ; //later: expand into teams[ Alliances::Friendly ] is a list of teams.
   
   AWryvGameMode(const FObjectInitializer& PCIP);
   virtual void InitGame( const FString& MapName, const FString& Options, FString& ErrorMessage ) override;
@@ -40,6 +43,7 @@ public:
   virtual void SetMatchState(FName NewState);
   virtual void Tick(float DeltaSeconds) override;
   vector<AGameObject*> GetObjectsOfType( Types type );
+  Alliance GetAlliance( Alliances alliance );
   // Finds all objects of type listed
   template<typename T> vector<T*> Find()
   {

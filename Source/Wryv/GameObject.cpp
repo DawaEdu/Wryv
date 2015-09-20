@@ -25,7 +25,6 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
   PrimaryActorTick.bCanEverTick = true;
   ID = 0;
-  Repairing = 0;
   team = 0;
   Pos = Vel = FVector(0, 0, 0);
   FollowTarget = AttackTarget = 0;
@@ -33,7 +32,9 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   Dead = 0;
   DeadTime = 0.f;
   MaxDeadTime = CapDeadTime;
-
+  vizColor = FLinearColor::MakeRandomColor();
+  vizSize = 10.f;
+  
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
   hitBounds = PCIP.CreateDefaultSubobject<UCapsuleComponent>( this, "HitVolumex222" );
@@ -64,8 +65,8 @@ void AGameObject::PostInitializeComponents()
   Hp = Stats.HpMax;
   Speed = 0.f;
 
-  if( isBuilding() )  Repairing = 0; // Buildings need an attending peasant to repair
-  else  Repairing = 1; // Live units automatically regen
+  Recovering = !isBuilding();// Buildings need an attending peasant to repair
+  // Live units automatically regen
 }
 
 // Called when the game starts or when spawned
@@ -96,6 +97,16 @@ float AGameObject::Hash()
   return Pos.X + Pos.Y + Pos.Z + ID + 
          (FollowTarget?FollowTarget->Hash():0)+
          (AttackTarget?AttackTarget->Hash():0);
+}
+
+void AGameObject::EnqueueCommand( Command task )
+{
+  Game->EnqueueCommand( task );
+}
+
+void AGameObject::SetCommand( Command task )
+{
+  Game->SetCommand( task );
 }
 
 AGameObject* AGameObject::SetParent( AGameObject* newParent )
@@ -184,7 +195,17 @@ bool AGameObject::isAttackTargetWithinRange()
 {
   if( AttackTarget )
   {
-    return centroidDistance( AttackTarget ) < Stats.AttackRange;
+    return outerDistance( AttackTarget ) <= Stats.AttackRange;
+  }
+
+  return 0;
+}
+
+bool AGameObject::isFollowTargetWithinRange()
+{
+  if( FollowTarget )
+  {
+    return outerDistance( FollowTarget ) <= Stats.FollowFallbackDistance;
   }
 
   return 0;
@@ -315,7 +336,7 @@ void AGameObject::UpdateStats( float t )
     Stats += BonusTraits[i].traits;
 
   // Recover HP at stock recovery rate
-  if( Repairing ) {
+  if( Recovering ) {
     Hp += Stats.RepairHPFractionCost*t;
     Clamp( Hp, 0.f, Stats.HpMax );
   }
@@ -366,7 +387,7 @@ bool AGameObject::UseAbility( int index )
   {
     info( FS( "Building a %s", *GetTypesName( type ) ));
     // Set placement object with instance of type
-    Game->flycam->ghost = Game->Make< ABuilding >( type, team );
+    //Game->flycam->ghost = Game->Make< ABuilding >( type, team ); // Now set where Icon is clicked.
   }
   else if( IsAction( type ) )
   {
@@ -377,7 +398,8 @@ bool AGameObject::UseAbility( int index )
   {
     // makes unit of type
     info( FS( "Making a unit of type %s", *GetTypesName( type ) ));
-    Make( type );
+    EnqueueCommand( Command( Command::CreateUnit, ID, type ) ); //Net command
+    //Make( type ); // C++ command
   }
   return 1;
 }
@@ -589,96 +611,6 @@ void AGameObject::Walk( float t )
   }
 }
 
-void AGameObject::GoToGroundPosition( FVector groundPos )
-{
-  DropAttackAndFollowTargets();
-  SetDestination( groundPos );
-}
-
-void AGameObject::SetDestination( FVector d )
-{
-  //LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
-  if( !Stats.SpeedMax ) {
-    error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
-    return;
-  }
-
-  // Make sure the destination is grounded
-  Game->flycam->SetOnGround( d );
-  
-  // Find the path, then submit list of Waypoints
-  Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
-  if( !Waypoints.size() )
-  {
-    error( FS( "No waypoints in path from %f %f %f to %f %f %f", Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z ) );
-    Dest = d;
-    return;
-  }
-
-  // Fix Waypoints z value so they sit on ground plane
-  for( int i = 0; i < Waypoints.size(); i++ )
-  {
-    if( !Game->flycam->SetOnGround( Waypoints[i] ) ) // Then set on ground.
-    {
-      LOG( "Waypoint %f %f %f couldn't reach ground",
-        Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z );
-    }
-  }
-
-  //Game->flycam->ClearViz();
-  
-  // Check that the 2nd point isn't more than 90
-  // degrees away from the 1st point.
-  if( Waypoints.size() >= 3 )
-  {
-    FVector b1 = Waypoints[ Waypoints.size() - 1 ];
-    FVector b2 = Waypoints[ Waypoints.size() - 2 ];
-    FVector b3 = Waypoints[ Waypoints.size() - 3 ];
-
-    // The two vectors between (b3, b2) and (b2, b1) must not have a large angle between them.
-    // If they do, delete the 2nd from the back one.
-    //   1 <--- 2 <--- 3  [ OK ]
-    //
-    //   1 <--- 2 [ cut middle elt ]
-    //         ^
-    //        /
-    //       /
-    //      3
-    FVector dir1 = b2 - b3;
-    FVector dir2 = b1 - b2;
-    dir1.Normalize(), dir2.Normalize();
-    const float a = cosf( WaypointAngleTolerance );
-    float dot = FVector::DotProduct( dir1, dir2 );
-    if( dot < a )
-    {
-      // Pop the 2nd from the back point, viz all back 3 pts.
-      vector<FVector>::iterator it = --(--(Waypoints.end()));
-      //Game->flycam->Visualize( Types::UNITSPHERE, *it, 64.f, FLinearColor::Black );
-      Waypoints.erase( it );
-    }
-  }
-
-  //Game->flycam->Visualize( Types::UNITSPHERE, Waypoints, 64.f, FLinearColor::Green, FLinearColor::Red );
-  // Visualize the pathway
-  //Game->flycam->ClearViz();
-  //Game->flycam->Visualize( UNITSPHERE, Waypoints, 11.f, FLinearColor( 0, 0, 0, 1.f ), FLinearColor( 1, 1, 1, 1.f ) );
-  //Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
-  Dest = Waypoints.front();
-  pop_front( Waypoints );
-}
-
-void AGameObject::StopMoving()
-{
-  Waypoints.clear(); // clear the Waypoints
-  Dest = Pos; // You are at your destination
-}
-
-void AGameObject::Stop()
-{
-  StopMoving();
-  DropAttackAndFollowTargets();
-}
-
 void AGameObject::Face( FVector point )
 {
   FVector to = point - Pos;
@@ -696,17 +628,17 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   float len = targetToMe.Size();
   //info( FS( "%s attacking %s is %f units from it", *Stats.Name, *AttackTarget->Stats.Name, len ) );
   // If we're outside the attack range.. move in.
-  if( len > fallbackDistance )
-  {
-    targetToMe /= len;
-    // set the fallback distance to being size of bounding radius of other unit
-    SetDestination( target->Pos + targetToMe*fallbackDistance );
-  }
-  else
+  if( len < fallbackDistance )
   {
     // Within distance, so face
     // You are within attack range, so face the attack target
     Face( target->Pos );
+  }
+  else
+  {
+    targetToMe /= len;
+    // set the fallback distance to being size of bounding radius of other unit
+    SetDestination( target->Pos + targetToMe*(fallbackDistance*.997f) );
   }
 }
 
@@ -737,6 +669,33 @@ void AGameObject::exec( const Command& cmd )
   AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
   switch( cmd.commandType )
   {
+    case Command::CommandType::CreateBuilding:
+      {
+        // builds the assigned building using peasant (id)
+        if( APeasant* peasant = Cast<APeasant>( go ) )
+        {
+          info( FS( "The unit [%s] is building a %s @ %f %f %f",
+            *peasant->GetName(), *GetTypesName( (Types)cmd.targetObjectId ),
+            cmd.pos.X,cmd.pos.Y,cmd.pos.Z ) );
+          peasant->Build( (Types)cmd.targetObjectId, cmd.pos );
+        }
+        else
+        {
+          error( FS( "The unit [%s] asked to build %s was not a peasant",
+            *go->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
+        }
+      }
+      break;
+    case Command::CommandType::CreateUnit:
+      {
+        go->Make( (Types)cmd.targetObjectId ); // C++ command
+      }
+      break;
+    case Command::CommandType::GoToGroundPosition:
+      {
+        go->GoToGroundPosition( cmd.pos );
+      }
+      break;
     case Command::CommandType::Target:
       {
         AGameObject* target = Game->GetUnitById( cmd.targetObjectId );
@@ -750,43 +709,9 @@ void AGameObject::exec( const Command& cmd )
         }
       }
       break;
-    case Command::CommandType::GoToGroundPosition:
-      {
-        go->GoToGroundPosition( cmd.pos );
-      }
-      break;
-    case Command::CommandType::CreateBuilding:
-      {
-        // builds the assigned building using peasant (id)
-        if( APeasant* peasant = Cast<APeasant>( go ) )
-        {
-          info( FS( "The unit [%s] is building a %s",
-            *peasant->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
-          peasant->Build( (Types)cmd.targetObjectId, cmd.pos );
-        }
-        else
-        {
-          error( FS( "The unit [%s] asked to build %s was not a peasant",
-            *go->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
-        }
-      }
-      break;
-    case Command::CommandType::RepairBuilding:
-      {
-        //p->SetDestination( Pos );
-        // What if the peasant dies?
-        //p->OnReachDestination = [this,p]()
-        //{
-        //  // put the peasant underground, so it appears to be building.
-        //  peasant = p; // only set the peasant here, so building only starts once he gets there.
-        //  peasant->SetPosition( peasant->Pos - FVector( 0, 0, peasant->GetHeight() ) );
-        //};
-      }
-      break;
     case Command::CommandType::UseAbility:
       {
         go->UseAbility( cmd.targetObjectId );
-
       }
       break;
     default:
@@ -869,6 +794,104 @@ float AGameObject::Radius()
   return hitBounds->GetScaledCapsuleRadius();
 }
 
+void AGameObject::GoToGroundPosition( FVector groundPos )
+{
+  StopAttackingAndFollowing();
+  SetDestination( groundPos );
+}
+
+void AGameObject::SetDestination( FVector d )
+{
+  for( AShape* flag : NavFlags )
+    flag->Destroy();
+  NavFlags.clear();
+  //LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
+  if( !Stats.SpeedMax ) {
+    error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
+    return;
+  }
+
+  // Make sure the destination is grounded
+  Game->flycam->SetOnGround( d );
+  
+  // Find the path, then submit list of Waypoints
+  Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
+  if( !Waypoints.size() )
+  {
+    error( FS( "No waypoints in path from %f %f %f to %f %f %f", Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z ) );
+    Dest = d;
+    return;
+  }
+
+  // Fix Waypoints z value so they sit on ground plane
+  for( int i = 0; i < Waypoints.size(); i++ )
+  {
+    if( !Game->flycam->SetOnGround( Waypoints[i] ) ) // Then set on ground.
+    {
+      LOG( "Waypoint %f %f %f couldn't reach ground",
+        Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z );
+    }
+  }
+
+  //Game->flycam->ClearViz();
+  
+  // Check that the 2nd point isn't more than 90
+  // degrees away from the 1st point.
+  if( Waypoints.size() >= 3 )
+  {
+    FVector b1 = Waypoints[ Waypoints.size() - 1 ];
+    FVector b2 = Waypoints[ Waypoints.size() - 2 ];
+    FVector b3 = Waypoints[ Waypoints.size() - 3 ];
+
+    // The two vectors between (b3, b2) and (b2, b1) must not have a large angle between them.
+    // If they do, delete the 2nd from the back one.
+    //   1 <--- 2 <--- 3  [ OK ]
+    //
+    //   1 <--- 2 [ cut middle elt ]
+    //         ^
+    //        /
+    //       /
+    //      3
+    FVector dir1 = b2 - b3;
+    FVector dir2 = b1 - b2;
+    dir1.Normalize(), dir2.Normalize();
+    const float a = cosf( WaypointAngleTolerance );
+    float dot = FVector::DotProduct( dir1, dir2 );
+    if( dot < a )
+    {
+      // Pop the 2nd from the back point, viz all back 3 pts.
+      vector<FVector>::iterator it = --(--(Waypoints.end()));
+      //Game->flycam->Visualize( Types::UNITSPHERE, *it, 64.f, FLinearColor::Black );
+      Waypoints.erase( it );
+    }
+  }
+  else if( Waypoints.size() >= 2 )
+  {
+    // Is the distance to the 2nd waypoint closer than that of the 1st waypoint?
+    if( FVector::DistSquared( Pos, Waypoints[1] ) < FVector::DistSquared( Pos, Waypoints[0] ) )
+    {
+      // get rid of point 1
+      info( "Getting rid of point1 in pathway" );
+      Viz( Waypoints[0] );
+      pop_front( Waypoints );
+    }
+  }
+
+  //Game->flycam->Visualize( Types::UNITSPHERE, Waypoints, 64.f, FLinearColor::Green, FLinearColor::Red );
+  // Visualize the pathway
+  //Game->flycam->ClearViz();
+  //Game->flycam->Visualize( UNITSPHERE, Waypoints, 11.f, FLinearColor( 0, 0, 0, 1.f ), FLinearColor( 1, 1, 1, 1.f ) );
+  //Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
+  Dest = Waypoints.front();
+  pop_front( Waypoints );
+}
+
+void AGameObject::StopMoving()
+{
+  Waypoints.clear(); // clear the Waypoints
+  Dest = Pos; // You are at your destination
+}
+
 bool AGameObject::isAllyTo( AGameObject* go )
 {
   return team->isAllyTo( go ); // Check with my team
@@ -881,7 +904,15 @@ bool AGameObject::isEnemyTo( AGameObject* go )
 
 void AGameObject::Target( AGameObject* target )
 {
-  if( isEnemyTo( target ) )
+  if( target == self )
+  {
+    warning( FS( "%s tried to target itself", *Stats.Name ) );
+    return; // Cannot target self.
+  }
+
+  if( !target )
+    LoseAttackersAndFollowers();
+  else if( isEnemyTo( target ) )
     Attack( target );
   else
     Follow( target );
@@ -889,12 +920,13 @@ void AGameObject::Target( AGameObject* target )
 
 void AGameObject::Follow( AGameObject* go )
 {
-  DropAttackAndFollowTargets();
+  StopAttackingAndFollowing();
   FollowTarget = go;
   if( FollowTarget )
   {
     if( FollowTarget->Dead ) {
       error( FS( "Trying to follow dead attack target %s", *go->Stats.Name ) );
+      FollowTarget = 0;
       return;
     }
     
@@ -905,12 +937,13 @@ void AGameObject::Follow( AGameObject* go )
 
 void AGameObject::Attack( AGameObject* go )
 {
-  DropAttackAndFollowTargets();
+  StopAttackingAndFollowing();
   AttackTarget = go;
   if( AttackTarget )
   {
     if( AttackTarget->Dead ) {
       error( FS( "Trying to attack dead attack target %s", *go->Stats.Name ) );
+      AttackTarget = 0;
       return;
     }
 
@@ -920,7 +953,7 @@ void AGameObject::Attack( AGameObject* go )
 }
 
 
-void AGameObject::DropAttackAndFollowTargets()
+void AGameObject::StopAttackingAndFollowing()
 {
   // Tell my old follow target (if any) that I'm no longer following him
   if( FollowTarget )
@@ -1030,6 +1063,11 @@ AGameObject* AGameObject::GetClosestObjectOfType( Types type )
   return 0; // NO UNITS In sight
 }
 
+void AGameObject::Viz( FVector pt )
+{
+  Game->flycam->Visualize( Types::SHAPESPHERE, pt, 10.f, vizColor );
+}
+
 void AGameObject::OnSelected()
 {
   // play selection sound
@@ -1121,7 +1159,7 @@ void AGameObject::SetColor( FLinearColor color )
 
 void AGameObject::Die()
 {
-  DropAttackAndFollowTargets(); // Remove its attack and follow
+  StopAttackingAndFollowing(); // Remove its attack and follow
   LoseAttackersAndFollowers(); // Attackers and followers stop detecting
 
   Dead = 1; // updates the blueprint animation and kicks off the death animation in the
