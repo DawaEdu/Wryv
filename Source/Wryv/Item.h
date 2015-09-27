@@ -13,5 +13,4 @@ public:
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
   void ProxPickup( AActor* OtherActor, UPrimitiveComponent* OtherComp,
     int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
-
 };

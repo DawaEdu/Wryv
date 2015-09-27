@@ -5,6 +5,7 @@
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "Peasant.h"
+#include "Resource.h"
 #include "Team.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
@@ -36,7 +37,7 @@ void Team::Defaults()
 {
   Gold = 500;
   Lumber = 500;
-  Stone = 250;
+  Stone = 100;
   DamageRepairThreshold = 2.f/3.f;
   alliance = Neutral;
   researchLevelMeleeWeapons = researchLevelRangedWeapons = researchLevelArmor = 0;
@@ -59,9 +60,18 @@ APeasant* Team::GetNextAvailablePeasant()
 {
   for( int i = 0; i < units.size(); i++ )
     if( APeasant *p = Cast<APeasant>( units[i] ) )
-      if( !p->isBusy() )
+      if( p->Idling() )
         return p;
   return 0;
+}
+
+vector<APeasant*> Team::GetPeasants()
+{
+  vector<APeasant*> peasants;
+  for( int i = 0; i < units.size(); i++ )
+    if( APeasant* p = Cast<APeasant>( units[i] ) )
+      peasants.push_back( p );
+  return peasants;
 }
 
 vector<ACombatUnit*> Team::GetWarriors()
@@ -176,43 +186,83 @@ bool Team::isNeedsFood()
   return ratio > ai.foodFraction;
 }
 
-Types Team::GetNeededResourceType()
+vector<Types> Team::GetNeededResourceTypes()
 {
-  return Types::RESGOLD;
-  //return ai.GetNeededResourceType( *this );
+  return ai.GetNeededResourceTypes( *this );
+}
+
+AGameObject* Team::GetMostAttackedUnit()
+{
+  AGameObject* mostAttacked = 0;
+  int maxAttackers = 0;
+  for( int i = 0; i < units.size(); i++ )
+  {
+    if( units[i]->Attackers.size() > maxAttackers )
+    {
+      mostAttacked = units[i];
+      maxAttackers = units[i]->Attackers.size();
+    }
+  }
+  return mostAttacked;
 }
 
 void Team::runAI( float t )
 {
   ai.timeSinceLastScout += t;
 
-  // Check for engaged units, and send more units to assist
-  int numAttackers = 0;
-  AGameObject* mostAttacked = 0;
-  for( int i = 0; i < units.size(); i++ )
+  // 1. Get all the idle peasants and assign them to resource gathering.
+  vector<APeasant*> peasants = GetPeasants();
+  for( APeasant* peasant : peasants )
   {
-    if( units[i]->Attackers.size() > numAttackers )
+    if( peasant->Idling() )
     {
-      mostAttacked = units[i];
-      numAttackers = units[i]->Attackers.size();
+      vector<Types> resType = GetNeededResourceTypes();
+      FString msg = FS( "%s: Needed resource types: ", *peasant->GetName() );
+      for( Types type : resType )
+        msg += GetTypesName( type );
+      info( msg );
+      AResource *res = peasant->FindAndTargetNewResource( peasant->Pos, resType, peasant->Stats.SightRange );
+      if( res )
+      {
+        info( FS( "Peasant %s assigned to gather %s", *peasant->Stats.Name, *res->Stats.Name ) );
+      }
+      else
+      {
+        info( FS( "Peasant %s couldn't find resources of any type to gather", *peasant->Stats.Name ) );
+      }
     }
   }
 
-  // try and protect most victimized unit by fighting in its vicinity
+  // Deal with CombatUnits
+  vector<ACombatUnit*> combatUnits = GetWarriors();
+
+  // Check for engaged units, and send more units to assist
+  AGameObject* mostAttacked = GetMostAttackedUnit();
+  // Try and protect most victimized unit by fighting in its vicinity
   // Send units towards areas where they are needed.
-  for( int i = 0; i < units.size(); i++ )
-    if( !units[i]->AttackTarget )
-      units[i]->SetDestination( mostAttacked->Pos );
+  if( mostAttacked )
+  {
+    for( int i = 0; i < combatUnits.size(); i++ )
+    {
+      // If the unit is idling and within SightRange of target, then
+      // target any unit near the mostAttacked unit (OR make a selection
+      // based on the class in the Attackers array).
+      if( combatUnits[i]->Idling() )
+      {
+        combatUnits[i]->AttackGroundPosition( mostAttacked->Pos );
+      }
+    }
+  }
 
   // Scout militia if they aren't engaged
   if( ai.timeSinceLastScout > ai.scoutInterval )
   {
     // gather a group of unbusy militia to scout
     int groupSize = randInt( 2, 3 );
-    vector<AGameObject*> group;
-    for( int i = 0; i < units.size() && group.size() < groupSize; i++ )
-      if( !units[i]->AttackTarget )
-        group.push_back( units[i] );
+    vector<AGameObject*> scoutGroup;
+    for( int i = 0; i < combatUnits.size() && scoutGroup.size() < groupSize; i++ )
+      if( combatUnits[i]->Idling() )
+        scoutGroup.push_back( combatUnits[i] );
     // Find a random location on the map, and send the group off towards it
     FBox box = Game->flycam->floor->GetBox();
     FVector randomLocation = Rand( box.Min, box.Max );
@@ -220,6 +270,8 @@ void Team::runAI( float t )
 
     ai.timeSinceLastScout = 0.f;
   }
+
+  
 
   // The AI function sends off a group of units to scout if it is time for that
   // Check food ratios
@@ -247,11 +299,15 @@ void Team::runAI( float t )
   {
     //peasant->Build( Types::BLDGBARRACKS );
   }
+
+  
 }
 
 void Team::Move( float t )
 {
-  //runAI( t );
+  runAI( t );
+
   for( int i = 0; i < units.size(); i++ )
     units[i]->Move( t );
 }
+

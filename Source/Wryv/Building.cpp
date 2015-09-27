@@ -99,7 +99,7 @@ void ABuilding::Move( float t )
       // keep the dust on while the building is being built.
       buildingDust->SetActive( true );
       // Building not complete yet, so increase HP and increase HP by a fraction
-      Hp += t / Stats.TimeLength * Stats.HpMax;// hp increases because building may be attacked while being built.
+      Hp += GetHPAdd( t );// hp increases because building may be attacked while being built.
       // The building cannot do anything else while building.
       Clamp( Hp, 0.f, Stats.HpMax );
     }

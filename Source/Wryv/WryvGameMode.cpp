@@ -18,15 +18,24 @@ void AWryvGameMode::InitGame( const FString& MapName, const FString& Options, FS
   Super::InitGame( MapName, Options, ErrorMessage );
   LOG( "AWryvGameMode::InitGame(%s, %s, %s)", *MapName, *Options, *ErrorMessage );
   
+  if( TeamColors.Num() < 8 )
+  {
+    // push in random colors
+    warning( "TeamColors not set up..  using random colors instead" );
+    for( int i = 0; i < 8 ; i++ )
+    {
+      TeamColors.Push( FLinearColor::MakeRandomColor() );
+    }
+  }
+
   // Create Teams required for this map. This happens before AActor::BeginPlay().
   Game->gm = this;
-  neutralTeam = new Team( 0, "Neutral", Alliances::Neutral, FLinearColor::White );
+  neutralTeam = new Team( 0, "Neutral", Alliances::Neutral, TeamColors[0] );
   teams.push_back( neutralTeam ); 
-  playersTeam = new Team( 1, "Player", Alliances::Friendly, FLinearColor::Blue );
+  playersTeam = new Team( 1, "Player", Alliances::Friendly, TeamColors[1] );
   teams.push_back( playersTeam );
-  enemyTeam = new Team( 2, "Opponent", Alliances::Enemy, FLinearColor::Red );
+  enemyTeam = new Team( 2, "Opponent", Alliances::Enemy, TeamColors[2] );
   teams.push_back( enemyTeam );
-
 }
 
 void AWryvGameMode::StartPlay()
@@ -40,19 +49,6 @@ void AWryvGameMode::StartPlay()
   {
     // Update the team's AI by evaluating the map.
     teams[i]->OnMapLoaded();
-  }
-
-  LOG( "The aiLevel class is %s", *aiLevel.ToString() );
-  UClass* uclass = aiLevel.ResolveClass(); // Use ResolveClass() to get the currently loaded class from editor
-  if( uclass )
-  {
-    LOG( "The UClass is %s", *uclass->GetName() );
-    UAIProfile* profile = NewObject<UAIProfile>( this, uclass );
-    LOG( "The instantiated object %s", *profile->ToString() );
-  }
-  else
-  {
-    LOG( "The UCLASS failed to load" );
   }
 }
 

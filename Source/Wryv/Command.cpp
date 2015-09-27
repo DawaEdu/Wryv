@@ -43,6 +43,7 @@ FString Command::ToString() const
     { CommandType::CreateBuilding, "CreateBuilding" },
     { CommandType::CreateUnit, "CreateUnit" },
     { CommandType::GoToGroundPosition, "GoToGroundPosition" },
+    { CommandType::Stop, "Stop" },
     { CommandType::Target, "Target" },
     { CommandType::UseAbility, "UseAbility" },
   };

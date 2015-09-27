@@ -7,6 +7,9 @@
 class ResourcesWidget : public StackPanel
 {
   TextWidget *Gold, *Lumber, *Stone;
+  // This is the currently displayed amount of gold,lumber,stone
+  // These are state variables since they are refreshed each frame.
+  float displayedGold, displayedLumber, displayedStone;
   int Px;       // size of the icons
   int Spacing;  // spacing between widgets
 public:
@@ -16,4 +19,5 @@ public:
   ResourcesWidget( FString name, int pxSize, int spacing );
   virtual ~ResourcesWidget(){}
   void SetValues( int goldCost, int lumberCost, int stoneCost );
+  virtual void Move( float t );
 };

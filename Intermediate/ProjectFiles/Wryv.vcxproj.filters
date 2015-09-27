@@ -120,9 +120,6 @@
     <ClInclude Include="..\..\Source\Wryv\FlyCam.h">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ItemBelt.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
@@ -249,9 +246,6 @@
     <ClInclude Include="..\..\Source\Wryv\CombatUnit.h">
       <Filter>Source\Wryv\GameObject\Units</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
-      <Filter>Source\Wryv\GameObject\Units</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Unit.h">
       <Filter>Source\Wryv\GameObject\Units</Filter>
     </ClInclude>
@@ -287,6 +281,18 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\AIProfile.h">
       <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\PlayerStartPosition.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h">
+      <Filter>Source\Wryv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\PlayerStats.h">
+      <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -334,9 +340,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\FlyCam.cpp">
       <Filter>Source\Wryv\Wryv</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp">
-      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ItemBelt.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
@@ -434,9 +437,6 @@
     <ClCompile Include="..\..\Source\Wryv\CombatUnit.cpp">
       <Filter>Source\Wryv\GameObject\Units</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
-      <Filter>Source\Wryv\GameObject\Units</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Unit.cpp">
       <Filter>Source\Wryv\GameObject\Units</Filter>
     </ClCompile>
@@ -472,6 +472,18 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\AIProfile.cpp">
       <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\PlayerStartPosition.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp">
+      <Filter>Source\Wryv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\PlayerStats.cpp">
+      <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

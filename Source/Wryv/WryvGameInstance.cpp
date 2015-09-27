@@ -24,29 +24,29 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
   UClassesLoaded = 0;
   IsDestroyStarted = 0;
 
-  if( UClass* res = FindObject< UClass >( ANY_PACKAGE, TEXT( "BP_Mage" ) ) )
-  {
-    LOG( "BP_Mage class maps to %s", *res->GetName() );
-  }
 }
 
 void UWryvGameInstance::SetCommand( const Command& cmd )
 {
+  info( FS( "SetCommand %s", *cmd.ToString() ) );
   ClearFlags(); // Clear waypointed flags
   /// retrieve command list from object
   AGameObject* go = GetUnitById( cmd.srcObjectId );
   if( !go )
   {
-    error( FS( "Unit %d doesn't exist", cmd.srcObjectId ) );
+    error( FS( "Unit %d doesn't exist, command `%s` is invalid", cmd.srcObjectId, *cmd.ToString() ) );
     return ;
   }
   
-  /// Remove old queued from go from global history
+  // Remove old queued from go from global history
   commands -= go->commands;
-  
+
+  // Pop current command and replace with the new one
   go->commands.clear();
   go->commands.push_back( cmd );
+  go->IsReadyToRunNextCommand = 1;
 }
+  
 
 void UWryvGameInstance::EnqueueCommand( const Command& cmd )
 {
@@ -63,7 +63,7 @@ void UWryvGameInstance::EnqueueCommand( const Command& cmd )
   unit->commands.push_back( cmd );
 
   // Add in a waypoint flag when commanded unit is 1st in hud selection 
-  if( Game->hud->Selected.size() && unit == Game->hud->Selected[0] )
+  if( Game->hud->Selected.size()   &&   unit == Game->hud->Selected[0] )
   {
     unit->DisplayWaypoints();
   }
@@ -222,9 +222,8 @@ void UWryvGameInstance::LoadUClasses()
     }
 
     LOG( "Type %s => Blueprint (%s)", *GetTypesName( type ), *p.second->GetName() );
-    unit->BaseStats.uClass = GetUClass( type );   // Write the uClass associated with the type here
-    Game->unitsData[ type ] = unit->BaseStats;    // 
-    unit->Cleanup();                              // destroy the sample unit
+    Game->unitsData[ type ] = unit->BaseStats;
+    unit->Cleanup();   // destroy the sample unit
   }
 
   AssertIntegrity();

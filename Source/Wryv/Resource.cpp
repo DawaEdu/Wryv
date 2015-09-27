@@ -34,7 +34,6 @@ void AResource::Harvest( APeasant* peasant )
     return;
   }
   
-  float dmg = peasant->DamageRoll();
   set<Types> acceptable = {RESGOLD,RESLUMBER,RESSTONE};
   if( !in( acceptable, Stats.Type.GetValue() ) )
   {
@@ -44,6 +43,7 @@ void AResource::Harvest( APeasant* peasant )
   }
 
   peasant->Mining = Stats.Type;
+  float dmg = peasant->DamageRoll();
   peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
   AmountRemaining -= dmg;
 
@@ -60,13 +60,9 @@ void AResource::Harvest( APeasant* peasant )
     Die(); // Mark dead (clears Attackers group)
     //Re-target all attackers to find new resources
     for( AGameObject * go : Harvesters )
-    {
       if( APeasant *peasant = Cast<APeasant>( go ) )
-      {
-        if( AResource* res = peasant->FindNewResource( Pos, peasant->Mining, peasant->Stats.SightRange ) )
+        if( AResource* res = peasant->FindAndTargetNewResource( Pos, {peasant->Mining}, peasant->Stats.SightRange ) )
           peasant->Target( res );
-      }
-    }
   }
 }
 

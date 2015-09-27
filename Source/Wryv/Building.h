@@ -46,5 +46,7 @@ class WRYV_API ABuilding : public AGameObject
   UFUNCTION(BlueprintCallable, Category = Building)  bool NeedsPeasant() {
     return !PrimaryPeasant && !Complete;
   }
+  // The HP added
+  float GetHPAdd( float t ) { return t * Stats.HpMax / Stats.TimeLength; }
   virtual void Die();
 };

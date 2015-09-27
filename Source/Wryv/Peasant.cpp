@@ -64,7 +64,6 @@ void APeasant::Build( Types type, FVector pos )
 
 void APeasant::Target( AGameObject* target )
 {
-  RepairTarget = 0;
   if( AResource *resource = Cast<AResource>( target ) )
   {
     // "attack" the resource to mine it.
@@ -92,9 +91,10 @@ void APeasant::Target( AGameObject* target )
   AUnit::Target( target );
 }
 
-void APeasant::StopAttackingAndFollowing()
+void APeasant::DropTargets()
 {
-  Super::StopAttackingAndFollowing();
+  Super::DropTargets();
+
   // Drop the RepairTarget.
   if( RepairTarget )
   {
@@ -109,20 +109,26 @@ void APeasant::Repair( float t )
   // If no building was found for repair, don't try and repair null object
   if( RepairTarget )
   {
-    if( RepairTarget->PrimaryPeasant == this )
-    {
-      return; // This is the primary builder, so he uses no additional resources when building.
-    }
-
-    if( !in( Overlaps, (AGameObject*)RepairTarget ) )
+    if( !in( RepulsionOverlaps, (AGameObject*)RepairTarget ) )
     {
       info( FS( "Peasant %s is too far from building to be repairing it", *Stats.Name ) );
       return;
     }
 
+    float hpRecovered = hpRecovered = RepairTarget->Stats.RepairRate * t;
+    if( RepairTarget->PrimaryPeasant == this )
+    {
+      return; // This is the primary builder, so he uses no additional resources when building.
+    }
+    else
+    {
+      // If the building's not done yet, repairs cost, but we do a build time add
+      if( !RepairTarget->BuildingDone() )
+        hpRecovered = RepairTarget->GetHPAdd( t );
+    }
+    
     // repairs Hp gradually to a building at a fraction of the building's original construction cost.
     // cost the team resources for Repairing this building.
-    float hpRecovered = RepairTarget->Stats.RepairRate * t; // HP/s*time
     float goldCost    = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.GoldCost;
     float lumberCost  = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.LumberCost;
     float stoneCost   = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.StoneCost;
@@ -141,28 +147,48 @@ void APeasant::Repair( float t )
     {
       // Stop repairing
       Game->hud->Status( "Need more resources to continue repair" );
-      Target( 0 );
+      DropTargets(); // Now idling.
+      return;
     }
 
     if( RepairTarget->HpFraction() >= 1.f )
     {
       Game->hud->Status( "Building has been fully repaired" );
-      Target( 0 );
+      DropTargets(); // Now idling.
     }
   }
 }
 
-AResource* APeasant::FindNewResource( FVector fromPos, Types type, float searchRadius )
+AResource* APeasant::FindAndTargetNewResource( FVector fromPos, vector<Types> types, float searchRadius )
 {
   vector<AGameObject*> objects = Game->pc->ShapePickExcept( fromPos,
-    FCollisionShape::MakeCapsule( Radius(), 100.f ), { type }, {} );
-  if( objects.size() )
+    FCollisionShape::MakeCapsule( searchRadius, Height()/2.f ), MakeSet(types), {} );
+
+  // From return results (which are in order of distance), refilter based on priority ordering in types
+  for( int i = 0; i < types.size(); i++ )
   {
-    if( AResource* res = Cast<AResource>( objects[0] ) )
-      return res;
-    else
-      error( FS( "%s is not a Resource object", *objects[0]->GetName() ) );
+    for( int j = 0; j < objects.size(); j++ )
+    {
+      if( objects[j]->Stats.Type.GetValue() == types[i] )
+      {
+        if( AResource* res = Cast<AResource>( objects[j] ) )
+        {
+          Target( res );
+          info( FS( "Peasant %s is now mining %s", *Stats.Name, *res->Stats.Name ) );
+          return res;
+        }
+        else
+        {
+          error( FS( "%s is Type %s but cannot cast to resource",
+            *Stats.Name, *GetTypesName( Stats.Type ) ) );
+        }
+      }
+    }
   }
+
+  // no resources of types selected were found in radius
+  info( FS( "%s found no resources of any type within %f units of %f %f %f", *Stats.Name,
+    Stats.SightRange, fromPos.X, fromPos.Y, fromPos.Z ) );
   
   return 0;
 }
@@ -244,33 +270,23 @@ void APeasant::ai( float t )
 
 void APeasant::OnResourcesReturned()
 {
-  // Resources returned. If it is AI controlled, then
-  // we may harvest a new type of resources here.
+  vector<Types> resType = {Mining}; // We're still mining MiningType unless otherwise specified.
   if( team->ai.aiLevel )
   {
-    Types neededResType = team->GetNeededResourceType();
-
-    // CHANGE resource type being mined.
-    if( neededResType != Mining )
-    {
-      // Try and find something of this new needed type in the vicinity.
-      if( AResource* res = FindNewResource( Pos, neededResType, Stats.SightRange*3.f ) )
-      {
-        Target( res );
-      }
-      else
-      {
-        // go where the resources were at least and seek further cmd
-        GoToGroundPosition( LastResourcePosition );
-      }
-    }
+    // Check for reassignment
+    resType = team->GetNeededResourceTypes();
   }
 
   // go back to get more resources near where we were previously gathering
   // If the mining target ran out of resources, find a new one.
-  AResource* res = FindNewResource( LastResourcePosition, Mining, Stats.SightRange );
-  if( res )  Target( res ) ;
-  else {
+  AResource* res = FindAndTargetNewResource( LastResourcePosition, resType, Stats.SightRange );
+  if( res )
+  { 
+    Target( res ) ;
+  }
+  else
+  {
+    // Otherwise, he just walks back to the location of the stump.
     GoToGroundPosition( LastResourcePosition );
   }
 }
@@ -282,11 +298,9 @@ void APeasant::Hit( AGameObject* other )
   if( other->Stats.Type == Types::BLDGTOWNHALL )
   {
     team->Gold += MinedResources[ Types::RESGOLD ];
-    MinedResources[ Types::RESGOLD ] = 0;
     team->Lumber += MinedResources[ Types::RESLUMBER ];
-    MinedResources[ Types::RESLUMBER ] = 0;
     team->Stone += MinedResources[ Types::RESSTONE ];
-    MinedResources[ Types::RESSTONE ] = 0;
+    MinedResources.clear(); // clear mined resources back to 0s
     Target( 0 ); // unfollow the townhall
 
     // The resources have been returned
@@ -316,10 +330,11 @@ void APeasant::ReturnResources()
           }
           else
           {
-            //info( FS( "Peasant %s returning to town center %s with %d %s",
-            //  *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
+            info( FS( "Peasant %s returning to town center %s with %d %s",
+              *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
             // Check if the resource is exhausted. If so, look for a similar resource
-            Target( returnCenter ); // Keep the attacktarget (miningtarget) set.
+            Follow( returnCenter ); // Set a follow on there (NOT general TARGET() cmd) so that
+            // it explicitly sets up as a follow and NOT RepairTarget.
           }
         }
       }
@@ -348,6 +363,11 @@ void APeasant::Move( float t )
       Mining = NOTHING;
     }
   }
+}
+
+bool APeasant::Idling()
+{
+  return AGameObject::Idling() || RepairTarget; // If the repair target is set, i'm not idling.
 }
 
 void APeasant::JobDone()

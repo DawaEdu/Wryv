@@ -3,7 +3,7 @@
 
 GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 {
-  resources = new ResourcesWidget( "GameChrome ResourcesWidget", 16, 4 );
+  resources = new ResourcesWidget( "Player's Resources", 16, 4 );
   Add( resources );
 
   rightPanel = new SidePanel( FVector2D( 280, size.Y ), FVector2D(8,8) );
@@ -31,6 +31,7 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
     tooltip->Hide();
     return Consumed;
   };
+  tooltip->Hide();
 
   // Canvas at bottom of thing so selections to sidepanel override & chance to consume
   // comes to them first.

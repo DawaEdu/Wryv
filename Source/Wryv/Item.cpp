@@ -36,7 +36,6 @@ void AItem::ProxPickup_Implementation( AActor* OtherActor, UPrimitiveComponent* 
     LOG( "%s picked up a %s", *unit->Stats.Name, *Stats.Name );
     Cleanup();
   }
-
 }
 
 

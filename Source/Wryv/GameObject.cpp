@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "Building.h"
 #include "Explosion.h"
 #include "FlyCam.h"
@@ -34,7 +35,9 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   MaxDeadTime = CapDeadTime;
   vizColor = FLinearColor::MakeRandomColor();
   vizSize = 10.f;
-  
+  IsReadyToRunNextCommand = 0;
+  AttackReady = 0;
+
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
   hitBounds = PCIP.CreateDefaultSubobject<UCapsuleComponent>( this, "HitVolumex222" );
@@ -97,16 +100,6 @@ float AGameObject::Hash()
   return Pos.X + Pos.Y + Pos.Z + ID + 
          (FollowTarget?FollowTarget->Hash():0)+
          (AttackTarget?AttackTarget->Hash():0);
-}
-
-void AGameObject::EnqueueCommand( Command task )
-{
-  Game->EnqueueCommand( task );
-}
-
-void AGameObject::SetCommand( Command task )
-{
-  Game->SetCommand( task );
 }
 
 AGameObject* AGameObject::SetParent( AGameObject* newParent )
@@ -253,7 +246,7 @@ void AGameObject::AttackCycle()
     else
     {
       // Sword attack
-      SendDamageTo( AttackTarget );
+      AttackTarget->ReceiveAttack( this );
     }
   }
 }
@@ -293,13 +286,13 @@ void AGameObject::Shoot()
   }
 }
 
-void AGameObject::SendDamageTo( AGameObject* go )
+void AGameObject::ReceiveAttack( AGameObject* from )
 {
-  float damage = DamageRoll() - go->Stats.Armor;
-  info( FS( "%s melee attacking %s for %f damage", *Stats.Name, *go->Stats.Name, damage ) );
-  go->Hp -= damage;
-  if( go->Hp < 0 )
-    go->Hp = 0.f;
+  float damage = from->DamageRoll() - Stats.Armor;
+  info( FS( "%s melee attacking %s for %f damage", *from->Stats.Name, *Stats.Name, damage ) );
+  Hp -= damage;
+  if( Hp < 0 )
+    Hp = 0.f;
 }
 
 void AGameObject::ApplyEffect( FUnitsDataRow item )
@@ -398,7 +391,7 @@ bool AGameObject::UseAbility( int index )
   {
     // makes unit of type
     info( FS( "Making a unit of type %s", *GetTypesName( type ) ));
-    EnqueueCommand( Command( Command::CreateUnit, ID, type ) ); //Net command
+    Game->EnqueueCommand( Command( Command::CreateUnit, ID, type ) ); //Net command
     //Make( type ); // C++ command
   }
   return 1;
@@ -492,7 +485,7 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
-  info( FS( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() ) );
+  //info( FS( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() ) );
   if( OtherActor == this )
   {
     // Don't do anything with reports of collision with self.
@@ -532,7 +525,7 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   // Make sure other component with defined overlap is AGameObject derivative.
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    Overlaps += go;
+    RepulsionOverlaps += go;
   }
 }
 
@@ -542,7 +535,7 @@ void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPri
   
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    Overlaps -= go;
+    RepulsionOverlaps -= go;
   }
 }
 
@@ -552,7 +545,7 @@ void AGameObject::AddRepulsionForcesFromOverlappedUnits()
   FVector forces( 0,0,0 );
 
   // If there is no attack target, don't use repel forces.
-  for( AGameObject * go : Overlaps )
+  for( AGameObject * go : RepulsionOverlaps )
   {
     FVector repel = Repel( go );
     forces += repel; // gather repelling force from other object
@@ -663,16 +656,19 @@ void AGameObject::DisplayWaypoints()
 void AGameObject::exec( const Command& cmd )
 {
   info( FS( "Executing command: %s", *cmd.ToString() ) );
-  // remove flag for previous cmd if any
-  Game->ClearFlag( CurrentCommand.CommandID );
-  CurrentCommand = cmd;
   AGameObject* go = Game->GetUnitById( cmd.srcObjectId );
+  if( ID != cmd.srcObjectId )
+  {
+    error( FS( "Submitted command %d id's didn't match %d/%d",
+      cmd.CommandID, ID, cmd.srcObjectId ) );
+  }
+  
   switch( cmd.commandType )
   {
     case Command::CommandType::CreateBuilding:
       {
         // builds the assigned building using peasant (id)
-        if( APeasant* peasant = Cast<APeasant>( go ) )
+        if( APeasant* peasant = Cast<APeasant>( this ) )
         {
           info( FS( "The unit [%s] is building a %s @ %f %f %f",
             *peasant->GetName(), *GetTypesName( (Types)cmd.targetObjectId ),
@@ -682,36 +678,36 @@ void AGameObject::exec( const Command& cmd )
         else
         {
           error( FS( "The unit [%s] asked to build %s was not a peasant",
-            *go->GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
+            *GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
         }
       }
       break;
     case Command::CommandType::CreateUnit:
       {
-        go->Make( (Types)cmd.targetObjectId ); // C++ command
+        Make( (Types)cmd.targetObjectId ); // C++ command
       }
       break;
     case Command::CommandType::GoToGroundPosition:
       {
-        go->GoToGroundPosition( cmd.pos );
+        GoToGroundPosition( cmd.pos );
       }
       break;
     case Command::CommandType::Target:
       {
         AGameObject* target = Game->GetUnitById( cmd.targetObjectId );
-        if( !go || !target )
+        if( !target )
         {
           error( "CommandType::Target: GameObject was NULL or target was NULL" );
         }
         else
         {
-          go->Target( target );
+          Target( target );
         }
       }
       break;
     case Command::CommandType::UseAbility:
       {
-        go->UseAbility( cmd.targetObjectId );
+        UseAbility( cmd.targetObjectId );
       }
       break;
     default:
@@ -733,24 +729,30 @@ void AGameObject::Move( float t )
     return; // Cannot move if dead
   }
 
-  // Process enqueued commands when idling.
-  if( Idling() )
+  // If explicitly asked to DoNextCommand.
+  if( IsReadyToRunNextCommand )
   {
+    // When a command completes, remove the flag for it (if any) and pop it from the queue
     if( commands.size() )
     {
-      Command cmd = commands.front();
-      // erase the flag for what we're doing next
-      exec( cmd );
-      commands.pop_front();
-    }
-    else
-    {
-      // Finished last task, idling.
-      // Clean up last flag when get there
-      Game->ClearFlag( CurrentCommand.CommandID );
+      // If there are still commands left, execute the next one.
+      exec( GetCurrentCommand() );
+      IsReadyToRunNextCommand = 0;
     }
   }
 
+  if( Idling() )
+  {
+    // Once we are idling, we can pop the current command and try to exec the next one
+    if( commands.size() )
+    {
+      Game->ClearFlag( GetCurrentCommand().CommandID );
+      commands.pop_front(); // pop out the front item in the queue
+    }
+    IsReadyToRunNextCommand = 1;
+  }
+
+  
   if( Hp <= 0 ) {
     Die();
     return;
@@ -773,8 +775,10 @@ bool AGameObject::Idling()
     !AttackTarget   &&
     // Within Radius() units of the set destination
     FVector::PointsAreNear( Pos, Dest, Radius() )   &&
-    // No more sceduled waypoints of destination
+    // No more scheduled waypoints of destination
     !Waypoints.size()
+    // FollowTarget isn't checked, because if you have reached and are
+    // standing near your FollowTarget, then you are still idling.
   ;
 }
 
@@ -786,7 +790,12 @@ void AGameObject::ai( float t )
 // The hit volumes overlapped
 void AGameObject::Hit( AGameObject* other )
 {
-  
+  // These objects have overlapped.
+}
+
+float AGameObject::Height()
+{
+  return 2.f*hitBounds->GetScaledCapsuleHalfHeight();
 }
 
 float AGameObject::Radius()
@@ -796,8 +805,73 @@ float AGameObject::Radius()
 
 void AGameObject::GoToGroundPosition( FVector groundPos )
 {
-  StopAttackingAndFollowing();
+  Stop(); // DropTargets() & clear old Destination waypoints
   SetDestination( groundPos );
+  AttackReady = 0; // Do NOT stop to engage enemy units
+}
+
+void AGameObject::AttackGroundPosition( FVector groundPos )
+{
+  Stop(); // DropTargets() & clear old Destination waypoints
+  SetDestination( groundPos );
+  AttackReady = 1;
+}
+
+void AGameObject::Target( AGameObject* target )
+{
+  if( target == self )
+  {
+    warning( FS( "%s tried to target itself", *Stats.Name ) );
+    return; // Cannot target self.
+  }
+
+  if( !target ) // Targetting NULL just drops targets. It doesn't clear the old waypoint queue.
+    DropTargets(); // This leaves the waypoint queue as it was.
+    // Call Stop() if you don't want the unit to continue moving towards where it was.
+  else if( isEnemyTo( target ) )
+    Attack( target );
+  else
+    Follow( target );
+}
+
+void AGameObject::Follow( AGameObject* go )
+{
+  Stop(); // DropTargets & Clear Old Waypoint queue
+
+  FollowTarget = go;
+  if( FollowTarget )
+  {
+    if( FollowTarget->Dead ) {
+      error( FS( "Trying to follow dead attack target %s", *go->Stats.Name ) );
+      FollowTarget = 0;
+      return;
+    }
+    
+    FollowTarget->Followers += this;
+    Game->hud->MarkAsFollow( FollowTarget );
+  }
+
+  AttackReady = 0; // Do not stop to engage other units.
+}
+
+void AGameObject::Attack( AGameObject* go )
+{
+  Stop(); // DropTargets & Clear Old Waypoint queue
+
+  AttackTarget = go;
+  if( AttackTarget )
+  {
+    if( AttackTarget->Dead ) {
+      error( FS( "Trying to attack dead attack target %s", *go->Stats.Name ) );
+      AttackTarget = 0;
+      return;
+    }
+
+    AttackTarget->Attackers += this;
+    Game->hud->MarkAsAttack( AttackTarget );
+  }
+
+  AttackReady = 0; // Do not stop to engage other units
 }
 
 void AGameObject::SetDestination( FVector d )
@@ -805,6 +879,7 @@ void AGameObject::SetDestination( FVector d )
   for( AShape* flag : NavFlags )
     flag->Destroy();
   NavFlags.clear();
+  
   //LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
     error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
@@ -828,9 +903,10 @@ void AGameObject::SetDestination( FVector d )
   {
     if( !Game->flycam->SetOnGround( Waypoints[i] ) ) // Then set on ground.
     {
-      LOG( "Waypoint %f %f %f couldn't reach ground",
-        Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z );
+      error( FS( "Waypoint %f %f %f couldn't reach ground",
+        Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z ) );
     }
+
   }
 
   //Game->flycam->ClearViz();
@@ -865,23 +941,20 @@ void AGameObject::SetDestination( FVector d )
       Waypoints.erase( it );
     }
   }
-  else if( Waypoints.size() >= 2 )
+  
+  if( Waypoints.size() >= 2 )
   {
     // Is the distance to the 2nd waypoint closer than that of the 1st waypoint?
     if( FVector::DistSquared( Pos, Waypoints[1] ) < FVector::DistSquared( Pos, Waypoints[0] ) )
     {
       // get rid of point 1
-      info( "Getting rid of point1 in pathway" );
-      Viz( Waypoints[0] );
+      //info( FS( "Getting rid of point (%f %f %f) in pathway", Waypoints[0].X, Waypoints[0].Y, Waypoints[0].Z ) );
+      //Viz( Waypoints[0] );
       pop_front( Waypoints );
     }
   }
 
-  //Game->flycam->Visualize( Types::UNITSPHERE, Waypoints, 64.f, FLinearColor::Green, FLinearColor::Red );
-  // Visualize the pathway
-  //Game->flycam->ClearViz();
-  //Game->flycam->Visualize( UNITSPHERE, Waypoints, 11.f, FLinearColor( 0, 0, 0, 1.f ), FLinearColor( 1, 1, 1, 1.f ) );
-  //Game->flycam->Visualize( d, 44.f, FLinearColor::Red );
+  Flags( Waypoints, FLinearColor::Black );
   Dest = Waypoints.front();
   pop_front( Waypoints );
 }
@@ -890,6 +963,12 @@ void AGameObject::StopMoving()
 {
   Waypoints.clear(); // clear the Waypoints
   Dest = Pos; // You are at your destination
+}
+
+void AGameObject::Stop()
+{
+  DropTargets(); // Drop Attack & Follow Targets
+  StopMoving();  // Clear old waypoint queue
 }
 
 bool AGameObject::isAllyTo( AGameObject* go )
@@ -902,58 +981,7 @@ bool AGameObject::isEnemyTo( AGameObject* go )
   return team->isEnemyTo( go );
 }
 
-void AGameObject::Target( AGameObject* target )
-{
-  if( target == self )
-  {
-    warning( FS( "%s tried to target itself", *Stats.Name ) );
-    return; // Cannot target self.
-  }
-
-  if( !target )
-    LoseAttackersAndFollowers();
-  else if( isEnemyTo( target ) )
-    Attack( target );
-  else
-    Follow( target );
-}
-
-void AGameObject::Follow( AGameObject* go )
-{
-  StopAttackingAndFollowing();
-  FollowTarget = go;
-  if( FollowTarget )
-  {
-    if( FollowTarget->Dead ) {
-      error( FS( "Trying to follow dead attack target %s", *go->Stats.Name ) );
-      FollowTarget = 0;
-      return;
-    }
-    
-    FollowTarget->Followers += this;
-    Game->hud->MarkAsFollow( FollowTarget );
-  }
-}
-
-void AGameObject::Attack( AGameObject* go )
-{
-  StopAttackingAndFollowing();
-  AttackTarget = go;
-  if( AttackTarget )
-  {
-    if( AttackTarget->Dead ) {
-      error( FS( "Trying to attack dead attack target %s", *go->Stats.Name ) );
-      AttackTarget = 0;
-      return;
-    }
-
-    AttackTarget->Attackers += this;
-    Game->hud->MarkAsAttack( AttackTarget );
-  }
-}
-
-
-void AGameObject::StopAttackingAndFollowing()
+void AGameObject::DropTargets()
 {
   // Tell my old follow target (if any) that I'm no longer following him
   if( FollowTarget )
@@ -997,14 +1025,12 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
   }
 }
 
-void AGameObject::LoseAttackersAndFollowers()
+void AGameObject::Stealth()
 {
-  // Carefully remove each Attacker from the set. Since the
-  // set CANNOT be removed from while iterating here, we cannot use
-  // a regular range for based loop.
-  //for( AGameObject* go : Attackers )  // Won't work, since go->Attack( 0 ) causes removal from Attackers set.
-  //  go->Attack( 0 );                  // Won't work, since go->Attack( 0 ) causes removal from Attackers set.
-  // Cap iterations @ Attackers.size(), to definite safe-guard against infinite loop bug.
+  // Iterate backwards to account for fact that objects removed from array
+  // as we iterate. Because we remove objects from the Attackers array
+  // as we iterate over it, we CANNOT use a range-based (for( AGameObject* go : Attackers)) style loop
+  // (it would cause a runtime error).
   for( int i = Attackers.size() - 1; i >= 0; i-- )
     (*Attackers.begin())->Attack( 0 );
   if( Attackers.size() )
@@ -1052,7 +1078,6 @@ AGameObject* AGameObject::GetClosestObjectOfType( Types type )
   for( AGameObject* go : team->units )
   {
     if( go->Stats.Type != type )  skip;
-
     float d = outerDistance( go );
     m[d] = go;
   }
@@ -1061,6 +1086,21 @@ AGameObject* AGameObject::GetClosestObjectOfType( Types type )
 
   info( FS( "Could not find an object of type %s", *GetTypesName( type ) ) );
   return 0; // NO UNITS In sight
+}
+
+void AGameObject::Flags( vector<FVector> points, FLinearColor color )
+{
+  for( AShape* flag : NavFlags )
+    flag->Cleanup();
+  NavFlags.clear();
+
+  for( int i = 0; i < points.size(); i++ )
+  {
+    AShape *flag = Game->Make<AShape>( Types::UIFLAGWAYPOINT, team, points[i] );
+    flag->SetColor( color );
+    flag->text = FS( "%d", i+1 );
+    NavFlags.push_back( flag );
+  }
 }
 
 void AGameObject::Viz( FVector pt )
@@ -1080,27 +1120,7 @@ void AGameObject::SetMaterialColors( FName parameterName, FLinearColor color )
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
   for( UMeshComponent* mesh : meshes )
   {
-    for( int i = 0; i < mesh->GetNumMaterials(); i++ )
-    {
-      UMaterialInterface *mi = mesh->GetMaterial( i );
-      if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
-      {
-        //info( "The MID was created" );
-        mid->SetVectorParameterValue( FName( parameterName ), color );
-      }
-      else
-      {
-        //info( "The MID wasn't created" );
-        mid = UMaterialInstanceDynamic::Create( mi, this );
-        FLinearColor defaultColor;
-        if( mid->GetVectorParameterValue( parameterName, defaultColor ) )
-        {
-          mid->SetVectorParameterValue( parameterName, color );
-          mesh->SetMaterial( i, mid );
-          //info( FS( "Setting mid param %s", *(parameterName.ToString()) ) );
-        }
-      }
-    }
+    SetMeshColor( mesh, this, parameterName, color );
   }
 }
 
@@ -1120,27 +1140,7 @@ void AGameObject::SetTeam( Team* newTeam )
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
   for( UMeshComponent* mesh : meshes )
   {
-    for( int i = 0; i < mesh->GetNumMaterials(); i++ )
-    {
-      UMaterialInterface *mi = mesh->GetMaterial( i );
-      if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
-      {
-        info( "The MID was created " );
-        mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
-      }
-      else
-      {
-        //info( "The MID wasn't created " );
-        mid = UMaterialInstanceDynamic::Create( mi, this );
-        FLinearColor defaultColor;
-        if( mid->GetVectorParameterValue( FName( "TeamColor" ), defaultColor ) )
-        {
-          mid->SetVectorParameterValue( FName( "TeamColor" ), team->Color );
-          mesh->SetMaterial( i, mid );
-          //info( "Setting mid param" );
-        }
-      }
-    }
+    SetMeshColor( mesh, this, "TeamColor", team->Color );
   }
 }
 
@@ -1159,8 +1159,8 @@ void AGameObject::SetColor( FLinearColor color )
 
 void AGameObject::Die()
 {
-  StopAttackingAndFollowing(); // Remove its attack and follow
-  LoseAttackersAndFollowers(); // Attackers and followers stop detecting
+  DropTargets(); // Remove its attack and follow
+  Stealth(); // Attackers and followers stop detecting
 
   Dead = 1; // updates the blueprint animation and kicks off the death animation in the
   // state machine (usually).
@@ -1185,7 +1185,7 @@ void AGameObject::Cleanup()
   if( Attackers.size() || Followers.size() )
   {
     error( FS("There are %d attackers and %d followers", Attackers.size(), Followers.size() ) );
-    LoseAttackersAndFollowers();
+    Stealth();
   }
 
   Destroy();
@@ -1203,7 +1203,7 @@ void AGameObject::BeginDestroy()
   if( Attackers.size() || Followers.size() )
   {
     error( FS("There are %d attackers and %d followers", Attackers.size(), Followers.size() ) );
-    LoseAttackersAndFollowers();
+    Stealth();
   }
 
   // Check if object is selected, only possible game launched/ready

@@ -298,26 +298,6 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
   object->AddChild( widget );
 }
 
-void ATheHUD::UpdateDisplayedResources()
-{
-  // spent=200, diff=-200
-  //    diff = 200 - 400;
-  float diff = Game->gm->playersTeam->Gold - displayedGold;
-  diff *= 0.1; // jump by 10%
-  displayedGold += diff;
-
-  diff = Game->gm->playersTeam->Lumber - displayedLumber;
-  diff *= 0.1; // jump by 10%
-  displayedLumber += diff;
-
-  diff = Game->gm->playersTeam->Stone - displayedStone;
-  diff *= 0.1; // jump by 10%
-  displayedStone += diff;
-
-  ui->gameChrome->resources->SetValues( FMath::RoundToInt( displayedGold ),
-    FMath::RoundToInt( displayedLumber ), FMath::RoundToInt( displayedStone ) );
-}
-
 void ATheHUD::DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, 
   float ScreenW, float ScreenH, float MaterialU, float MaterialV, float MaterialUWidth, float MaterialVHeight)
 {
@@ -360,7 +340,7 @@ void ATheHUD::DrawTexture(UCanvas* canvas, UTexture* Texture, float ScreenX, flo
 	}
 }
 
-void ATheHUD::DrawPortrait()
+void ATheHUD::RenderPortrait()
 {
   // Draws the portrait of the first selected object
   if( Selected.size() )
@@ -379,9 +359,7 @@ void ATheHUD::DrawHUD()
   Super::DrawHUD();
   HotSpot::hud = this;
   InitWidgets();
-
-  UpdateDisplayedResources();
-  DrawPortrait();
+  RenderPortrait();
   
   // Render the minimap, only if the floor is present
   FBox box = Game->flycam->floor->GetBox();

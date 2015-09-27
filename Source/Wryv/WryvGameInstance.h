@@ -28,11 +28,12 @@ class WRYV_API UWryvGameInstance : public UGameInstance
 public:
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
-
   // These are the flags by CommandID=>Flag instance, for flag removal
   map< int64, AShape* > Flags;
-
   int64 NextObjectID;
+  // The unitsData object is used to look up a unit type's properties in advance.
+  // We use this for things like the CanAfford() function, so we can look-ahead the
+  // cost of spawning an object before actually spawning it.
   map<Types,FUnitsDataRow> unitsData;
   bool UClassesLoaded;
   ATheHUD *hud;

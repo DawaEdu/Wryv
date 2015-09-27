@@ -42,7 +42,7 @@ void AProjectile::Hit( AGameObject* other )
   {
     LOG( "%s is detonating", *Stats.Name );
     // Damage the attack target with impact-damage
-    SendDamageTo( AttackTarget );
+    AttackTarget->ReceiveAttack( this );
     Die(); Cleanup();
   }
   else if( other == Game->flycam->floor )

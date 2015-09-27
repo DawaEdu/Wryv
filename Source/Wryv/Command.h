@@ -9,7 +9,7 @@ struct Command
 {
   static int64 NextCommandID;
 
-  enum CommandType { CreateBuilding, CreateUnit, GoToGroundPosition, Target, UseAbility };
+  enum CommandType { CreateBuilding, CreateUnit, GoToGroundPosition, Stop, Target, UseAbility };
 
   int64 CommandID;          // The numeric ID of the Command (these are in-order)
   int64 FrameID;

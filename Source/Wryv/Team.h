@@ -41,6 +41,7 @@ struct Team
   bool isAllyTo( AGameObject* go );
   bool isEnemyTo( AGameObject* go );
   APeasant* GetNextAvailablePeasant();
+  vector<APeasant*> GetPeasants();
   vector<ACombatUnit*> GetWarriors();
 
   void RemoveUnit( AGameObject *go );
@@ -61,7 +62,8 @@ struct Team
 
   // Tells if AI computes that this team 
   bool isNeedsFood();
-  Types GetNeededResourceType();
+  vector<Types> GetNeededResourceTypes();
+  AGameObject* GetMostAttackedUnit();
   void runAI( float t );
   void Move( float t );
 };

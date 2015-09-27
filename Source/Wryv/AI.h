@@ -34,23 +34,9 @@ struct WRYV_API FAI
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingGold;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingLumber;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingStone;
-  //FAI()
-  //{
-  //  //aiLevel = AILevel::AINone;
-  //  foodFraction = 2.f/3.f; // default of 66%
-  //  timeSinceLastScout = 0.f;
-  //  scoutInterval = 20.f;
-  //  // Try to keep these stock amounts of each resource type
-  //  StartingGold = 1000;
-  //  StartingLumber = 500;
-  //  StartingStone = 50;
-  //}
-  //Types GetNeededResourceType( Team& team );
-  FString ToString()
-  {
-    return FS( "AILevel aiLevel=%d foodFraction=%f scoutInterval=%f gold=%d lumber=%d stone=%d", 
-      (int)aiLevel.GetValue(), foodFraction, scoutInterval,
-      StartingGold, StartingLumber, StartingStone );
-  }
+
+  FAI();
+  vector<Types> GetNeededResourceTypes( Team& team );
+  FString ToString();
 };
 

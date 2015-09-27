@@ -1,4 +1,6 @@
 #include "Wryv.h"
+
+#include "AIProfile.h"
 #include "Building.h"
 #include "FlyCam.h"
 #include "GameObject.h"
@@ -7,6 +9,7 @@
 #include "Pathfinder.h"
 #include "Peasant.h"
 #include "PlayerControl.h"
+#include "PlayerStartPosition.h"
 #include "Projectile.h"
 #include "Resource.h"
 #include "Shape.h"
@@ -154,23 +157,9 @@ void AFlyCam::OnLevelLoaded()
 {
   LOG( "AFlyCam::OnLevelLoaded()" );
   FindFloor();
-  if( !floor ) {
-    LOG( "No floor!" );
-    return; // means there's no floor! level cannot be played
-  }
-  
   RetrievePointers();
   InitializePathfinding();
-
-  float IMAX = 1000.f;
-  for( int i = 0; i <= IMAX; i += 100 )
-  {
-    FVector v( 1000, 1000, i );
-    FLinearColor color = FLinearColor::LerpUsingHSV( FLinearColor::Black, FLinearColor::White, i/IMAX );
-    AShape* s = Game->Make<AShape>( Types::SHAPESPHERE, Game->gm->neutralTeam, v );
-    s->SetColor( color );
-    s->text = FS( "%d", i );
-  }
+  
 
   setupLevel = 1;
 }
@@ -281,11 +270,9 @@ void AFlyCam::InitializePathfinding()
         if( intns.size() ) {
           pathfinder->nodes[ idx ]->terrain = Terrain::Impassible;
           sphere->SetColor( FLinearColor::Red );
-          LOG( "Shape %s had collisions:", *sphere->GetName() );
-          for( AGameObject* g : intns )
-          {
-            LOG( "  * %s", *g->GetName() );
-          }
+          //LOG( "Shape %s had collisions:", *sphere->GetName() );
+          //for( AGameObject* g : intns ) {
+          //  LOG( "  * %s", *g->GetName() ); }
         }
         else {
           pathfinder->nodes[ idx ]->terrain = Terrain::Passible;
@@ -536,9 +523,22 @@ void AFlyCam::FindFloor()
   TTransArray<AActor*>& actors = level->Actors;
 
   // Here, the floor wasn't found above, so search by name.
-  for( int i = 0; i < actors.Num() && !floor; i++ )
+  for( int i = 0; i < actors.Num(); i++ )
+  {
     if( AGroundPlane* gp = Cast<AGroundPlane>( actors[i] ) )
       floor = gp;
+
+    if( APlayerStartPosition* psp = Cast<APlayerStartPosition>( actors[i] ) )
+    {
+      info( FS( "Found PlayerStartPosition %d", psp->TeamNumber ) );
+      if( psp->TeamNumber < Game->gm->teams.size() )
+      {
+        Team* team = Game->gm->teams[ psp->TeamNumber ];
+        team->ai = psp->aiProfile->ai;
+        info( FS( "Player %d has AI `%s`", psp->TeamNumber, *team->ai.ToString() ) );
+      }
+    }
+  }
 
   // Form the world bounds. You cannot use 
   // FBox box = ALevelBounds::CalculateLevelBounds( level );
@@ -642,11 +642,13 @@ void AFlyCam::MouseDownRight()
       if( Game->pc->IsAnyKeyDown( {EKeys::LeftShift, EKeys::RightShift } ) )
       {
         // When shift is down, we have to add the command to the list of commands for this unit.
+        info( "enqueue" );
         Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
       }
       else
       {
         // When shift is NOT down, we have to clear the unit's command set.
+        info( "Replacing prev cmd" );
         Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
       }
     }

@@ -126,7 +126,8 @@ protected:
       children[i]->render( offset + Pos() );
   }
 public:
-  virtual void Move( float t ) {
+  virtual void Move( float t )
+  {
     displayTime -= t;
 
     // Hide if display time drops below 0, or delete it if it is not 'eternal'

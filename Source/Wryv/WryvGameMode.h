@@ -22,8 +22,7 @@ class WRYV_API AWryvGameMode : public AGameMode
 public:
   // Launch state
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = GameMode ) TEnumAsByte< GameStates > state;
-  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = GameMode ) UAIProfile* enemyAILevel;
-  UPROPERTY( EditAnywhere, meta=(MetaClass="AIProfile") ) FStringClassReference aiLevel;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = GameMode ) TArray< FLinearColor > TeamColors;
 
   // VIRTUAL SECOND: RTS uses a virtual second to get deterministic play.
   float T; // The Timestep size of each frame.

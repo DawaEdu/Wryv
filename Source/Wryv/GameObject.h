@@ -31,8 +31,7 @@ class WRYV_API AGameObject : public AActor
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
   static AGameObject* Nothing;
   static float CapDeadTime; // Dead units get cleaned up after this many seconds (time given for dead anim to play out)
-  Command CurrentCommand;
-
+  
   // 
   // Stats.
   int64 ID; // Unique Identity of the object.
@@ -71,11 +70,17 @@ class WRYV_API AGameObject : public AActor
 
   // Series of commands.
   deque<Command> commands;
+  bool IsReadyToRunNextCommand; // This Flag is an instruction to execute the next command.
+  // Set when idling, OR when manually asked to change command to a new one.
+  bool AttackReady; // When this flag is set, the unit will engage any enemy units.
+  // Peasants rarely have this flag set, while most combat units have it set (unless they are
+  // responding to a GotoGroundPosition() command)
+  Command& GetCurrentCommand(){ return commands.front(); }
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
-  vector<AGameObject*> Followers, Attackers, Overlaps;
+  vector<AGameObject*> Followers, Attackers, RepulsionOverlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
 
   // 
@@ -90,9 +95,7 @@ class WRYV_API AGameObject : public AActor
   // Net
   // Hashes the object (checking for network state desync)
   float Hash();
-  void EnqueueCommand( Command task );
-  void SetCommand( Command task );
-
+  
   // 
   // Scenegraph management.
   AGameObject* SetParent( AGameObject* newParent );
@@ -128,7 +131,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
   void Shoot();
-  void SendDamageTo( AGameObject* other );
+  virtual void ReceiveAttack( AGameObject* from );
 
   // Sets object to use indexed action
   void ApplyEffect( FUnitsDataRow item );
@@ -171,35 +174,43 @@ class WRYV_API AGameObject : public AActor
   // This function is provided INSTEAD of ::Tick(), which has variable timestep value 
   // and unpredicatable call order.
   virtual void Move( float t );
-  bool Idling();
+  virtual bool Idling();
   virtual void ai( float t );
   // The hit volumes overlapped
   virtual void Hit( AGameObject* other );
+  float Height();
   float Radius();
 
+  // 
+  // COMMAND
   // Sets a new ground destination, dropping Follow/Attack targets.
   virtual void GoToGroundPosition( FVector groundPos );
+  // Goes towards ground position, while attacking any units that are within SightRange units of it.
+  virtual void AttackGroundPosition( FVector groundPos );
+  // Sets a particular object as a Target (due to generic right click).
+  // Resolves if target is ally (follow) or opponent (attack).
+  virtual void Target( AGameObject* target );
+  void Follow( AGameObject* go );
+  void Attack( AGameObject* go );
+  
   // Moves towards d using pathfinder, WITHOUT losing Follow/Attack targets.
   void SetDestination( FVector d );
-  // Stops unit from moving, WITHOUT losing Follow/Attack targets.
+  // Stops motion, WITHOUT losing Follow/Attack targets.
   void StopMoving();
+  // Stop command, which aborts current command, and cancels all queued commands.
+  void Stop();
   
   // 
   // Unit relationship functions
   bool isAllyTo( AGameObject* go );
   bool isEnemyTo( AGameObject* go );
 
-  // Sets a particular object as a Target (due to generic right click).
-  // Resolves if target is ally (follow) or opponent (attack).
-  virtual void Target( AGameObject* target );
-  void Follow( AGameObject* go );
-  void Attack( AGameObject* go );
-
-  // Stop my attack and follow.
-  virtual void StopAttackingAndFollowing();
+  // Drop my attack & follow targets
+  virtual void DropTargets();
   void LoseFollower( AGameObject* formerFollower );
   void LoseAttacker( AGameObject* formerAttacker );
-  void LoseAttackersAndFollowers();
+  // Causes all attackers and followers to stop attacking and following this unit.
+  void Stealth();
 
   // 
   // AI
@@ -210,6 +221,7 @@ class WRYV_API AGameObject : public AActor
 	
   // 
   // Utility
+  void Flags( vector<FVector> points, FLinearColor color );
   void Viz( FVector pt );
   void OnSelected();
   void SetMaterialColors( FName parameterName, FLinearColor color );

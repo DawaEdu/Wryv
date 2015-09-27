@@ -46,19 +46,19 @@ public:
   void PostInitializeComponents();
   void Build( Types type, FVector pos );
   virtual void Target( AGameObject* target ) override;
-  virtual void StopAttackingAndFollowing() override;
+  virtual void DropTargets() override;
   void Repair( float t );
-  AResource* FindNewResource( FVector fromPos, Types type, float searchRadius );
+  AResource* FindAndTargetNewResource( FVector fromPos, vector<Types> type, float searchRadius );
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   // Is the unit repairing something, so play the repair animation
   UFUNCTION( BlueprintCallable, Category = Stats )  bool IsRepairing();
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   void ReturnResources();
   virtual void Move( float t );
+  virtual bool Idling();
   virtual void ai( float t );
   void OnResourcesReturned();
   virtual void Hit( AGameObject* other );
-  bool isBusy(){ return AttackTarget || FollowTarget || Waypoints.size(); }
   // We are the primary builder if the building is set to have it as primary
   void JobDone();
   virtual void Die();

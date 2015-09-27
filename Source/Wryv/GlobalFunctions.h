@@ -168,6 +168,7 @@ template <typename T> inline bool in( const vector<T>& s, const T& elt )
       return 1;
   return 0;
 }
+
 template <typename T> inline bool in( const vector<T*>& s, const T* elt )
 {
   for( int i = 0; i < s.size(); i++ )
@@ -179,6 +180,28 @@ template <typename T> inline bool in( const vector<T*>& s, const T* elt )
 template <typename T> inline bool in( const deque<T>& d, const T& elt )
 {
   return find( d.begin(), d.end(), elt ) != d.end();
+}
+
+template <typename T, typename S> inline bool in( const map<T,S>& m, const T& key )
+{
+  return find( m.begin(), m.end(), elt ) != m.end();
+}
+
+template <typename T, typename S> inline bool in( const map<T,S>& m, const S& val )
+{
+  for( const pair<const T,S>& p : m )
+    if( p.second == val )
+      return 1;
+  return 0;
+}
+
+template <typename T, typename S> inline bool in( const map<T, vector<S> >& m, const S& val )
+{
+  for( const pair< const T, vector<S> > p : m )
+    for( const S& s : p.second )
+      if( s == val )
+        return 1;
+  return 0;
 }
 
 template <typename T> inline int index( const vector<T>& s, const T& elt )
@@ -426,7 +449,7 @@ template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
 template <typename T> set<T> MakeSet( const vector<T>& A )
 {
   set<T> B;
-  for( T& t : A )
+  for( const T& t : A )
     B.insert( t );
   return B;
 }
@@ -441,10 +464,36 @@ template <typename T> vector<T*> MakeVector( const set<T*>& A )
 template <typename T> vector<T> MakeVector( const set<T>& A )
 {
   vector<T> B;
-  for( T& t : A )
+  for( const T& t : A )
     B.push_back( t );
   return B;
 }
+
+template <typename T, typename S> vector<T> MakeVectorT( const map<T,S>& m )
+{
+  vector<T> B;
+  for( const pair<T,S>& p : m )
+    B.push_back( p.first );
+  return B;
+}
+
+template <typename T, typename S> vector<S> MakeVectorS( const map<T,S>& m )
+{
+  vector<S> B;
+  for( const pair<T,S>& p : m )
+    B.push_back( p.second );
+  return B;
+}
+
+template <typename T, typename S> vector<S> MakeVectorS( const map<T, vector<S> >& m )
+{
+  vector<S> v;
+  for( const pair< const float, vector<S> > p : objects )
+    for( const S& s : p.second )
+      v += s;
+  return os;
+}
+
 
 inline FVector Rand()
 {
@@ -475,6 +524,65 @@ inline void Print( FString msg, FBox box )
     box.Max.X, box.Max.Y, box.Max.Z,
     box.GetSize().X, box.GetSize().Y, box.GetSize().Z,
     box.GetExtent().X, box.GetExtent().Y, box.GetExtent().Z );
+}
+
+inline UClass* GetUClass( const FStringClassReference& scr )
+{
+  UClass* uclass = scr.TryLoadClass<UClass>();
+  if( !uclass )
+  {
+    warning( FS( "TryLoadClass for %s failed", *scr.ToString() ) );
+    uclass = scr.ResolveClass();
+    if( !uclass )
+    {
+      error( FS( "Couldn't load UClass for SCR %s via Resolve", *scr.ToString() ) );
+    }
+  }
+  else
+  {
+    info( FS( "Loaded UClass %s from SCR %s", *uclass->GetName(), *scr.ToString() ) );
+  }
+  
+  return uclass;
+}
+
+// 
+template <typename T> T* Construct( UObject* parent, const FStringClassReference& scr )
+{
+  UClass* uclass = GetUClass( scr );
+  if( !uclass )
+  {
+    error( FS( "Couldn't construct object of type %s due to NULL UClass", *scr.ToString() ) );
+    return 0;
+  }
+
+  T* object = NewObject<T>( parent, uclass );
+  return object;
+}
+
+inline void SetMeshColor( UMeshComponent* mesh, UObject* parent, FName parameter, FLinearColor color )
+{
+  for( int i = 0; i < mesh->GetNumMaterials(); i++ )
+  {
+    UMaterialInterface *mi = mesh->GetMaterial( i );
+    if( UMaterialInstanceDynamic *mid = Cast< UMaterialInstanceDynamic >( mi ) )
+    {
+      //info( "The MID was created " );
+      mid->SetVectorParameterValue( parameter, color );
+    }
+    else
+    {
+      //info( "The MID wasn't created " );
+      mid = UMaterialInstanceDynamic::Create( mi, parent );
+      FLinearColor defaultColor;
+      if( mid->GetVectorParameterValue( parameter, defaultColor ) )
+      {
+        mid->SetVectorParameterValue( parameter, color );
+        mesh->SetMaterial( i, mid );
+        //info( "Setting mid param" );
+      }
+    }
+  }
 }
 
 inline FVector& ZERO( FVector & v ) {

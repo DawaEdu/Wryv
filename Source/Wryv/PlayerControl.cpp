@@ -60,8 +60,8 @@ FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const R
   FCollisionQueryParams fcqp( true );
   if( !component->LineTraceComponent( hit, ray.start, ray.end, fcqp ) )
   {
-    warning( FS( "TraceAgainst (%s) failed %f %f %f => %f %f %f",
-      *component->GetName(), ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
+    //warning( FS( "TraceAgainst (%s) failed %f %f %f => %f %f %f",
+    //  *component->GetName(), ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
   }
 
   return hit;
@@ -177,8 +177,6 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box )
 // If InTypes is EMPTY, then it picks any type
 vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
 {
-  vector<AGameObject*> objects;
-  
   // A 0 area box picks with a ray from TL corner of the click.
   if( !box.GetArea() ) {
     // use a ray pick
@@ -189,6 +187,7 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types>
   vector<FVector2D> pts = { box.TL(), box.BL(), box.BR(), box.TR() };
   vector<Ray> rays;
 
+  FVector centerP(0,0,0);
   // get the 4 rays of the frustum
   for( int i = 0; i < pts.size(); i++ )
   {
@@ -200,8 +199,10 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types>
 
     ray.SetLen( 1e4f );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e6f causes imprecision
     rays.push_back( ray );
+    centerP += ray.start;
   }
-
+  centerP /= rays.size();
+  
   // Make a frustum with the 6 planes formed by the 8 points
   TArray<FPlane, TInlineAllocator<6>> planes;
   planes.Push( FPlane( rays[0].end,   rays[0].start, rays[1].start ) ); // Left
@@ -213,7 +214,7 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types>
   FConvexVolume selectionVolume( planes );
   
   // go through all world actors and see what is intersected
-  //Game->flycam->ClearViz();
+  map< float, vector<AGameObject*> > objects;
   for( Team* team : Game->gm->teams )
   {
     for( AGameObject* go : team->units )
@@ -232,11 +233,20 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types>
       // Selection by mesh's bounding box is best.
       if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )
       {
-        objects += go;
+        float d = FVector::Dist( centerP, go->Pos );
+        info( FS( "%s is %f units away from camera (%f %f %f) => (%f %f %f)", 
+          *go->Stats.Name, d, centerP.X,centerP.Y,centerP.Z, go->Pos.X,go->Pos.Y,go->Pos.Z ) );
+        objects[ d ].push_back( go ); // Possibility of equidistant objects
       }
     }
   }
-  return objects;
+
+  // Form a linear vector from the map (equidistant objects adjacent)
+  vector<AGameObject*> os;
+  for( pair< const float, vector<AGameObject*> > p : objects )
+    for( AGameObject* go : p.second )
+      os += go;
+  return os;
 }
 
 vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape shape )
@@ -255,7 +265,13 @@ vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionSha
     FCollisionObjectQueryParams::InitType::AllObjects );
   // To query using a specific object TYPE, use OverlapMultiByProfile()
   GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fcqp );
-  vector<AGameObject*> objects;
+  
+  // indicate where the search shape is.
+  //DrawDebugCylinder( GetWorld(), pos, pos + FVector( 0, 0, shape.Capsule.HalfHeight*2.f ), shape.Capsule.Radius,
+  //  16, FColor::Yellow, 1, 10.f, 0 );
+  //info( FS( "Shape overlaps %d units", overlaps.Num() ) );
+
+  map< float, vector<AGameObject*> > objects;
   for( int i = 0; i < overlaps.Num(); i++ )
   {
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
@@ -263,10 +279,24 @@ vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionSha
       if( go->Dead ) skip;
       if( AcceptedTypes.size() && !in( AcceptedTypes, go->Stats.Type.GetValue() ) )  skip;
       if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
-      objects += go;
+      
+      // Duplicates DO happen
+      if( !in( objects, go ) )
+      {
+        float d = FVector::Dist( pos, go->Pos ); // order 
+        objects[ d ].push_back( go );
+        //info( FS( "  * %s", *go->GetName() ) );
+        //DrawDebugCylinder( GetWorld(), go->Pos, go->Pos + FVector(0,0,go->Height()),
+        //  go->Radius(), 16, FColor::Green, 1, 10.f, 0 );
+      }
     }
   }
-  return objects;
+
+  vector<AGameObject*> os;
+  for( pair< const float, vector<AGameObject*> > p : objects )
+    for( AGameObject* go : p.second )
+      os += go;
+  return os;
 }
 
 vector<AGameObject*> APlayerControl::ComponentPickExcept( AGameObject* object, UPrimitiveComponent* up, vector<AGameObject*> except,
@@ -296,15 +326,17 @@ vector<AGameObject*> APlayerControl::ComponentPickExcept( AGameObject* object, U
   ECollisionChannel queryChannel = CollisionChannels[queryObjectType];
   GetWorld()->ComponentOverlapMultiByChannel( overlaps, up, ve, ro, queryChannel, fqp, objectTypes );
   
-  vector<AGameObject*> objects;
+  map<float, AGameObject*> objects;
   for( int i = 0; i < overlaps.Num(); i++ )
   {
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
     {
-      objects += go;
+      float d = FVector::Dist( object->Pos, go->Pos );
+      objects[ d ] = go;
     }
   }
-  return objects;
+
+  return MakeVectorS( objects );
 }
 
 bool APlayerControl::IsKeyDown( FKey key )

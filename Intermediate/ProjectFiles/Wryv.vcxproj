@@ -330,9 +330,13 @@
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />
+    <ClCompile Include="..\..\Source\Wryv\PlayerStats.cpp" />
     <ClCompile Include="..\..\Source\Wryv\PlayerControl.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\PlayerStats.h" />
     <ClInclude Include="..\..\Source\Wryv\PlayerControl.h" />
+    <ClCompile Include="..\..\Source\Wryv\PlayerStartPosition.cpp" />
     <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp" />
+    <ClInclude Include="..\..\Source\Wryv\PlayerStartPosition.h" />
     <ClInclude Include="..\..\Source\Wryv\PortraitsPanel.h" />
     <ClCompile Include="..\..\Source\Wryv\ProgressBar.cpp" />
     <ClInclude Include="..\..\Source\Wryv\ProgressBar.h" />

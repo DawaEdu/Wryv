@@ -41,6 +41,7 @@ public:
 
   // 3Space
   vector<AGameObject*> ShapePick( FVector pos, FCollisionShape shape );
+  // The results are ordered by RADIAL DISTANCE to the src cylinder
   vector<AGameObject*> ShapePickExcept( FVector pos, FCollisionShape shape, set<Types> AcceptedTypes, set<Types> NotTypes );
 
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.

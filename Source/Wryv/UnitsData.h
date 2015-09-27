@@ -9,8 +9,11 @@ struct WRYV_API FUnitsDataRow : public FTableRowBase
 {
   GENERATED_USTRUCT_BODY()
 public:
-  // Name properties
+  // The TYPE of the object. Each object type has an entry in the Types enum.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte<Types> Type;
+  // GameObject or derivative UCLASS
+  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="GameObject"))
+  //FStringClassReference BlueprintClass;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Name;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UTexture* Portrait;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
@@ -49,9 +52,14 @@ public:
   // 
   // Weapon properties: If attacks send a projectile, set object here.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > ReleasedProjectileWeapon;
+  // GameObject or derivative UCLASS
+  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="Projectile"))
+  //FStringClassReference ProjectileBlueprintClass;
   
   // The object that gets spawned when the unit explodes (eg a building)
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > OnExploded;
+  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="Explosion"))
+  //FStringClassReference ExplosionBlueprintClass;
   
   // If this is a ground attack spell/property, then it doesn't require a gameobject target
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AttacksGround;
@@ -87,9 +95,9 @@ public:
   // The abilities this unit has, including ability to build, etc.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
   // The blueprint from which class instance came from
-  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) 
-  UClass* uClass;
-
+  
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool Invulnerability;
+  
   FUnitsDataRow()
   {
     Type = NOTHING;
@@ -102,7 +110,7 @@ public:
     AOERadius = 0.f;
     RepairHPFractionCost = 0.f;
     RepairRate = 0.f;
-    TimeLength = 0.f;
+    TimeLength = 10.f;
     SpeedMax = 100.f;
 
     HpMax = 100.f;
@@ -117,8 +125,7 @@ public:
     TeamId = 0;
     FoodProvided = 0;
     FoodUsed = 1;
-    TimeLength = 10.f;
-    uClass = 0;
+    Invulnerability = 0;
   }
 
   FUnitsDataRow operator+=( const FUnitsDataRow& row )
@@ -152,7 +159,6 @@ public:
 
   void Print()
   {
-    LOG( "%f %f %f",  );
   }
 };
 

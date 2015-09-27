@@ -83,10 +83,6 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
 
-  // This is the currently displayed amount of gold,lumber,stone
-  // These are state variables since they are refreshed each frame.
-  float displayedGold, displayedLumber, displayedStone;
-  
   ATheHUD(const FObjectInitializer& PCIP);
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
@@ -104,8 +100,6 @@ public:
   void MarkAsSelected( AGameObject* object );
   void MarkAsFollow( AGameObject* object );
   void MarkAsAttack( AGameObject* object );
-  
-  void UpdateDisplayedResources();
   void UpdateMouse();
 
   bool Valid() { return IsCanvasValid_WarnIfNot() ; }
@@ -114,7 +108,7 @@ public:
   void DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float MaterialU, float MaterialV, float MaterialUWidth, float MaterialVHeight, float Scale, bool bScalePosition, float Rotation, FVector2D RotPivot);
   void DrawTexture(UCanvas* Canvas, UTexture* Texture, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float TextureU, float TextureV, float TextureUWidth, float TextureVHeight, FLinearColor TintColor=FLinearColor::White, EBlendMode BlendMode=BLEND_Translucent, float Scale=1.f, bool bScalePosition=false, float Rotation=0.f, FVector2D RotPivot=FVector2D::ZeroVector);
   
-  void DrawPortrait();
+  void RenderPortrait();
   virtual void DrawHUD() override;
 
   virtual void Tick( float t );

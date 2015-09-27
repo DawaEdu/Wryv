@@ -49,6 +49,13 @@ void AUnit::Move( float t )
   // recompute path
   if( Stats.SpeedMax )
   {
+    // Prioritize the FollowTarget.
+    if( FollowTarget && AttackTarget )
+    {
+      warning( FS( "%s had both FollowTarget=%s AttackTarget=%s",
+        *Stats.Name, *FollowTarget->Stats.Name, *AttackTarget->Stats.Name ) );
+    }
+
     if( FollowTarget )
     {
       MoveWithinDistanceOf( FollowTarget,  FollowTarget->Radius() );
