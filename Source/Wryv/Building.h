@@ -22,6 +22,10 @@ class WRYV_API ABuilding : public AGameObject
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveRadius;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveForce;
 
+  // The researches this building is able to do
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)
+  TArray< UResearch* > Researches;
+
   //ABuilding(const FObjectInitializer& PCIP);
   APeasant* PrimaryPeasant;      // The main peasant creating the building ( doesn't use resource to build )
   float TimeBuilding;     // When a unit is building, this is the % progress it is to completion.

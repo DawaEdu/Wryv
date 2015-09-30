@@ -4,21 +4,21 @@
 #include <set>
 using namespace std;
 
-#include <Types.h>
 #include <GameFramework/Pawn.h>
+
 #include "FogOfWar.h"
-#include "UISounds.h"
 #include "SoundEffect.h"
+#include "UISounds.h"
 #include "FlyCam.generated.h"
 
-struct GraphNode;
+class ABuilding;
 struct Edge;
+struct GraphNode;
+class AGameObject;
+class AGroundPlane;
 class Pathfinder;
 class ATheHUD;
 class APlayerControl;
-class AGameObject;
-class ABuilding;
-class AGroundPlane;
 
 inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
 {
@@ -31,6 +31,8 @@ class WRYV_API AFlyCam : public APawn
 	GENERATED_BODY()
 public:
   AGroundPlane* floor; // Every level must have an object called the floor.
+  TSubclassOf<AShape> FloorPlaneBackupClass; // This should be a simple unit cube.
+
   ABuilding* ghost;    // ghosts of pending buildings being set for placement
   //vector<ABuilding*> ghosts; // Shift+Click allows series of buildings for placement
 
@@ -44,7 +46,12 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizPassibles;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> VizClass;
+
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CheckerSphereRadius;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> CheckerClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> LineClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> WaypointFlagClass;
 
   // Use a TARRAY to keep sfx organized, includes music & effects
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
@@ -88,8 +95,8 @@ public:
   void SetCameraPosition( FVector2D perc );
   UMaterialInterface* GetMaterial( FLinearColor color );
   // Series of points to visualize
-  void Visualize( Types type, FVector& v, float s, FLinearColor color );
-  void Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
+  void Visualize( UClass* shapeType, FVector& v, float s, FLinearColor color );
+  void Visualize( UClass* shapeType, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor );
   void ClearViz();
   
   AGameObject* MakeLine( FVector Start, FVector End, FLinearColor color );

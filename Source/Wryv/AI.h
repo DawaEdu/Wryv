@@ -1,10 +1,13 @@
 #pragma once
 
+#include <vector>
+using namespace std;
+
 #include "Wryv.h"
-#include "Types.h"
 #include "AI.generated.h"
 
 struct Team;
+class AResource;
 
 UENUM()
 enum AILevel
@@ -16,7 +19,7 @@ enum AILevel
 };
 
 // The artificial intelligence for the team. Parameters for the AI.
-USTRUCT() //( BlueprintType, Blueprintable, meta=(ShortTooltip="An AI profile") )
+USTRUCT()
 struct WRYV_API FAI
 {
   GENERATED_USTRUCT_BODY()
@@ -27,6 +30,8 @@ struct WRYV_API FAI
   // How much spare food do we want to keep in stock?
   // If food% is 40/60 (66%) then perhaps we want to build another farm.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) float foodFraction;
+  // The fraction at which the hp of a building needs repair.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) float repairFraction;
   // Attacks are periodic. We scout at intervals.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) float scoutInterval;
   float timeSinceLastScout;
@@ -36,7 +41,7 @@ struct WRYV_API FAI
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingStone;
 
   FAI();
-  vector<Types> GetNeededResourceTypes( Team& team );
+  vector< TSubclassOf<AResource> > GetNeededResourceTypes( Team& team );
   FString ToString();
 };
 

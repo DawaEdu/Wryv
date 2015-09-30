@@ -1,5 +1,6 @@
 #include "Wryv.h"
 #include "Buffs.h"
+#include "Item.h"
 
 void Buffs::Set( AGameObject* go )
 {
@@ -9,8 +10,8 @@ void Buffs::Set( AGameObject* go )
   
   for( int i = 0; i < go->BonusTraits.size(); i++ )
   {
-    Types buff = go->BonusTraits[i].traits.Type;
-    StackRight( new ImageWidget( "a buff", Game->GetPortrait( buff ) ), Top );
+    AItem* item = go->BonusTraits[i].Powerup;
+    StackRight( new ImageWidget( "a buff", item->BuffPortrait ), Top );
   }
 }
 

@@ -86,18 +86,19 @@ void AWryvGameMode::Tick(float DeltaSeconds)
   }
 }
 
-vector<AGameObject*> AWryvGameMode::GetObjectsOfType( Types type )
+vector<AGameObject*> AWryvGameMode::GetObjectsOfType( UClass* ClassType )
 {
   vector<AGameObject*> v;
 
   // Get all objects in the level of this type
-  ULevel* level = GetLevel();
-  TTransArray<AActor*> *actors = &level->Actors;
-  for( int i = 0; i < actors->Num(); i++ )
+  ULevel* level = GetLevel(); // The level containing the GameMode object contains the
+  // Actors in the level.
+  TTransArray<AActor*>& actors = level->Actors;
+  for( int i = 0; i < actors.Num(); i++ )
   {
-    AGameObject* g = Cast<AGameObject>( (*actors)[i] );
-    if( g->Stats.Type == type )
-      v.push_back( g );
+    AGameObject* go = Cast<AGameObject>( actors[i] );
+    if( go->IsA( ClassType ) )
+      v.push_back( go );
   }
 
   return v;

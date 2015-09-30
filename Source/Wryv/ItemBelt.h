@@ -7,5 +7,5 @@ class ItemBelt : public SlotPalette
 {
 public:
   ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
-  void Set( AUnit* go );
+  void Set( AGameObject* go );
 };

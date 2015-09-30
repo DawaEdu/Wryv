@@ -8,17 +8,15 @@ using namespace std;
 #include "AI.h"
 #include "GlobalFunctions.h"
 #include "Team.h"
-#include "Types.h"
-#include "UnitTypeUClassPair.h"
 #include "UnitsData.h"
 #include "WryvGameInstance.generated.h"
 
-class ATheHUD;
+class AFlyCam;
 class APlayerControl;
+class AShape;
+class ATheHUD;
 class AWryvGameMode;
 class AWryvGameState;
-class AFlyCam;
-class AShape;
 struct Team;
 
 UCLASS()
@@ -27,15 +25,15 @@ class WRYV_API UWryvGameInstance : public UGameInstance
 	GENERATED_BODY()
 public:
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  TArray< FUnitTypeUClassPair > UnitTypeUClasses;
   // These are the flags by CommandID=>Flag instance, for flag removal
   map< int64, AShape* > Flags;
   int64 NextObjectID;
-  // The unitsData object is used to look up a unit type's properties in advance.
-  // We use this for things like the CanAfford() function, so we can look-ahead the
+  // Cached copies of stock BaseUnitsData (FUnitsDataRow objects) for each UClass* type, loaded on-demand.
+  // Used for things like the CanAfford() function, so we can look-ahead the
   // cost of spawning an object before actually spawning it.
-  map<Types,FUnitsDataRow> unitsData;
-  bool UClassesLoaded;
+private:
+  map<UClass*,FUnitsDataRow> BaseUnitsData;
+public:
   ATheHUD *hud;
   APlayerControl *pc;
   AWryvGameMode *gm;
@@ -56,59 +54,63 @@ public:
   AGameObject* GetUnitById( int64 unitId );
   bool IsReady();
   virtual void Init() override;
-  void AssertIntegrity();
-  void LoadUClasses();
   virtual ULocalPlayer*	CreateInitialPlayer(FString& OutError) override;
   virtual void StartGameInstance() override;
 	virtual bool Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Out = *GLog) override;
-  
-  // Uses the UI-populated unit-types-UClasses array.
-  inline UClass* GetUClass( Types type ) {
-    int t = (int)type;
-    if( t < 0 || t >= UnitTypeUClasses.Num() ) {
-      error( FS( "Unit type %d / %s doesn't exist in UnitTypesUClasses mapping",
-        t, *GetTypesName( type ) ) );
-      t = NOTHING; // Return the nothing object instead
-    }
-    return UnitTypeUClasses[ t ].uClass;
-  }
   // T Must be a AGameObject class derivative.
-  template <typename T> T* Make( Types type, Team* team, FVector v ) {
+  template <typename T> T* Make( TSubclassOf<AGameObject> ClassType, Team* team, FVector v )
+  {
     if( !team )
     {
       LOG( "Make(): team was null!" );
       // select the neutral team.
       team = gm->neutralTeam;
     }
-    if( type < 0 || type >= Types::MAX )
+    if( !ClassType )
     {
-      error( FS( "Type %d is OOB defined types", (int)type ) );
-      type = NOTHING;
-    }
-    UClass *uClass = GetUClass( type );
-    if( !uClass )
-    {
-      error( FS( "Couldn't find UCLASS belonging to type %d", (int)type ) );
+      error( FS( "Make(): ClassType was NULL" ) );
       return 0;
     }
-
-    T* obj = GetWorld()->SpawnActor<T>( uClass, v, FRotator(0.f) );
+    T* obj = GetWorld()->SpawnActor<T>( ClassType, v, FRotator(0.f) );
     if( obj )
     {
       obj->SetTeam( team );
     }
     else
     {
-      error( FS( "Object of type %s could not be spawned (did it die on spawn by colliding with another actor?)", *GetTypesName( type ) ) );
+      error( FS( 
+        "Object of type %s could not be spawned (did it die on spawn by colliding with another actor?)",
+        *ClassType->GetName() ) );
     }
-    
     return obj;
   }
-  template <typename T> T* Make( Types type, Team* team ) {
-    return Make<T>( type, team, FVector( 0.f ) );
+  template <typename T> T* Make( TSubclassOf<AGameObject> ClassType, Team* team ) {
+    return Make<T>( ClassType, team, FVector( 0.f ) );
   }
-  FUnitsDataRow GetData( Types type ) { return unitsData[ type ]; }
-  UTexture* GetPortrait( Types type ) { return unitsData[ type ].Portrait; }
+  template <typename T> T* Make( TSubclassOf<AGameObject> ClassType ) {
+    return Make<T>( ClassType, 0, FVector( 0.f ) );
+  }
+public:
+  FUnitsDataRow GetData( UClass* ClassType )
+  {
+    if( !ClassType )
+    {
+      error( "Cannot GetData() for NULL ClassType" );
+    }
+    //else if( !in( BaseUnitsData, ClassType ) )
+    else if( BaseUnitsData.find( ClassType ) == BaseUnitsData.end() )
+    {
+      // Add it in
+      info( FS( "First load of UClass `%s`", *ClassType->GetName() ) );
+      AGameObject* object = Make<AGameObject>( ClassType );
+      if( object )  BaseUnitsData[ ClassType ] = object->BaseStats;
+      else  error( FS( "Couldn't make object ClassType `%s`", *ClassType->GetName() ) );
+    }
+    return BaseUnitsData[ ClassType ];
+  }
+  UTexture* GetPortrait( UClass* ClassType ) {
+    return GetData( ClassType ).Portrait;
+  }
   virtual void BeginDestroy() override;
 };
 

@@ -1,12 +1,16 @@
 #include "Wryv.h"
 
+#include "Barracks.h"
+#include "Building.h"
 #include "CombatUnit.h"
-#include "GameObject.h"
+#include "Farm.h"
 #include "FlyCam.h"
+#include "GameObject.h"
 #include "GlobalFunctions.h"
 #include "Peasant.h"
 #include "Resource.h"
 #include "Team.h"
+#include "Townhall.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
@@ -40,7 +44,6 @@ void Team::Defaults()
   Stone = 100;
   DamageRepairThreshold = 2.f/3.f;
   alliance = Neutral;
-  researchLevelMeleeWeapons = researchLevelRangedWeapons = researchLevelArmor = 0;
   Color = FLinearColor::Blue;
 }
 
@@ -96,41 +99,46 @@ void Team::OnMapLoaded()
     units[i]->OnMapLoaded();
 }
 
-bool Team::Has( Types objectType )
+bool Team::Has( UClass* ClassType )
 {
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->Stats.Type == objectType )
+    if( units[i]->IsA( ClassType ) )
      return 1;
   return 0;
 }
 
-bool Team::CanAfford( Types type )
+bool Team::CanAfford( UClass* ClassType )
 {
-  FUnitsDataRow ud = Game->unitsData[ type ];
+  FUnitsDataRow ud = Game->GetData( ClassType );
   return Gold >= ud.GoldCost && Lumber >= ud.LumberCost && Stone >= ud.StoneCost;
 }
 
-bool Team::CanBuild( Types buildingType )
+bool Team::CanBuild( UClass* ClassType )
 {
   // Requirements for building an object of a certain type.
   // Must have an object of required types to build, as well as afford.
-  for( int i = 0; i < Game->unitsData[ buildingType ].Requirements.Num(); i++ )
-    if( !Has( buildingType ) )
+  TArray< TSubclassOf< ABuilding > > requirements = Game->GetData( ClassType ).Requirements;
+  for( int i = 0; i < requirements.Num(); i++ )
+  {
+    if( !Has( requirements[i] ) )
       return 0;
-  return 1; // Had all required buildings.
+  }
+  return 1; // Had all requirements.
 }
 
-bool Team::Spend( Types type )
+bool Team::Spend( UClass* ClassType )
 {
-  FUnitsDataRow ud = Game->unitsData[ type ];
-  if( CanAfford( type ) )
+  if( !CanAfford( ClassType ) )
   {
-    Gold   -= ud.GoldCost;
-    Lumber -= ud.LumberCost;
-    Stone  -= ud.StoneCost;
-    return 1;
+    warning( FS( "Team %s cannot afford a %s", *Name, *ClassType->GetName() ) );
+    return 0;
   }
-  return 0;
+
+  FUnitsDataRow ud = Game->GetData( ClassType );
+  Gold   -= ud.GoldCost;
+  Lumber -= ud.LumberCost;
+  Stone  -= ud.StoneCost;
+  return 1;
 }
 
 // Usage of food by units in the game.
@@ -153,19 +161,19 @@ int Team::computeFoodSupply()
   return foodSupply;
 }
 
-int Team::GetNumberOf( Types type )
+int Team::GetNumberOf( UClass* ClassType )
 {
   int count = 0;
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->Stats.Type == type )
+    if( units[i]->IsA( ClassType ) )
       count++;
   return count;
 }
 
-AGameObject* Team::GetFirstOfType( Types type )
+AGameObject* Team::GetFirstOfType( UClass* ClassType )
 {
   for( int i = 0; i < units.size(); i++ )
-    if( units[i]->Stats.Type == type )
+    if( units[i]->IsA( ClassType ) )
       return units[i];
   return 0; // not found
 }
@@ -175,7 +183,7 @@ FVector Team::GetTownCentroid()
 {
   FVector v;
   for( int i = 0; i < units.size(); i++ )
-    if( IsBuilding( units[i]->Stats.Type ) )
+    if( units[i]->IsA( ATownhall::StaticClass() ) )
       v += units[i]->Pos;
   return v;
 }
@@ -186,7 +194,7 @@ bool Team::isNeedsFood()
   return ratio > ai.foodFraction;
 }
 
-vector<Types> Team::GetNeededResourceTypes()
+vector< TSubclassOf<AResource> > Team::GetNeededResourceTypes()
 {
   return ai.GetNeededResourceTypes( *this );
 }
@@ -216,10 +224,10 @@ void Team::runAI( float t )
   {
     if( peasant->Idling() )
     {
-      vector<Types> resType = GetNeededResourceTypes();
+      vector< TSubclassOf<AResource> > resType = GetNeededResourceTypes();
       FString msg = FS( "%s: Needed resource types: ", *peasant->GetName() );
-      for( Types type : resType )
-        msg += GetTypesName( type );
+      for( TSubclassOf<AResource> type : resType )
+        msg += type->GetName();
       info( msg );
       AResource *res = peasant->FindAndTargetNewResource( peasant->Pos, resType, peasant->Stats.SightRange );
       if( res )
@@ -278,16 +286,16 @@ void Team::runAI( float t )
 
   // Construct needed buildings
   APeasant* peasant = GetNextAvailablePeasant();
-  if( GetNumberOf( Types::BLDGTOWNHALL ) < 1   &&   CanAfford( Types::BLDGTOWNHALL ) )
+  if( !Has( ATownhall::StaticClass() )   &&   CanAfford( ATownhall::StaticClass() ) )
   {
-    //peasant->Build( Types::BLDGTOWNHALL );
+    //peasant->Build( ATownhall::StaticClass() );
   }
 
   // Do we need a farm?
   // First check to see if we need food. If we do need food,
   // and we have the resources to construct a Farm, then make one.
   // 1. Evaluate food requirements for team,
-  else if( isNeedsFood()   &&   CanAfford( Types::BLDGFARM ) )
+  else if( isNeedsFood()   &&   CanAfford( AFarm::StaticClass() ) )
   {
     //LOG( "Team %s is building a farm", *team.Name );
     // request the team build a farm.
@@ -295,7 +303,7 @@ void Team::runAI( float t )
     //peasant->Build( Types::BLDGFARM );
   }
   
-  else if( GetNumberOf( Types::BLDGBARRACKS )   &&   CanAfford( Types::BLDGBARRACKS ) )
+  else if( !Has( ABarracks::StaticClass() )   &&   CanAfford( ABarracks::StaticClass() ) )
   {
     //peasant->Build( Types::BLDGBARRACKS );
   }

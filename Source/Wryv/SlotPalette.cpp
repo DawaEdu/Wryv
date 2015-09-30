@@ -1,6 +1,8 @@
 #include "Wryv.h"
-#include "SlotPalette.h"
+
+#include "Action.h"
 #include "Clock.h"
+#include "SlotPalette.h"
 #include "WryvGameInstance.h"
 
 FLinearColor SlotPalette::DefaultColor( 0.0, 0.0, 0.0, 0.15 );
@@ -126,34 +128,5 @@ vector<Clock*> SlotPalette::SetNumSlots( int rows, int cols )
   return slots;
 }
 
-vector<Clock*> SlotPalette::Populate( vector< CooldownCounter > elts )
-{
-  vector<Clock*> clocks;
-  for( int i = 0; i < elts.size()   && 
-                  i < GetNumSlots(); i++ )
-  {
-    Types e = elts[i].Type;
-    // Construct buttons that run abilities of the object.
-    UTexture* tex = Game->GetPortrait( e );
-    SetSlotTexture( i, tex );
-    Clock* clock = GetSlot( i );
-    clock->Set( elts[i].Fraction() );
-    clock->Show();
-    clocks.push_back( clock );
-  }
-
-  // Turn off the rest of the slots
-  //for( int i = elts.Num(); i < GetNumSlots(); i++ )
-  //{
-  //  // Turn off the function object, just in case
-  //  GetSlot(i)->OnMouseDownLeft = [i](FVector2D mouse) -> EventCode {
-  //    info( FS( "Slot %d not used", i ) );
-  //    return NotConsumed;
-  //  };
-  //  GetSlot(i)->Hide();
-  //}
-  
-  return clocks;
-}
 
 

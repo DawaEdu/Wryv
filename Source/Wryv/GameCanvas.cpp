@@ -53,7 +53,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
       {
         // Build a building @ location. The peasant will pick up this command next frame.
         Command cmd( Command::CommandType::CreateBuilding,
-          peasant->ID, ghost->Stats.Type, ghost->Pos );
+          peasant->ID, peasant->LastBuildingID, ghost->Pos );
         Game->EnqueueCommand( cmd );
         Game->flycam->ClearGhost();
       }

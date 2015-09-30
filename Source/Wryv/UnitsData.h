@@ -1,23 +1,30 @@
 #pragma once
 
 #include "Wryv.h"
-#include "Types.h"
 #include "UnitsData.generated.h"
+
+class ABuilding;
+class AExplosion;
+class AGameObject;
+class AItem;
+class AProjectile;
+class AUnit;
+
+class UAction;
+class UBuildAction;
+class UItemAction;
+class UResearch;
+class UTrainingAction;
 
 USTRUCT()
 struct WRYV_API FUnitsDataRow : public FTableRowBase
 {
   GENERATED_USTRUCT_BODY()
 public:
-  // The TYPE of the object. Each object type has an entry in the Types enum.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte<Types> Type;
-  // GameObject or derivative UCLASS
-  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="GameObject"))
-  //FStringClassReference BlueprintClass;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Name;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) UTexture* Portrait;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FString Description;
-
+  
   // CreateBuilding-cost properties
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 GoldCost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 LumberCost;
@@ -49,17 +56,14 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SpeedMax;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float SightRange;
   
-  // 
   // Weapon properties: If attacks send a projectile, set object here.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > ReleasedProjectileWeapon;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TSubclassOf< AProjectile > ReleasedProjectileWeapon;
   // GameObject or derivative UCLASS
-  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="Projectile"))
-  //FStringClassReference ProjectileBlueprintClass;
   
   // The object that gets spawned when the unit explodes (eg a building)
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TEnumAsByte< Types > OnExploded;
-  //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData, meta=(MetaClass="Explosion"))
-  //FStringClassReference ExplosionBlueprintClass;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TSubclassOf< AExplosion > OnExploded;
   
   // If this is a ground attack spell/property, then it doesn't require a gameobject target
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool AttacksGround;
@@ -90,84 +94,115 @@ public:
   // The shortcut key to activate this thing. FKey: autopopulates dialog with available keys.
   // The UnitsData of all capabilities of the SelectedUnit in the UI's shortcut keys are activated.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) FKey ShortcutKey;
-  // Required buildings to have built or possess to be able to build this object
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Requirements;
-  // The abilities this unit has, including ability to build, etc.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) TArray< TEnumAsByte< Types > > Abilities;
-  // The blueprint from which class instance came from
+
+  // Construction requirements: things to have built or possess to be able to build this object
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< ABuilding > > Requirements;
   
+  // The abilities this unit has, including ability to build, etc.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UAction > > Abilities;
+  // Buildings we can build using this unit
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UBuildAction > > Builds;
+  // List of types this building can train.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UTrainingAction > > Trains;
+  // Researches that this Building can do
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UResearch > > Researches;
+  // The items the unit starts carrying
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UItemAction > > StartingItems;
+
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool Invulnerability;
   
   FUnitsDataRow()
   {
-    Type = NOTHING;
+    Name = "UNNAMED UNIT";
     Portrait = 0;
-    Description = "Description";
+    Description = "NO DESCRIPTION";
+    GoldCost = LumberCost = StoneCost = 0;
+    ManaCost = 0;
     Quantity = 1;
-    GoldCost = LumberCost = StoneCost = ManaCost = 0;
-    AttacksGround = 0;
-    MaxTravelHeight = 100.f;
-    AOERadius = 0.f;
-    RepairHPFractionCost = 0.f;
-    RepairRate = 0.f;
-    TimeLength = 10.f;
-    SpeedMax = 100.f;
-
     HpMax = 100.f;
-    Armor = 1.f;
-    SightRange = 10000.f;
-    BaseAttackDamage = 10.f;
-    BonusAttackDamage = 5.f;
+    Armor = 0.f;
+    RepairHPFractionCost = 1.f;
+    RepairRate = 1.f;
+    TimeLength = 10.f;
+    GatheringRate = 1.f;
+    SpeedMax = 100.f;
+    SightRange = 250.f;
+    
+    AttacksGround = 0;
+    MaxTravelHeight = 150.f;
+    AOERadius = 100.f;
+    BaseAttackDamage = 2;
+    BonusAttackDamage = 5;
     AttackSpeedMultiplier = 1.f;
-    AttackRange = 100.f;
-    PickupRange = 100.f;
-    FollowFallbackDistance = 50.f;
-    TeamId = 0;
+    MissPercent = 0.2f;
+    AttackRange = 50.f;
+    FollowFallbackDistance = 100.f;
+    PickupRange = 50.f;
+    TeamId = 1;
     FoodProvided = 0;
     FoodUsed = 1;
     Invulnerability = 0;
   }
 
-  FUnitsDataRow operator+=( const FUnitsDataRow& row )
+  inline bool Add( bool a, bool b )
   {
-    FUnitsDataRow r;
+    int ia( (int)a ), ib( (int)b );
+    ia += ib;
+    return static_cast<bool>( !! ia ); // !! required for bool conversion without the warning
+  }
+  FUnitsDataRow operator+=( FUnitsDataRow row )
+  {
+    FUnitsDataRow r = *this;
+    r.Name += row.Name;
+    //r.Portrait += row.Portrait;
+    r.Description += row.Description;
     r.GoldCost += row.GoldCost;
     r.LumberCost += row.LumberCost;
     r.StoneCost += row.StoneCost;
-    r.TimeLength += row.TimeLength;
-    r.SpeedMax += row.SpeedMax;
+    r.ManaCost += row.ManaCost;
+    r.Quantity += row.Quantity;
     r.HpMax += row.HpMax;
     r.Armor += row.Armor;
+    r.RepairHPFractionCost += row.RepairHPFractionCost;
+    r.RepairRate += row.RepairRate;
+    r.TimeLength += row.TimeLength;
+    r.GatheringRate += row.GatheringRate;
+    r.SpeedMax += row.SpeedMax;
     r.SightRange += row.SightRange;
+    
+    r.AttacksGround = Add( r.AttacksGround, row.AttacksGround );
+    r.MaxTravelHeight += row.MaxTravelHeight;
+    r.AOERadius += row.AOERadius;
     r.BaseAttackDamage += row.BaseAttackDamage;
     r.BonusAttackDamage += row.BonusAttackDamage;
+    r.AttackSpeedMultiplier += row.AttackSpeedMultiplier;
+    r.MissPercent += row.MissPercent;
     r.AttackRange += row.AttackRange;
+    r.FollowFallbackDistance += row.FollowFallbackDistance;
+    r.PickupRange += row.PickupRange;
+    r.TeamId += row.TeamId;
+    r.FoodProvided += row.FoodProvided;
+    r.FoodUsed += row.FoodUsed;
+    r.Invulnerability = Add( r.Invulnerability, row.Invulnerability );
+
     return r;
-  }
-
-  // Check that all Types-typed objects are within range
-  bool Integrity()
-  {
-    bool valid = IsValidType( Type.GetValue() )  &&  IsProjectile( ReleasedProjectileWeapon.GetValue() )  &&
-             IsExplosion( OnExploded.GetValue() );
-    for( int i = 0; i < Requirements.Num(); i++ )
-      valid &= IsValidType( Requirements[i].GetValue() );
-    for( int i = 0; i < Abilities.Num(); i++ )
-      valid &= IsValidType( Abilities[i].GetValue() );
-    return valid;
-  }
-
-  void Print()
-  {
   }
 };
 
 struct PowerUpTimeOut
 {
-  FUnitsDataRow traits;
+  AItem* Powerup;
   float timeRemaining;
-  PowerUpTimeOut():timeRemaining(0.f){}
-  PowerUpTimeOut( FUnitsDataRow &iTraits, float timeLength ) :
-    traits( iTraits ), timeRemaining( timeLength ) { }
+  float timeInterval;  //application interval between Use() calls
+  PowerUpTimeOut():Powerup(0),timeRemaining(0.f),timeInterval(0.f){}
+  PowerUpTimeOut( AItem* item, float timeLength, float interval ) :
+    Powerup( item ), timeRemaining( timeLength ), timeInterval( interval ) { }
 };
+
 

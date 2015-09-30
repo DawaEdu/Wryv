@@ -1,4 +1,6 @@
 #include "Wryv.h"
+
+#include "BuildAction.h"
 #include "BuildQueue.h"
 #include "Clock.h"
 
@@ -30,14 +32,14 @@ void BuildQueue::Set( AGameObject* go )
   Hide(); // Assume hidden
   if( !go )  return;
 
-  if( go->BuildQueueCounters.size() )
+  if( go->CountersBuildQueue.size() )
     Show(); // There is an object to show
   // Things that are spawning each have a clock.
-  for( int i = 0; i < go->BuildQueueCounters.size(); i++ )
+  for( int i = 0; i < go->CountersBuildQueue.size(); i++ )
   {
-    CooldownCounter counter = go->BuildQueueCounters[i];
+    UBuildInProgress* buildAction = go->CountersBuildQueue[i];
     Clock* clock = new Clock( FS( "Cooldown %d", i ),
-      EntrySize, Game->GetPortrait( counter.Type ), ClockColor );
+      EntrySize, buildAction->Icon, ClockColor );
     StackRight( clock, VCenter );
     clocks.push_back( clock );
     
@@ -45,7 +47,7 @@ void BuildQueue::Set( AGameObject* go )
     clock->OnMouseDownLeft = [this,go,clock,i](FVector2D mouse) -> EventCode
     {
       LOG( "Cancelled item [%d] belonging to %s", i, *go->Stats.Name );
-      removeIndex( go->BuildQueueCounters, i );
+      removeIndex( go->CountersBuildQueue, i );
       needsRefresh = 1; // reset the buildQueue's contents.
       return Consumed;
     };
@@ -67,7 +69,7 @@ void BuildQueue::Move( float t )
   if( Selected )
   {
     // refresh the counts
-    for( int i = 0; i < Selected->BuildQueueCounters.size(); i++ )
+    for( int i = 0; i < Selected->CountersBuildQueue.size(); i++ )
     {
       if( i >= clocks.size() )
       {
@@ -77,7 +79,7 @@ void BuildQueue::Move( float t )
       }
       else
       {
-        clocks[i]->Set( Selected->BuildQueueCounters[i].Fraction() );
+        clocks[i]->Set( Selected->CountersBuildQueue[i]->cooldown.Fraction() );
       }
     }
   }

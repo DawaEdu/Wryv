@@ -52,6 +52,8 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NoTextureTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TSubclassOf<AWidget3D> SelectorClass;
+  
   UPROPERTY() TArray<UMaterialInstanceDynamic*> MaterialInstances; // Referenced collection of material instances.
   // Required to prevent auto-cleanup of instanced materials
   // The blueprint for the fog of war instance to use.
@@ -93,7 +95,6 @@ public:
   HotSpot* MouseMoved( FVector2D mouse );
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
-  vector<AGameObject*> Filter( vector<AGameObject*> objects, set<Types> typesToRemove );
   void Select( vector<AGameObject*> objects );
   void Unselect( vector<AGameObject*> objects );
   void Status( FString msg );

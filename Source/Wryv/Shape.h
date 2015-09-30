@@ -1,7 +1,7 @@
 #pragma once
 
-#include "GameObject.h"
 #include "GameFramework/Actor.h"
+#include "GameObject.h"
 #include "Shape.generated.h"
 
 // Checkers & UI objects (gen. unintersectable)

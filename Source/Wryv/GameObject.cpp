@@ -5,6 +5,7 @@
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "GameObject.h"
+#include "Item.h"
 #include "TheHUD.h"
 #include "Pathfinder.h"
 #include "Peasant.h"
@@ -13,6 +14,12 @@
 #include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
+
+#include "Action.h"
+#include "BuildAction.h"
+#include "BuildInProgress.h"
+#include "ItemAction.h"
+#include "TrainingAction.h"
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -37,6 +44,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   vizSize = 10.f;
   IsReadyToRunNextCommand = 0;
   AttackReady = 0;
+  HoldingGround = 0;
 
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
@@ -68,8 +76,60 @@ void AGameObject::PostInitializeComponents()
   Hp = Stats.HpMax;
   Speed = 0.f;
 
-  Recovering = !isBuilding();// Buildings need an attending peasant to repair
-  // Live units automatically regen
+  Recovering = 1;
+
+  // Create instances of each class type
+  for( int i = 0; i < Stats.Abilities.Num(); i++ )
+  {
+    if( Stats.Abilities[i] )
+    {
+      UAction* action = NewObject<UAction>( this, Stats.Abilities[i] );
+      CountersAbility.push_back( action );
+    }
+  }
+
+  for( int i = 0; i < Stats.Builds.Num(); i++ )
+  {
+    if( Stats.Builds[i] )
+    {
+      UBuildAction* action = NewObject<UBuildAction>( this, Stats.Builds[i] );
+      CountersBuildings.push_back( action );
+    }
+  }
+  
+  for( int i = 0; i < Stats.Trains.Num(); i++ )
+  {
+    if( Stats.Trains[i] )
+    {
+      UTrainingAction* action = NewObject<UTrainingAction>( this, Stats.Trains[i] );
+      CountersTraining.push_back( action );
+    }
+  }
+  
+  for( int i = 0; i < Stats.Researches.Num(); i++ )
+  {
+    if( Stats.Researches[i] )
+    {
+      UResearch* action = NewObject<UResearch>( this, Stats.Researches[i] );
+      CountersResearch.push_back( action );
+    }
+  }
+  
+  for( int i = 0; i < Stats.StartingItems.Num(); i++ )
+  {
+    if( Stats.StartingItems[i] )
+    {
+      UItemAction* action = NewObject<UItemAction>( this, Stats.StartingItems[i] );
+      CountersItems.push_back( action );
+    }
+  }
+  
+  
+  //ConstructCooldowns< ABuilding, UAction >( Stats.Builds, CountersBuildQueue );
+  //ConstructCooldowns< AUnit,     UAction >( Stats.Trains, CountersTraining );
+  //ConstructCooldowns< UResearch, UAction >( Stats.Researches, CountersResearch );
+  //ConstructCooldowns< UAction,   UAction >( Stats.Items, CountersItems );
+
 }
 
 // Called when the game starts or when spawned
@@ -80,10 +140,6 @@ void AGameObject::BeginPlay()
   //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
   Team* newTeam = Game->gm->teams[ BaseStats.TeamId ];
   SetTeam( newTeam );
-
-  // Instantiate abilities
-  for( int i = 0; i < Stats.Abilities.Num(); i++ )
-    AbilityCooldowns.push_back( CooldownCounter( Stats.Abilities[i] ) );
 
   ID = Game->NextId();
 }
@@ -269,7 +325,8 @@ void AGameObject::Shoot()
     }
   }
 
-  LOG( "%s launching a projectile of type %d", *Stats.Name, (int)Stats.ReleasedProjectileWeapon.GetValue() );
+  LOG( "%s launching a projectile of type %s",
+    *Stats.Name, *Stats.ReleasedProjectileWeapon->GetName() );
   AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, team, launchPos );
   if( !projectile )
   {
@@ -289,44 +346,19 @@ void AGameObject::Shoot()
 void AGameObject::ReceiveAttack( AGameObject* from )
 {
   float damage = from->DamageRoll() - Stats.Armor;
-  info( FS( "%s melee attacking %s for %f damage", *from->Stats.Name, *Stats.Name, damage ) );
+  info( FS( "%s melee attacking %s for %f damage",
+    *from->Stats.Name, *Stats.Name, damage ) );
   Hp -= damage;
   if( Hp < 0 )
     Hp = 0.f;
 }
 
-void AGameObject::ApplyEffect( FUnitsDataRow item )
-{
-  // 1-frame application of effect.
-  Hp += item.HpMax; // This field contains hp boosts.
-}
-
-// Function adds a buff of type for specified time interval
-void AGameObject::AddBuff( Types item )
-{
-  FUnitsDataRow itemData = Game->GetData( item );
-
-  // TimeLength, dataSet
-  LOG( "Applying %s for %f seconds", *itemData.Name, itemData.TimeLength );
-
-  // Don't do anything for the Nothing item
-  if( IsItem( itemData.Type ) )
-  {
-    // If there's no timeout, (0.0) then it applies for one frame only (hp boost +250 hp eg
-    // applies next frame).
-    BonusTraits.push_back( PowerUpTimeOut( itemData, itemData.TimeLength ) );
-  }
-  else
-  {
-    LOG( "%s NOT AN ITEM", *itemData.Name );
-  }
-}
-
 void AGameObject::UpdateStats( float t )
 {
+  // Refreshes Stats completely
   Stats = BaseStats;
   for( int i = 0; i < BonusTraits.size(); i++ )
-    Stats += BonusTraits[i].traits;
+    Stats += BonusTraits[i].Powerup->Stats;
 
   // Recover HP at stock recovery rate
   if( Recovering ) {
@@ -334,76 +366,93 @@ void AGameObject::UpdateStats( float t )
     Clamp( Hp, 0.f, Stats.HpMax );
   }
 
-  // Check buffs
-  for( int i = 0; i < BonusTraits.size(); i++ )
-  {
-    // Apply any per-frame effects to the unit in bonus traits
-    ApplyEffect( BonusTraits[i].traits );
-  }
-  
   // Tick all the traits
   for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
     BonusTraits[i].timeRemaining -= t;
     if( BonusTraits[i].timeRemaining <= 0 )
       BonusTraits.erase( BonusTraits.begin() + i );
   }
-
-  // tick builds, and remove finished counters
-  for( int i = BuildQueueCounters.size() - 1; i >= 0; i-- )
-  {
-    BuildQueueCounters[i].Time += t;
-    // update the viz of the build queue counter, ith clock
-    if( BuildQueueCounters[i].Done() )
-    {
-      // Remove it and consider ith building complete. Place @ unoccupied position around building.
-      FVector buildPos = Pos + GetActorForwardVector() * Radius();
-      
-      AGameObject* newUnit = Game->Make<AGameObject>( BuildQueueCounters[i].Type, team, buildPos );
-
-      // Remove counter & refresh the build queue.
-      removeIndex( BuildQueueCounters, i );
-      Game->hud->ui->gameChrome->buildQueue->Refresh();
-    }
-  }
 }
 
 bool AGameObject::UseAbility( int index )
-{ 
-  if( index < 0 || index > Stats.Abilities.Num() )
+{
+  if( index < 0 || index > CountersAbility.size() )
   {
-    error( FS( "%s cannot use ability %d, OOB", *Stats.Name, index ) );
+    error( FS( "%s cannot use ability %d, OOB",
+      *Stats.Name, index ) );
     return 0;
   }
 
-  Types type = Stats.Abilities[index];
-  if( IsBuilding( type ) )
+  if( !CountersAbility[index]->IsReady() )
   {
-    info( FS( "Building a %s", *GetTypesName( type ) ));
-    // Set placement object with instance of type
-    //Game->flycam->ghost = Game->Make< ABuilding >( type, team ); // Now set where Icon is clicked.
+    info( FS( "%s: Ability %s was not ready",
+      *Stats.Name, *CountersAbility[index]->Text ) );
+    return 0;
   }
-  else if( IsAction( type ) )
-  {
-    FUnitsDataRow action = Game->GetData( type );
-    info( FS( "%s used action %s", *Stats.Name, *action.Name ) );
-  }
-  else if( IsUnit( type ) )
-  {
-    // makes unit of type
-    info( FS( "Making a unit of type %s", *GetTypesName( type ) ));
-    Game->EnqueueCommand( Command( Command::CreateUnit, ID, type ) ); //Net command
-    //Make( type ); // C++ command
-  }
+  
+  CountersAbility[index]->Go( this );
   return 1;
 }
 
-bool AGameObject::Make( Types type )
+bool AGameObject::UseBuild( int index )
 {
-  // Start building.
-  BuildQueueCounters.push_back( CooldownCounter( type ) );
+  if( index < 0 || index >= Stats.Builds.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
 
-  Game->hud->ui->gameChrome->buildQueue->Refresh(); // enqueue a refresh of the build queue
+  // Construct an instance of 
+  UBuildAction* buildingAction = NewObject<UBuildAction>(
+    this, Stats.Builds[index] );
+  buildingAction->Go( this );
+  return 1;
+}
 
+bool AGameObject::UseTrain( int index )
+{
+  if( index < 0 || index >= Stats.Trains.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  UTrainingAction* trainingUnit = NewObject<UTrainingAction>(
+    this, Stats.Trains[index] );
+  CountersTraining.push_back( trainingUnit );
+  return 1;
+}
+
+bool AGameObject::UseResearch( int index )
+{
+  if( index < 0 || index >= Stats.Researches.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  UResearch* researchUnit = NewObject<UResearch>(
+    this, Stats.Researches[index] );
+  CountersResearch.push_back( researchUnit );
+  return 1;
+}
+
+bool AGameObject::UseItem( int index )
+{
+  // Item instances already populate the CounterItems
+  if( index < 0 || index >= CountersItems.size() )
+  {
+    error( FS( "%s cannot consume item %d / %d, OOR",
+      *Stats.Name, index, CountersItems.size() ) );
+    return 0;
+  }
+
+  // use the item. qty goes down by 1
+  // we don't affect the UI here, only
+  CountersItems[index]->Quantity--;
+  if( !CountersItems[index]->Quantity ) {
+    removeIndex( CountersItems, index );
+  }
   return 1;
 }
 
@@ -646,7 +695,7 @@ void AGameObject::DisplayWaypoints()
     else
     {
       // Stick a flag in
-      AShape *flag = Game->Make<AShape>( Types::UIFLAGWAYPOINT, team, commands[i].pos );
+      AShape *flag = Game->Make<AShape>( Game->flycam->WaypointFlagClass, team, commands[i].pos );
       Game->Flags[ commands[i].CommandID ] = flag;
       flag->text = FS( "%d", i+1 );
     }
@@ -670,26 +719,40 @@ void AGameObject::exec( const Command& cmd )
         // builds the assigned building using peasant (id)
         if( APeasant* peasant = Cast<APeasant>( this ) )
         {
+          UBuildAction* buildAction = peasant->CountersBuildings[ cmd.targetObjectId ];
           info( FS( "The unit [%s] is building a %s @ %f %f %f",
-            *peasant->GetName(), *GetTypesName( (Types)cmd.targetObjectId ),
+            *peasant->GetName(), *buildAction->BuildingType->GetName(),
             cmd.pos.X,cmd.pos.Y,cmd.pos.Z ) );
-          peasant->Build( (Types)cmd.targetObjectId, cmd.pos );
+          
+          peasant->Build( buildAction, cmd.pos );
         }
         else
         {
-          error( FS( "The unit [%s] asked to build %s was not a peasant",
-            *GetName(), *GetTypesName( (Types)cmd.targetObjectId ) ) );
+          error( FS( "The unit [%s] asked to build entry [%d] was not a peasant",
+            *GetName(), cmd.targetObjectId ) );
         }
       }
       break;
     case Command::CommandType::CreateUnit:
       {
-        Make( (Types)cmd.targetObjectId ); // C++ command
+        UseBuild( cmd.targetObjectId ); // C++ command
       }
       break;
     case Command::CommandType::GoToGroundPosition:
       {
         GoToGroundPosition( cmd.pos );
+      }
+      break;
+    case Command::CommandType::Stop:
+      {
+        Stop();
+      }
+      break;
+    case Command::CommandType::HoldGround:
+      {
+        Stop();
+        AttackReady = 1;   // Ready to attack any in-range units who are NOT AttackTarget.
+        HoldingGround = 1; // Do not run out to engage nearby units, unless in range.
       }
       break;
     case Command::CommandType::Target:
@@ -937,7 +1000,6 @@ void AGameObject::SetDestination( FVector d )
     {
       // Pop the 2nd from the back point, viz all back 3 pts.
       vector<FVector>::iterator it = --(--(Waypoints.end()));
-      //Game->flycam->Visualize( Types::UNITSPHERE, *it, 64.f, FLinearColor::Black );
       Waypoints.erase( it );
     }
   }
@@ -1070,21 +1132,21 @@ map<float, AGameObject*> AGameObject::FindEnemyUnitsInSightRange()
   return distances;
 }
 
-AGameObject* AGameObject::GetClosestObjectOfType( Types type )
+AGameObject* AGameObject::GetClosestObjectOfType( TSubclassOf<AGameObject> ClassType )
 {
   // You can only select within range of unit
   // Go thru all objects on team
   map< float, AGameObject* > m;
   for( AGameObject* go : team->units )
   {
-    if( go->Stats.Type != type )  skip;
+    if( go->IsA( ClassType ) )  skip;
     float d = outerDistance( go );
     m[d] = go;
   }
   if( m.size() )
     return m.begin()->second;
 
-  info( FS( "Could not find an object of type %s", *GetTypesName( type ) ) );
+  info( FS( "Could not find an object of type %s", *ClassType->GetName() ) );
   return 0; // NO UNITS In sight
 }
 
@@ -1096,7 +1158,7 @@ void AGameObject::Flags( vector<FVector> points, FLinearColor color )
 
   for( int i = 0; i < points.size(); i++ )
   {
-    AShape *flag = Game->Make<AShape>( Types::UIFLAGWAYPOINT, team, points[i] );
+    AShape *flag = Game->Make<AShape>( Game->flycam->WaypointFlagClass, team, points[i] );
     flag->SetColor( color );
     flag->text = FS( "%d", i+1 );
     NavFlags.push_back( flag );
@@ -1105,7 +1167,7 @@ void AGameObject::Flags( vector<FVector> points, FLinearColor color )
 
 void AGameObject::Viz( FVector pt )
 {
-  Game->flycam->Visualize( Types::SHAPESPHERE, pt, 10.f, vizColor );
+  Game->flycam->Visualize( Game->flycam->VizClass, pt, 10.f, vizColor );
 }
 
 void AGameObject::OnSelected()

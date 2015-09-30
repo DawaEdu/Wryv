@@ -2,8 +2,11 @@
 #include "Wryv.h"
 
 #include "AI.h"
+#include "Goldmine.h"
 #include "Team.h"
-#include "Types.h"
+#include "Resource.h"
+#include "Stone.h"
+#include "Tree.h"
 
 FAI::FAI()
 {
@@ -18,9 +21,9 @@ FAI::FAI()
   StartingStone = 50;
 }
 
-vector<Types> FAI::GetNeededResourceTypes( Team& team )
+vector< TSubclassOf<AResource> > FAI::GetNeededResourceTypes( Team& team )
 {
-  vector<Types> types;
+  vector< TSubclassOf<AResource> > types;
 
   // recommend to get the resource type of lowest % of starting amounts.
   float goldP = (float)team.Gold / StartingGold;
@@ -31,29 +34,24 @@ vector<Types> FAI::GetNeededResourceTypes( Team& team )
   if( goldP < lumberP   &&   goldP < stoneP )
   {
     if( lumberP < stoneP )
-      types = { RESGOLD, RESLUMBER, RESSTONE };
+      types = { AGoldmine::StaticClass(), ATree::StaticClass(), AStone::StaticClass() };
     else
-      types = { RESGOLD, RESSTONE, RESLUMBER };
+      types = { AGoldmine::StaticClass(), AStone::StaticClass(), ATree::StaticClass() };
   }
   else if( lumberP < goldP   &&   lumberP < stoneP )
   {
     if( goldP < stoneP )
-      types = { RESLUMBER, RESGOLD, RESSTONE };
+      types = { ATree::StaticClass(), AGoldmine::StaticClass(), AStone::StaticClass() };
     else
-      types = { RESLUMBER, RESSTONE, RESGOLD };
+      types = { ATree::StaticClass(), AStone::StaticClass(), AGoldmine::StaticClass() };
   }
   else // stone is scarecest
   {
     if( lumberP < goldP )
-      types = { RESSTONE, RESLUMBER, RESGOLD };
+      types = { AStone::StaticClass(), ATree::StaticClass(), AGoldmine::StaticClass() };
     else
-      types = { RESSTONE, RESGOLD, RESLUMBER }; // EQUAL
+      types = { AStone::StaticClass(), AGoldmine::StaticClass(), ATree::StaticClass() }; // EQUAL
   }
-
-
-  info( "Types needed are " );
-  for( Types t : types )
-    info( FS( "  * %s", *GetTypesName( t ) ) );
 
   return types;
 }

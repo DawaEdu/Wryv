@@ -50,8 +50,12 @@ FString Command::ToString() const
 
   FString str = FS( "[%d] [CMDID=%d] Type=`%s` srcObjectId=%d ", 
     FrameID, CommandID, *cmds[ commandType ], srcObjectId );
-  if( commandType == CommandType::CreateBuilding )
-    str += FS( "%s ", *GetTypesName( (Types)targetObjectId ) );
+  // For buildings & abilities, the slot # is indicated by targetObjectId
+  // (instead of the actual building or ability
+  if( commandType == CommandType::CreateBuilding ||
+      commandType == CommandType::UseAbility ) {
+    str += FS( "SLOTENTRY=%d ", targetObjectId );
+  }
   str += FS( "(%f, %f, %f)", pos.X, pos.Y, pos.Z );
   return str;
 }

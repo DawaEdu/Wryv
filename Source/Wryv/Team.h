@@ -5,17 +5,31 @@
 using namespace std;
 
 #include "AI.h"
-#include "Types.h"
 #include "UnitsData.h"
 
-class AGameObject;
-class AUnit;
-class APeasant;
 class ACombatUnit;
+class AGameObject;
+class APeasant;
+class AResource;
+class UResearch;
+class AUnit;
 
 enum Alliances
 {
   Neutral=0, Friendly=1, Enemy=2
+};
+
+// The techtree lists buildings the AI WANTS to build
+// as the game progresses. when the team has enough
+// resources and units its starts building buildings
+// down the techtree. when the building is built it is marked built,
+// if it is destroyed it needs to be rebuilt with urgency as far
+// up the techtree.
+//   1. townhall
+
+struct TechTree
+{
+  vector< TSubclassOf<AGameObject> > list;
 };
 
 // Team consists of a single player's 
@@ -32,7 +46,9 @@ struct Team
   float DamageRepairThreshold;
   // Groups of buildings, peasants, and units sit in the same collection.
   vector<AGameObject*> units;
-  int researchLevelMeleeWeapons, researchLevelArmor, researchLevelRangedWeapons;
+  // The research level objects that have been completed. New units have
+  // these stats pushed into their stats stack.
+  vector<UResearch*> Researches;
 
   Team();
   Team( int iTeamId, FString str );
@@ -47,22 +63,22 @@ struct Team
   void RemoveUnit( AGameObject *go );
   void OnMapLoaded();
 
-  // Check if this team can afford to build a unit of UnitType
-  bool Has( Types objectType );
-  bool CanAfford( Types buildingType );
-  bool CanBuild( Types buildingType );
-  bool Spend( Types buildingType );
+  // Check if this team can afford to build a unit of ClassType
+  bool Has( UClass* ClassType );
+  bool CanAfford( UClass* ClassType );
+  bool CanBuild( UClass* ClassType );
+  bool Spend( UClass* ClassType );
 
   // Usage of food by units in the game.
   int computeFoodUsage();
   int computeFoodSupply();
-  int GetNumberOf( Types type );
-  AGameObject* GetFirstOfType( Types type );
+  int GetNumberOf( UClass* ClassType );
+  AGameObject* GetFirstOfType( UClass* ClassType );
   FVector GetTownCentroid();
 
   // Tells if AI computes that this team 
   bool isNeedsFood();
-  vector<Types> GetNeededResourceTypes();
+  vector< TSubclassOf<AResource> > GetNeededResourceTypes();
   AGameObject* GetMostAttackedUnit();
   void runAI( float t );
   void Move( float t );
@@ -78,3 +94,5 @@ struct Alliance
     alliance = Alliances::Neutral;
   }
 };
+
+

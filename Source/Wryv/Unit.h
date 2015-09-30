@@ -4,11 +4,12 @@
 #include <set>
 using namespace std;
 
-#include "Types.h"
 #include "GameFramework/Actor.h"
+
 #include "GameObject.h"
-#include "ItemQuantity.h"
 #include "Unit.generated.h"
+
+class AItem;
 
 UCLASS()
 class WRYV_API AUnit : public AGameObject
@@ -17,13 +18,9 @@ class WRYV_API AUnit : public AGameObject
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USkeletalMeshComponent* Mesh;
 
-  // These start with # items in editor. Defaults "Nothing" in toolbelt
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=UnitProperties)  TArray< TEnumAsByte< Types > > StartingItems;
-  // The items the unit is holding
-  TArray< FUnitsDataRow > Items;
   //AUnit(const FObjectInitializer& PCIP);
   virtual void BeginPlay() override;
-  void ConsumeItem( int i );
+  
   // Function that runs whenever the unit is first clicked on or selected.
   virtual void Move( float t ) override;
 

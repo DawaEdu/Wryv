@@ -70,6 +70,9 @@
     <Filter Include="Source\Wryv\GameObject\Objects">
       <UniqueIdentifier>{43aa52bf-de88-4486-b47b-72f73754515a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\GameObject\Objects\Actionable">
+      <UniqueIdentifier>{6dfb76c6-e306-45b3-9a12-45d66372e5e9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\Border.h">
@@ -122,9 +125,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ItemBelt.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\ItemQuantity.h">
-      <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\ITextWidget.h">
       <Filter>Source\Wryv\UI\Elements</Filter>
@@ -201,13 +201,7 @@
     <ClInclude Include="..\..\Source\Wryv\Wryv.h">
       <Filter>Source\Wryv\Wryv</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\UnitTypeUClassPair.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UISounds.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Types.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
@@ -226,9 +220,6 @@
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\StdWilUtil.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Team.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Settings.h">
@@ -251,9 +242,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\Peasant.h">
       <Filter>Source\Wryv\GameObject\Units</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Item.h">
-      <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\GroundPlane.h">
       <Filter>Source\Wryv\GameObject\Objects</Filter>
@@ -294,6 +282,54 @@
     <ClInclude Include="..\..\Source\Wryv\PlayerStats.h">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Townhall.h">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Farm.h">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Barracks.h">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Tree.h">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Stone.h">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Goldmine.h">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Research.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Team.h">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Smith.h">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Item.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Action.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ItemAction.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\BuildAction.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\CastSpellAction.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\TrainingAction.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\BuildInProgress.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\Border.cpp">
@@ -329,9 +365,6 @@
     <ClCompile Include="..\..\Source\Wryv\ImageWidget.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\CooldownCounter.cpp">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\HotSpot.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
     </ClCompile>
@@ -343,9 +376,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ItemBelt.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\ItemQuantity.cpp">
-      <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\ITextWidget.cpp">
       <Filter>Source\Wryv\UI\Elements</Filter>
@@ -422,9 +452,6 @@
     <ClCompile Include="..\..\Source\Wryv\Settings.cpp">
       <Filter>Source\Wryv\Structures</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Team.cpp">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\NotifyTreeFinishedFall.cpp">
       <Filter>Source\Wryv\GameObject\AnimationNotifies</Filter>
     </ClCompile>
@@ -442,9 +469,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp">
       <Filter>Source\Wryv\GameObject\Units</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Item.cpp">
-      <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\GroundPlane.cpp">
       <Filter>Source\Wryv\GameObject\Objects</Filter>
@@ -484,6 +508,54 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\PlayerStats.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Townhall.cpp">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Farm.cpp">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Barracks.cpp">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Tree.cpp">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Stone.cpp">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Goldmine.cpp">
+      <Filter>Source\Wryv\GameObject\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Action.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Research.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Team.cpp">
+      <Filter>Source\Wryv\GameObject\Team</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Smith.cpp">
+      <Filter>Source\Wryv\GameObject\Buildings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Item.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ItemAction.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\BuildAction.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\CastSpellAction.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\TrainingAction.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\BuildInProgress.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

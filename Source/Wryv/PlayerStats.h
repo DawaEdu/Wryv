@@ -18,13 +18,9 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI)
   float scoutInterval;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Attack, meta=(MetaClass="Projectile") )
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Attack )
   TSubclassOf<AProjectile> Projectile;
-  //UClass* uclass;
   
-  UPROPERTY( EditAnywhere, Category = Attack, meta=(MetaClass="Projectile") )
-  FStringClassReference ProjectileType;
-
   UPlayerStats( const FObjectInitializer& PCIP );
   UFUNCTION(BlueprintCallable, Category = AI)
   FString ToString();

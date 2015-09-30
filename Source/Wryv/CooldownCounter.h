@@ -1,23 +1,38 @@
 #pragma once
 
-#include "Types.h"
-
-class AGameObject;
+#include "CooldownCounter.generated.h"
 
 // Structure representing something in progress.
-// Cooldown for building something, recharging something etc.
-struct CooldownCounter
+USTRUCT()
+struct WRYV_API FCooldownCounter
 {
-  Types Type;
-  float Time, TotalTime;
-  AGameObject* go; // The object that is being constructed
-
-  CooldownCounter();
-  CooldownCounter( Types type );
-  CooldownCounter( Types type, AGameObject* object );
-  float Fraction();
+  GENERATED_USTRUCT_BODY()
+  float Time;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
+  float TotalTime;
+  FCooldownCounter()
+  {
+    Time = 0.f;
+    TotalTime = 0.f;
+  }
+  float Fraction()
+  {
+    // If TotalTime is set, use it to determine fraction.
+    // Else, the cooldown has 0 recharge time, so it is always fully charged.
+    if( TotalTime )
+      return Time / TotalTime;
+    else
+      return 1.f; // always recharged.
+  }
   bool Done() { return Time >= TotalTime; }
   void Reset() { Time = 0.f; }
+  void Step( float t ) {
+    Time += t;
+
+    // Prevent over 100% counts
+    if( Time > TotalTime )
+      Time = TotalTime;
+  }
 };
 
 

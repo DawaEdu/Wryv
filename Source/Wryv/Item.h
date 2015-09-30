@@ -3,14 +3,20 @@
 #include "GameObject.h"
 #include "Item.generated.h"
 
+class UItemAction;
+
 UCLASS()
 class WRYV_API AItem : public AGameObject
 {
   GENERATED_UCLASS_BODY()
 public:
-  virtual void BeginPlay() override;
+  // The small portrait of the item when used as a buff on a unit.
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
+  UTexture* BuffPortrait;
+  // When the item is picked up, this is the class of the button.
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
+  TSubclassOf<UItemAction> ButtonClass;
 
-  UFUNCTION(BlueprintNativeEvent, Category = Collision)
-  void ProxPickup( AActor* OtherActor, UPrimitiveComponent* OtherComp,
-    int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult );
+  virtual void Hit( AGameObject* other ) override;
+
 };

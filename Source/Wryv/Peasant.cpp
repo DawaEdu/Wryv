@@ -1,19 +1,27 @@
 #include "Wryv.h"
-#include "Peasant.h"
-#include "Resource.h"
-#include "WryvGameInstance.h"
-#include "WryvGameMode.h"
-#include "FlyCam.h"
-#include "Pathfinder.h"
+
 #include "AI.h"
 #include "Building.h"
-#include "TheHUD.h"
+#include "FlyCam.h"
+#include "Goldmine.h"
+#include "Pathfinder.h"
+#include "Peasant.h"
 #include "PlayerControl.h"
+#include "Resource.h"
+#include "Stone.h"
+#include "TheHUD.h"
+#include "Townhall.h"
+#include "Tree.h"
+#include "WryvGameInstance.h"
+#include "WryvGameMode.h"
+
+#include "BuildAction.h"
+#include "BuildInProgress.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
   ResourceCarry = PCIP.CreateDefaultSubobject<USceneComponent>( this, "ResourceCarry1" );
-  ResourceCarry->AttachTo( RootComponent );
+  ResourceCarry->AttachTo( GetRootComponent() );
 
   GoldPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "GoldPiece1" );
   GoldPiece->AttachTo( ResourceCarry );
@@ -26,18 +34,18 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   LumberPiece->SetVisibility( false );
   StonePiece->SetVisibility( false );
 
-  MinedResources[ Types::RESGOLD ] = 0;
-  MinedResources[ Types::RESLUMBER ] = 0;
-  MinedResources[ Types::RESSTONE ] = 0;
+  MinedResources[ AGoldmine::StaticClass() ] = 0;
+  MinedResources[ ATree::StaticClass() ] = 0;
+  MinedResources[ AStone::StaticClass() ] = 0;
 
-  MinedPieces[ Types::RESGOLD ] = GoldPiece;
-  MinedPieces[ Types::RESLUMBER ] = LumberPiece;
-  MinedPieces[ Types::RESSTONE ] = StonePiece;
+  MinedPieces[ AGoldmine::StaticClass() ] = GoldPiece;
+  MinedPieces[ ATree::StaticClass() ] = LumberPiece;
+  MinedPieces[ AStone::StaticClass() ] = StonePiece;
 
   RepairTarget = 0;
   Carrying = 0;
   Shrugging = 0;
-  Mining = NOTHING;
+  Mining = 0;
 
   //RepairTarget = 0;
   LastResourcePosition = FVector(0,0,0);
@@ -47,18 +55,33 @@ void APeasant::PostInitializeComponents()
 {
   Super::PostInitializeComponents();
 
-  Capacities[ Types::RESGOLD ] = GoldCarryCapacity;
-  Capacities[ Types::RESLUMBER ] = LumberCarryCapacity;
-  Capacities[ Types::RESSTONE ] = StoneCarryCapacity;
+  Capacities[ AGoldmine::StaticClass() ] = GoldCarryCapacity;
+  Capacities[ ATree::StaticClass() ] = LumberCarryCapacity;
+  Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
 }
 
-void APeasant::Build( Types type, FVector pos )
+bool APeasant::Build( UBuildAction* buildAction, FVector pos )
 {
-  if( team->CanAfford( type ) )
+  if( team->CanAfford( buildAction->BuildingType ) )
   {
+    // Construct the instance of the building
+    ABuilding* building = Game->Make<ABuilding>( buildAction->BuildingType, team, pos );
+
+    // Construct the counter & add it to counters for this object
+    UBuildInProgress* buildInProgress = NewObject<UBuildInProgress>( 
+      this, UBuildInProgress::StaticClass() );
+    buildInProgress->BuildingInProgress = building;
+    CountersBuildQueue.push_back( buildInProgress );
+
     // Make the building and ask the peasant to join in building it.
-    ABuilding* building = Game->Make<ABuilding>( type, team, pos );
     building->PlaceBuilding( this );
+    return 1;
+  }
+  else
+  {
+    info( FS( "%s cannot afford type %s",
+      *Stats.Name, *buildAction->BuildingType->GetName() ) );
+    return 0;
   }
 }
 
@@ -159,17 +182,21 @@ void APeasant::Repair( float t )
   }
 }
 
-AResource* APeasant::FindAndTargetNewResource( FVector fromPos, vector<Types> types, float searchRadius )
+AResource* APeasant::FindAndTargetNewResource( FVector fromPos,
+  vector< TSubclassOf<AResource> > types, float searchRadius )
 {
+  set< TSubclassOf<AGameObject> > acceptable;
+  for( TSubclassOf<AResource> r : types )
+    acceptable.insert( r );
   vector<AGameObject*> objects = Game->pc->ShapePickExcept( fromPos,
-    FCollisionShape::MakeCapsule( searchRadius, Height()/2.f ), MakeSet(types), {} );
+    FCollisionShape::MakeCapsule( searchRadius, Height()/2.f ), acceptable, {} );
 
   // From return results (which are in order of distance), refilter based on priority ordering in types
   for( int i = 0; i < types.size(); i++ )
   {
     for( int j = 0; j < objects.size(); j++ )
     {
-      if( objects[j]->Stats.Type.GetValue() == types[i] )
+      if( objects[j]->IsA( types[i] ) )
       {
         if( AResource* res = Cast<AResource>( objects[j] ) )
         {
@@ -180,7 +207,7 @@ AResource* APeasant::FindAndTargetNewResource( FVector fromPos, vector<Types> ty
         else
         {
           error( FS( "%s is Type %s but cannot cast to resource",
-            *Stats.Name, *GetTypesName( Stats.Type ) ) );
+            *objects[j]->GetName(), *types[j]->GetName() ) );
         }
       }
     }
@@ -232,24 +259,24 @@ AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
   //   2. we should be able to recover some amount of the building's HP without stopping repairs
 
   // Get the building most in need of repair
-  AGameObject* lowestHpUnit = 0;
+  ABuilding* lowestHpBuilding = 0;
   float lowestHpPerc = 1.f; // 100% Hp
   
   // Could add some logic here to leave higher HP units alone
   for( int i = 0; i < team->units.size(); i++ )
   {
-    AGameObject *g = team->units[ i ];
-    if( g->isBuilding() )
+    if( ABuilding* building = Cast<ABuilding>( team->units[ i ] ) )
     {
-      float hpPerc = g->HpFraction();
+      float hpPerc = building->HpFraction();
       if( hpPerc < threshold && hpPerc < lowestHpPerc )
       {
-        lowestHpUnit = g;
+        lowestHpBuilding = building;
         lowestHpPerc = hpPerc;
       }
     }
   }
-  return lowestHpUnit;
+
+  return lowestHpBuilding;
 }
 
 void APeasant::ai( float t )
@@ -260,17 +287,21 @@ void APeasant::ai( float t )
   // Search for a repair target
   for( AGameObject *go : team->units )
   {
-    if( go->isBuilding() && go->HpFraction() < .5f )
+    if( ABuilding* building = Cast<ABuilding>( go ) )
     {
-      Target( go ) ; // repair it
-      return;
+      // Begin repairing building when building's hp is below repair threshold
+      if( go->HpFraction() < team->ai.repairFraction )
+      {
+        Target( go ) ; // repair it
+        return;
+      }
     }
   }
 }
 
 void APeasant::OnResourcesReturned()
 {
-  vector<Types> resType = {Mining}; // We're still mining MiningType unless otherwise specified.
+  vector< TSubclassOf<AResource> > resType = {Mining}; // We're still mining MiningType unless otherwise specified.
   if( team->ai.aiLevel )
   {
     // Check for reassignment
@@ -295,11 +326,11 @@ void APeasant::OnResourcesReturned()
 void APeasant::Hit( AGameObject* other )
 {
   // if the other building is a townhall, can drop off resources
-  if( other->Stats.Type == Types::BLDGTOWNHALL )
+  if( ATownhall* townhall = Cast<ATownhall>(other) )
   {
-    team->Gold += MinedResources[ Types::RESGOLD ];
-    team->Lumber += MinedResources[ Types::RESLUMBER ];
-    team->Stone += MinedResources[ Types::RESSTONE ];
+    team->Gold += MinedResources[ AGoldmine::StaticClass() ];
+    team->Lumber += MinedResources[ ATree::StaticClass() ];
+    team->Stone += MinedResources[ AStone::StaticClass() ];
     MinedResources.clear(); // clear mined resources back to 0s
     Target( 0 ); // unfollow the townhall
 
@@ -314,7 +345,7 @@ void APeasant::ReturnResources()
   // Attempt to return resources if full-up on any type.
   if( !FollowTarget )
   {
-    for( pair< Types, int32 > p : MinedResources )
+    for( pair< TSubclassOf<AResource>, int32 > p : MinedResources )
     {
       if( p.second > 0 )
       {
@@ -323,7 +354,7 @@ void APeasant::ReturnResources()
         if( p.second >= Capacities[ p.first ] )
         {
           // Return to nearest townhall for dropoff
-          AGameObject* returnCenter = GetClosestObjectOfType( Types::BLDGTOWNHALL );
+          AGameObject* returnCenter = GetClosestObjectOfType( ATownhall::StaticClass() );
           if( !returnCenter )
           {
             info( "NO RETURN CENTER" );
@@ -331,7 +362,7 @@ void APeasant::ReturnResources()
           else
           {
             info( FS( "Peasant %s returning to town center %s with %d %s",
-              *GetName(), *returnCenter->GetName(), p.second, *GetTypesName( p.first ) ) );
+              *GetName(), *returnCenter->GetName(), p.second, *p.first->GetName() ) );
             // Check if the resource is exhausted. If so, look for a similar resource
             Follow( returnCenter ); // Set a follow on there (NOT general TARGET() cmd) so that
             // it explicitly sets up as a follow and NOT RepairTarget.
@@ -344,6 +375,11 @@ void APeasant::ReturnResources()
       }
     }
   }
+}
+
+void APeasant::AddMined( TSubclassOf<AResource> resourceType, float resAmount )
+{
+  MinedResources[ resourceType ] += resAmount; 
 }
 
 void APeasant::Move( float t )
@@ -360,7 +396,7 @@ void APeasant::Move( float t )
     {
       // go back to where the resource was and shrug
       Shrugging = 1;
-      Mining = NOTHING;
+      Mining = 0;
     }
   }
 }

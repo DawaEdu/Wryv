@@ -1,8 +1,11 @@
 #include "Wryv.h"
 #include "FlyCam.h"
+#include "Goldmine.h"
 #include "NotifyTreeFinishedFall.h"
 #include "Peasant.h"
 #include "Resource.h"
+#include "Stone.h"
+#include "Tree.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
@@ -34,17 +37,20 @@ void AResource::Harvest( APeasant* peasant )
     return;
   }
   
-  set<Types> acceptable = {RESGOLD,RESLUMBER,RESSTONE};
-  if( !in( acceptable, Stats.Type.GetValue() ) )
+  set< TSubclassOf<AResource> > acceptable = { 
+    AGoldmine::StaticClass(), ATree::StaticClass(), AStone::StaticClass()
+  };
+  if( !IsAny( acceptable ) )
   {
     // This happens when you have a bad entry in BaseStats.
     error( FS( "Resource object type %s not recognized", *Stats.Name ) );
     return;
   }
 
-  peasant->Mining = Stats.Type;
   float dmg = peasant->DamageRoll();
-  peasant->MinedResources[ Stats.Type ] += dmg; // Use "damage" to determine mined qty
+  // Use "damage" to determine mined qty
+  peasant->Mining = StaticClass();
+  peasant->AddMined( StaticClass(), dmg );
   AmountRemaining -= dmg;
 
   if( AmountRemaining <= 0 )

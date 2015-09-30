@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "GroundPlane.h"
@@ -175,7 +176,9 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box )
 }
 
 // If InTypes is EMPTY, then it picks any type
-vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types> AcceptedTypes, set<Types> NotTypes )
+vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, 
+  set< TSubclassOf<AGameObject> > AcceptedTypes,
+  set< TSubclassOf<AGameObject> > NotTypes )
 {
   // A 0 area box picks with a ray from TL corner of the click.
   if( !box.GetArea() ) {
@@ -223,10 +226,10 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, set<Types>
       if( go->IsPendingKill()   ||   go->Dead )  skip;
 
       // If the accepted types collection was specified, and the type is not in accepted types, skip
-      if( AcceptedTypes.size() && ( !in( AcceptedTypes, go->Stats.Type.GetValue() ) ) )  skip;
+      if( AcceptedTypes.size() && ( !go->IsAny( AcceptedTypes ) ) )  skip;
 
       // If you are in the not types group, skip also
-      if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
+      if( go->IsAny( NotTypes ) ) skip;
 
       FBox box = go->hitBounds->Bounds.GetBox();
       
@@ -255,7 +258,7 @@ vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape sha
 } 
 
 vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionShape shape,
-  set<Types> AcceptedTypes, set<Types> NotTypes )
+  set< TSubclassOf<AGameObject> > AcceptedTypes, set< TSubclassOf<AGameObject> > NotTypes )
 {
   // We use the base shapepick, then filter
   FCollisionQueryParams fcqp;
@@ -277,8 +280,10 @@ vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionSha
     if( AGameObject* go = Cast<AGameObject>( overlaps[i].GetActor() ) )
     {
       if( go->Dead ) skip;
-      if( AcceptedTypes.size() && !in( AcceptedTypes, go->Stats.Type.GetValue() ) )  skip;
-      if( in( NotTypes, go->Stats.Type.GetValue() ) )  skip;
+
+      if( AcceptedTypes.size()   &&   !go->IsAny( AcceptedTypes ) )  skip;
+
+      if( go->IsAny( NotTypes ) )  skip;
       
       // Duplicates DO happen
       if( !in( objects, go ) )

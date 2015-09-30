@@ -43,7 +43,7 @@ __forceinline void info( FString message )
   UE_LOG( K, Display, TEXT("%s"), *message );
 }
 
-// Removes all occurrences of `elt` from `v`
+// Removes all occurrences of `elt` from `v`. Returns # removals.
 template <typename T> int removeElement( vector<T*>& v, T* elt )
 {
   int count = 0;
@@ -55,6 +55,7 @@ template <typename T> int removeElement( vector<T*>& v, T* elt )
   return count;
 }
 
+// Removes occurrences of `elt` from `v`. Returns #.
 template <typename T> int removeElement( vector<T>& v, T& elt )
 {
   int count = 0;
@@ -64,22 +65,6 @@ template <typename T> int removeElement( vector<T>& v, T& elt )
       count++;
     }
   return count;
-}
-
-template <typename T> vector<T*>& operator-=( vector<T*>& v, T* elt )
-{
-  for( int i = v.size()-1 ; i >= 0; i-- )
-    if( v[i] == elt )
-      v.erase( v.begin() + i );
-  return v;
-}
-
-template <typename T> vector<T>& operator-=( vector<T>& v, T& elt )
-{
-  for( int i = v.size()-1 ; i >= 0; i-- )
-    if( v[i] == elt )
-      v.erase( v.begin() + i );
-  return v;
 }
 
 template <typename T> bool removeElement( set<T*>& s, T* elt )
@@ -100,6 +85,22 @@ template <typename T> bool removeElement( set<T>& s, T& elt )
     return 1;
   }
   return 0;
+}
+
+template <typename T> vector<T*>& operator-=( vector<T*>& v, T* elt )
+{
+  for( int i = v.size()-1 ; i >= 0; i-- )
+    if( v[i] == elt )
+      v.erase( v.begin() + i );
+  return v;
+}
+
+template <typename T> vector<T>& operator-=( vector<T>& v, T& elt )
+{
+  for( int i = v.size()-1 ; i >= 0; i-- )
+    if( v[i] == elt )
+      v.erase( v.begin() + i );
+  return v;
 }
 
 template <typename T> T* removeIndex( vector<T*>& v, int index )
@@ -187,6 +188,7 @@ template <typename T, typename S> inline bool in( const map<T,S>& m, const T& ke
   return find( m.begin(), m.end(), elt ) != m.end();
 }
 
+// Linear search thru the map for an `S`
 template <typename T, typename S> inline bool in( const map<T,S>& m, const S& val )
 {
   for( const pair<const T,S>& p : m )
@@ -422,9 +424,9 @@ template <typename T> set<T*>& operator|=(
     }
     else ++it;
   }
-
   return src;
 }
+
 template <typename T> vector<T*>& operator|=( 
   vector<T*>& src, function< bool (T*) > doFilterFunction )
 {
@@ -503,6 +505,12 @@ inline FVector Rand()
 inline FVector Rand( FVector min, FVector max )
 {
   return min + FMath::FRand()*( max - min );
+}
+
+inline FString GetEnumName( TCHAR* enumType, int enumValue )
+{
+  const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, enumType, true);
+  return EnumPtr->GetEnumText(enumValue).ToString();
 }
 
 inline FVector Invert( FVector v )

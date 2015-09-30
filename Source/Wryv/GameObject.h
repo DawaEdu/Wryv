@@ -8,12 +8,13 @@
 #include <List.h>
 using namespace std;
 
+#include "GameFramework/Actor.h"
+
 #include "Command.h"
 #include "CooldownCounter.h"
+#include "GlobalFunctions.h"
 #include "SoundEffect.h"
-#include "Types.h"
 #include "UnitsData.h"
-#include "GameFramework/Actor.h"
 
 #include "GameObject.generated.h"
 
@@ -22,6 +23,14 @@ class AGameObject;
 class AResource;
 class AShape;
 struct Team;
+
+class UAction;
+class UBuildAction;
+class UBuildInProgress;
+class UCastSpellAction;
+class UItemAction;
+class UResearch;
+class UTrainingAction;
 
 UCLASS()
 class WRYV_API AGameObject : public AActor
@@ -32,12 +41,17 @@ class WRYV_API AGameObject : public AActor
   static AGameObject* Nothing;
   static float CapDeadTime; // Dead units get cleaned up after this many seconds (time given for dead anim to play out)
   
-  // 
   // Stats.
   int64 ID; // Unique Identity of the object.
   Team *team;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
+  // The stats applied due to research bonuses.
+  vector<FUnitsDataRow> ResearchBonusStats;
+  // Level of the object.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Level;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Kills;
+
   // The amount that this object multiplies incoming repulsion forces by.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float RepelMultiplier;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USceneComponent* DummyRoot;
@@ -52,8 +66,20 @@ class WRYV_API AGameObject : public AActor
   FLinearColor vizColor;
   float vizSize;
   bool Recovering;
-  vector< CooldownCounter > AbilityCooldowns;
-  vector< CooldownCounter > BuildQueueCounters;  // The queue of objects being built
+
+  // 
+  // COOLDOWNS: A list of these for each of our capabilities in Stats.
+  vector< UAction* > CountersAbility;    // All classes
+  // List of objects that are currently being built by this object.
+  vector< UBuildAction* > CountersBuildings; // Todo: Peasant only
+  vector< UBuildInProgress* > CountersBuildQueue; // Todo: Peasant only
+  vector< UItemAction* > CountersItems;      // Todo: Units
+  vector< UResearch* > CountersResearch;   // Todo: For Buildings only
+  vector< UTrainingAction* > CountersTraining;   // Todo: For Buildings only
+  // Items unit is holding in-play.
+
+  int64 LastBuildingID; // The ID of the last building we proposed to be placed.
+  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Attacks;
@@ -75,6 +101,9 @@ class WRYV_API AGameObject : public AActor
   bool AttackReady; // When this flag is set, the unit will engage any enemy units.
   // Peasants rarely have this flag set, while most combat units have it set (unless they are
   // responding to a GotoGroundPosition() command)
+  bool HoldingGround; // Do not move to engage nearby enemy units.
+  // When this flag is false, AttackTarget is set to the nearest unit in SightRange.
+
   Command& GetCurrentCommand(){ return commands.front(); }
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
@@ -102,13 +131,12 @@ class WRYV_API AGameObject : public AActor
   AGameObject* AddChild( AGameObject* newChild );
   bool isParentOf( AGameObject* go );
   bool isChildOf( AGameObject* parent );
-  template <typename T> T* MakeChild( Types type )
+  template <typename T> T* MakeChild( TSubclassOf<AGameObject> ClassType )
   {
-    T* child = Game->Make<T>( type, team );
+    T* child = Game->Make<T>( ClassType, team );
     AddChild( child );
     return child;
   }
-
   void SetSize( FVector size );
 
   // 
@@ -133,12 +161,15 @@ class WRYV_API AGameObject : public AActor
   void Shoot();
   virtual void ReceiveAttack( AGameObject* from );
 
-  // Sets object to use indexed action
-  void ApplyEffect( FUnitsDataRow item );
-  void AddBuff( Types item );
   void UpdateStats( float t );
+
+  // Use* functions use specific indexes from Abilities,
+  // Builds, Training, Researches, or Items slots.
   bool UseAbility( int index );
-  bool Make( Types type );
+  bool UseBuild( int index );
+  bool UseTrain( int index );
+  bool UseResearch( int index );
+  bool UseItem( int index );
   
   // 
   // Movement functions.
@@ -181,7 +212,7 @@ class WRYV_API AGameObject : public AActor
   float Height();
   float Radius();
 
-  // 
+  //
   // COMMAND
   // Sets a new ground destination, dropping Follow/Attack targets.
   virtual void GoToGroundPosition( FVector groundPos );
@@ -217,7 +248,7 @@ class WRYV_API AGameObject : public AActor
   AGameObject* GetClosestEnemyUnit();
   map<float, AGameObject*> FindEnemyUnitsInSightRange();
   // Searches for an object of specific type on my TEAM
-  AGameObject* GetClosestObjectOfType( Types type );
+  AGameObject* GetClosestObjectOfType( TSubclassOf<AGameObject> ClassType );
 	
   // 
   // Utility
@@ -226,19 +257,32 @@ class WRYV_API AGameObject : public AActor
   void OnSelected();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );
-  void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, RootComponent ); }
+  void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, GetRootComponent() ); }
   void SetMaterial( UMaterialInterface* mat );
   void SetColor( FLinearColor color );
   
+  // Returns true if this object is a subclass of any of the types listed.
+  // Eg this is a Projectile, then { ASpell::StaticClass(), AProjectile::StaticClass() }
+  // would return true.
+  template <typename T>
+  bool IsAny( set< TSubclassOf< T > > types )
+  {
+    static_assert( is_base_of< AGameObject, T >::value, "Populate<T>: T must derive from AGameObject" );
+
+    for( TSubclassOf<AGameObject> uc : types )
+    {
+      if( this->IsA( uc ) )
+      {
+        info( FS( "%s IsA( %s )", *Stats.Name, *(*uc)->GetName() ) );
+        return 1;
+      }
+    }
+    return 0;
+  }
+
   // Shouldn't have to reflect unit type often, but we use these
   // to select a building for example from the team's `units` collection.
   // Another way to do this is orthogonalize collections [buildings, units.. etc]
-  bool isPeasant() { return Stats.Type == Types::UNITPEASANT; }
-  bool isUnit(){ return IsUnit( Stats.Type ); }
-  bool isBuilding(){ return IsBuilding( Stats.Type ); }
-  bool isResource(){ return IsResource( Stats.Type ); }
-  bool isItem(){ return IsItem( Stats.Type ); }
-  bool isShape(){ return IsShape( Stats.Type ); }
   virtual void Die();
   UFUNCTION(BlueprintCallable, Category = Fighting) 
   void Cleanup();

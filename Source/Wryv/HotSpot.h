@@ -1,19 +1,18 @@
 #pragma once
 
 #include "Wryv.h"
-#include <vector>
-#include <set>
 #include <functional>
+#include <set>
 #include <string>
+#include <vector>
 using namespace std;
 
-#include "GlobalFunctions.h"
-#include "WryvGameMode.h"
-#include "CooldownCounter.h"
-#include "Types.h"
-#include "GameObject.h"
-#include "Unit.h"
 #include "Box2DU.h"
+#include "CooldownCounter.h"
+#include "GameObject.h"
+#include "GlobalFunctions.h"
+#include "Unit.h"
+#include "WryvGameMode.h"
 
 class TextWidget;
 class AGameObject;

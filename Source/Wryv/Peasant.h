@@ -35,25 +35,26 @@ public:
   // These are set when the peasant is repairing a building or unit.
   ABuilding* RepairTarget;  // The building we are repairing.
   FVector LastResourcePosition;
-  Types Mining;   // The type of resource that I'm mining
-
+  TSubclassOf<AResource> Mining;   // The type of resource that I'm mining
+  
   // [The resource type I'm mining] => The amount of resource I'm holding.
-  map< Types, int32 >  MinedResources;
-  map< Types, UStaticMeshComponent* >  MinedPieces;
-  map< Types, int32 >  Capacities;  // How much of each resource this unit can carry
+  map< TSubclassOf<AResource>, int32 >  MinedResources;
+  map< TSubclassOf<AResource>, UStaticMeshComponent* >  MinedPieces;
+  map< TSubclassOf<AResource>, int32 >  Capacities;  // How much of each resource this unit can carry
   
   //APeasant(const FObjectInitializer& PCIP);
   void PostInitializeComponents();
-  void Build( Types type, FVector pos );
+  bool Build( UBuildAction* buildAction, FVector pos );
   virtual void Target( AGameObject* target ) override;
   virtual void DropTargets() override;
   void Repair( float t );
-  AResource* FindAndTargetNewResource( FVector fromPos, vector<Types> type, float searchRadius );
+  AResource* FindAndTargetNewResource( FVector fromPos, vector< TSubclassOf<AResource> > types, float searchRadius );
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   // Is the unit repairing something, so play the repair animation
   UFUNCTION( BlueprintCallable, Category = Stats )  bool IsRepairing();
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   void ReturnResources();
+  void AddMined( TSubclassOf<AResource> resourceType, float resAmount );
   virtual void Move( float t );
   virtual bool Idling();
   virtual void ai( float t );

@@ -39,6 +39,8 @@ void ABuilding::PostInitializeComponents()
   // start the destructible mesh as invisible
   Mesh->SetVisibility( true );
   destructableMesh->SetVisibility( false );
+
+  Recovering = 0; // buildings don't autorecover hp.
 }
 
 void ABuilding::BeginPlay()

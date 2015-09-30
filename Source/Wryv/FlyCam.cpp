@@ -1,10 +1,13 @@
 #include "Wryv.h"
 
+#include "GameFramework/PlayerInput.h"
+
 #include "AIProfile.h"
 #include "Building.h"
 #include "FlyCam.h"
 #include "GameObject.h"
 #include "GlobalFunctions.h"
+#include "Goldmine.h"
 #include "GroundPlane.h"
 #include "Pathfinder.h"
 #include "Peasant.h"
@@ -13,12 +16,12 @@
 #include "Projectile.h"
 #include "Resource.h"
 #include "Shape.h"
+#include "Stone.h"
 #include "TheHUD.h"
-#include "Types.h"
+#include "Tree.h"
 #include "UISounds.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
-#include "GameFramework/PlayerInput.h"
 
 // Sets default values
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
@@ -49,6 +52,9 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   CameraMovementSpeed = 1000.f;
   VizGrid = 0;
   VizPassibles = 0;
+  CheckerClass = 0;
+  LineClass = 0;
+  WaypointFlagClass = 0;
 }
 
 // Called when the game starts or when spawned
@@ -212,8 +218,6 @@ void AFlyCam::InitializePathfinding()
   if( pathfinder )  delete pathfinder;
   pathfinder = new Pathfinder( Rows, Cols );
 
-  set<Types> intTypes = { Types::RESLUMBER, Types::RESSTONE, Types::RESGOLD };
-  
   // get the actual spacing between nodes, then divide by 2
   // use 95% prox to ensure that
   FBox floorBox = floor->GetBox();
@@ -249,7 +253,7 @@ void AFlyCam::InitializePathfinding()
       else
       {
         pathfinder->nodes[ idx ]->point = p;
-        AShape* sphere = Game->Make<AShape>( SHAPESPHERE, Game->gm->neutralTeam, p );
+        AShape* sphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, p );
         if( !sphere )
         {
           error( "Couldn't make intersection sphere" );
@@ -299,16 +303,17 @@ void AFlyCam::InitializePathfinding()
     {
       if( VizPassibles )
       {
-        AShape *vizSphere = Game->Make<AShape>( SHAPESPHERE, Game->gm->neutralTeam, node->point );
+        AShape *vizSphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, node->point );
         vizSphere->SetSize( diameterScale );
       }
     }
     else
     {
-      AShape *vizSphere = Game->Make<AShape>( SHAPESPHERE, Game->gm->neutralTeam, node->point );
+      AShape *vizSphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, node->point );
       vizSphere->SetColor( FLinearColor::Red );
       vizSphere->SetSize( diameterScale );
     }
+
     // create a node and edge connections
     for( int j = 0; j < node->edges.size(); j++ )
       edges.insert( node->edges[j] );
@@ -407,22 +412,22 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
   return material;
 }
 
-void AFlyCam::Visualize( Types type, FVector& v, float s, FLinearColor color )
+void AFlyCam::Visualize( UClass* shapeType, FVector& v, float s, FLinearColor color )
 {
-  AGameObject* go = Game->Make<AGameObject>( type, Game->gm->neutralTeam, v );
+  AGameObject* go = Game->Make<AGameObject>( shapeType, Game->gm->neutralTeam, v );
   go->SetSize( FVector(s) );
   go->SetColor( color );
   viz.push_back( go );
 }
 
-void AFlyCam::Visualize( Types type, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
+void AFlyCam::Visualize( UClass* shapeType, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
 {
   for( int i = 0; i < v.size(); i++ )
   {
     //LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
     float p = (float)i / v.size();
     FLinearColor color = FLinearColor::LerpUsingHSV( startColor, endColor, p );
-    Visualize( type, v[i], s, color );
+    Visualize( shapeType, v[i], s, color );
   }
 }
 
@@ -445,7 +450,7 @@ AGameObject* AFlyCam::MakeLine( FVector Start, FVector End, FLinearColor color )
   }
   dir /= len;
 
-  AShape *line = Game->Make<AShape>( Types::SHAPEEDGE, Game->gm->neutralTeam, Start );
+  AShape *line = Game->Make<AShape>( LineClass, Game->gm->neutralTeam, Start );
   line->SetSize( FVector(len) );
   line->SetColor( color );
   line->SetActorRotation( dir.Rotation() );
@@ -459,7 +464,6 @@ void AFlyCam::RetrievePointers()
   Game->gm = (AWryvGameMode*)GetWorld()->GetAuthGameMode();
   Game->gs = (AWryvGameState*)GetWorld()->GetGameState();
   Game->flycam = this;
-
   //info( FS( "PC: %d, HUD %d, GM: %d, GS %d, flycam %d",
   //  Game->pc, Game->hud, Game->gm, Game->gs, Game->flycam ) );
 }
@@ -489,29 +493,20 @@ bool AFlyCam::SetOnGround( FVector& v )
     return 0;
   }
 
-  //ClearViz();
-  // Get ray hit with ground
-  //Visualize( Types::SHAPESPHERE, v, 10.f, FLinearColor::Green );
-  //Print( "v:", v );
-  
   FVector v2 = v;
   v2.Z += floor->GetBox().GetSize().Z; /// Pick up far above the floor
-  //Print( "v2:", v2 );
-  //Visualize( Types::SHAPESPHERE, v2, 10.f, FLinearColor::Blue );
-
-  FHitResult hit = Game->pc->TraceAgainst( floor, Ray(v2, FVector( 0, 0, -1 ), 1e4f) );
+  
+  FHitResult hit = Game->pc->TraceAgainst( floor, Ray(v2, FVector( 0, 0, -1 ), 1e4f ) );
   if( hit.GetActor() )
   {
     v = hit.ImpactPoint;
-    //Print( "impact @:", v2 );
-    //Visualize( Types::SHAPESPHERE, v, 10.f, FLinearColor::Red );
     return 1;
   }
   else
   {
     // no hit, no change
     warning( FS( "Point %f %f %f cannot hit the ground", v.X, v.Y, v.Z ) );
-    Visualize( Types::SHAPESPHERE, v, 50.f, FLinearColor::Blue );
+    Visualize( VizClass, v, 50.f, FLinearColor::Blue );
     return 0;
   }
 }
@@ -556,31 +551,10 @@ void AFlyCam::FindFloor()
     //FBox box = ALevelBounds::CalculateLevelBounds( level ); X
     Print( "level bounds", box );
     FVector size = box.GetSize();
-    
-    //{
-    //  AShape* shape = Game->Make<AShape>( SHAPECUBE, Game->gm->neutralTeam );
-    //  shape->SetSize( FVector( size.X, size.Y, 100.f ) );
-    //  shape->SetColor( FLinearColor::Blue );
-    //  //shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
-    //  shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - box.GetSize().Z - 100.f ) );
-    //}
-
-    {
-      AShape* shape = Game->Make<AShape>( SHAPECUBE, Game->gm->neutralTeam );
-      shape->SetSize( FVector( size.X, size.Y, 100.f ) );
-      shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
-      shape->SetColor( FLinearColor::Yellow );
-      AGroundPlane *f2 = GetWorld()->SpawnActor<AGroundPlane>( AGroundPlane::StaticClass() );
-      f2->Mesh = shape->Mesh;
-      shape->Mesh->AttachTo( f2->GetRootComponent(), NAME_None, EAttachLocation::KeepWorldPosition );
-      shape->RemoveOwnedComponent( shape->Mesh );
-      //f2->AddOwnedComponent( shape->Mesh ); // This is not allowed.., the owner is not f2
-      // so you can't call AddOwnedComponent(), but on top of that 
-      // Transferring a component from one actor to another is not allowed
-      //shape->Dead = 1;
-      //shape->MaxDeadTime = 2.f;
-      //shape->Cleanup();
-    }
+    AShape* shape = Game->Make<AShape>( FloorPlaneBackupClass, Game->gm->neutralTeam );
+    shape->SetSize( FVector( size.X, size.Y, 100.f ) );
+    shape->SetPosition( FVector( 0, 0, box.Min.Z - box.GetExtent().Z - 100.f ) );
+    shape->SetColor( FLinearColor::Yellow );
   }
 
   // create the fog of war now

@@ -1,20 +1,28 @@
 #pragma once
 
-#include <vector>
-#include <set>
 #include <map>
+#include <set>
+#include <vector>
 using namespace std;
 
 #include "GameFramework/GameMode.h"
 #include "AIProfile.h"
 #include "Team.h"
-#include "Types.h"
 #include "WryvGameMode.generated.h"
 
 // We'll use the GameMode object to store all information about
 // the currently loaded game instance.
 class UAIProfile;
 class ACombatUnit;
+
+UENUM()
+enum GameStates
+{
+  Title = 0             UMETA(DisplayName = "Title"),
+  MapSelect             UMETA(DisplayName = "MapSelect"),
+  Running               UMETA(DisplayName = "Running"),
+};
+
 UCLASS()
 class WRYV_API AWryvGameMode : public AGameMode
 {
@@ -41,7 +49,7 @@ public:
   virtual void StartMatch();
   virtual void SetMatchState(FName NewState);
   virtual void Tick(float DeltaSeconds) override;
-  vector<AGameObject*> GetObjectsOfType( Types type );
+  vector<AGameObject*> GetObjectsOfType( UClass* ClassType );
   Alliance GetAlliance( Alliances alliance );
   // Finds all objects of type listed
   template<typename T> vector<T*> Find()

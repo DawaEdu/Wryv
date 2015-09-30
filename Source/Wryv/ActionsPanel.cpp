@@ -1,4 +1,6 @@
 #include "Wryv.h"
+
+#include "Action.h"
 #include "ActionsPanel.h"
 #include "Building.h"
 #include "Clock.h"
@@ -66,35 +68,19 @@ void AbilitiesPanel::Set( AGameObject *go )
   HideChildren();
   if( !go ) return;
 
-  vector<Clock*> abilitiesClocks = Populate( go->AbilityCooldowns );
+  vector<Clock*> abilitiesClocks = Populate<UAction>( go->CountersAbility );
 
   for( int i = 0; i < abilitiesClocks.size(); i++ )
   {
     Clock* clock = abilitiesClocks[ i ];
+
     // Attach button with invokation of i'th ability
     clock->OnMouseDownLeft = [go,i]( FVector2D mouse ) {
       // Invoke I'th action of the object
-      Types type = go->AbilityCooldowns[i].Type;
-      if( IsBuilding( type ) )
-      {
-        // HUD change to show creating a building. This is done here to prevent
-        // command delay, since this command doesn't do anything yet
-        info( FS( "Ghosting %s", *GetTypesName( type ) ) );
-        Game->flycam->ghost = Game->Make< ABuilding >( type, go->team );
-      }
-      else
-      {
-        Game->EnqueueCommand( // Network cmd.
-          Command( Command::CommandType::UseAbility, go->ID, i )
-        );
-        //go->UseAbility( i );// C++ cmd.
-      }
+      go->CountersAbility[i]->Go( go );
       return Consumed;
     };
   }
-  
-  buildButton->Hide();
-  if( go->isPeasant() ) buildButton->Show();
 }
 
 

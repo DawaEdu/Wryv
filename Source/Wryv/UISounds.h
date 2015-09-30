@@ -9,5 +9,4 @@ enum UISounds
   Error               UMETA(DisplayName = "Error"),
   Click               UMETA(DisplayName = "Click"),
   Music               UMETA(DisplayName = "Music"),
-
 };

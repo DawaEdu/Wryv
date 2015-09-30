@@ -173,11 +173,10 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   //}
 
   // Cannot select objects of these types
-  set<Types> forbidden = { Types::GROUNDPLANE, Types::UISELECTOR, Types::UIFLAGWAYPOINT };
-  function< bool (AGameObject*) > filter = [forbidden]( AGameObject *g ) -> bool {
+  set< TSubclassOf<AGameObject> > forbiddenTypes = { AGroundPlane::StaticClass(), AWidget3D::StaticClass() };
+  function< bool (AGameObject*) > filter = [ forbiddenTypes ]( AGameObject *go ) -> bool {
     // remove objects of forbidden types.
-    return g->Dead || in( forbidden, g->Stats.Type.GetValue() ) ||
-           IsProjectile( g->Stats.Type.GetValue() );
+    return go->Dead || go->IsAny( forbiddenTypes );
   };
   objects |= filter;
 
@@ -251,7 +250,7 @@ void ATheHUD::MarkAsSelected( AGameObject* object )
     return;
   }
 
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( SelectedTargetName );
@@ -270,7 +269,7 @@ void ATheHUD::MarkAsFollow( AGameObject* object )
     return; // already marked as an attack target
   }
 
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( FollowTargetName );
@@ -288,7 +287,7 @@ void ATheHUD::MarkAsAttack( AGameObject* object )
     return; // already marked as an attack target
   }
 
-  AWidget3D* widget = Game->Make<AWidget3D>( UISELECTOR, object->team );
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( AttackTargetName );

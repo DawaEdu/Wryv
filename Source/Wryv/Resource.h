@@ -10,6 +10,8 @@ class WRYV_API AResource : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
 public:
+  typedef TSubclassOf<AResource> /* as */ Type;
+
   float AmountRemaining;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USkeletalMeshComponent* Mesh;
   // Sets the tree to jiggling.
