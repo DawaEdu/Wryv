@@ -109,15 +109,15 @@ bool Team::Has( UClass* ClassType )
 
 bool Team::CanAfford( UClass* ClassType )
 {
-  FUnitsDataRow ud = Game->GetData( ClassType );
-  return Gold >= ud.GoldCost && Lumber >= ud.LumberCost && Stone >= ud.StoneCost;
+  AGameObject* go = Game->GetData( ClassType );
+  return Gold >= go->Stats.GoldCost && Lumber >= go->Stats.LumberCost && Stone >= go->Stats.StoneCost;
 }
 
 bool Team::CanBuild( UClass* ClassType )
 {
   // Requirements for building an object of a certain type.
   // Must have an object of required types to build, as well as afford.
-  TArray< TSubclassOf< ABuilding > > requirements = Game->GetData( ClassType ).Requirements;
+  TArray< TSubclassOf< ABuilding > > requirements = Game->GetData( ClassType )->Stats.Requirements;
   for( int i = 0; i < requirements.Num(); i++ )
   {
     if( !Has( requirements[i] ) )
@@ -134,10 +134,20 @@ bool Team::Spend( UClass* ClassType )
     return 0;
   }
 
-  FUnitsDataRow ud = Game->GetData( ClassType );
-  Gold   -= ud.GoldCost;
-  Lumber -= ud.LumberCost;
-  Stone  -= ud.StoneCost;
+  AGameObject* go = Game->GetData( ClassType );
+  Gold   -= go->Stats.GoldCost;
+  Lumber -= go->Stats.LumberCost;
+  Stone  -= go->Stats.StoneCost;
+  return 1;
+}
+
+bool Team::Refund( UClass* ClassType )
+{
+  // Refund cost of ClassType back to team.
+  AGameObject* go = Game->GetData( ClassType );
+  Gold   += go->Stats.GoldCost;
+  Lumber += go->Stats.LumberCost;
+  Stone  += go->Stats.StoneCost;
   return 1;
 }
 
@@ -157,7 +167,8 @@ int Team::computeFoodSupply()
   int foodSupply = 0;
   // The food supply is from Farm objects
   for( int i = 0; i < units.size(); i++ )
-    foodSupply += units[i]->Stats.FoodProvided;
+    if( ABuilding* building = Cast<ABuilding>( units[i] ) )
+      foodSupply += building->FoodProvided;
   return foodSupply;
 }
 

@@ -5,7 +5,6 @@
 using namespace std;
 
 #include "AI.h"
-#include "UnitsData.h"
 
 class ACombatUnit;
 class AGameObject;
@@ -48,7 +47,7 @@ struct Team
   vector<AGameObject*> units;
   // The research level objects that have been completed. New units have
   // these stats pushed into their stats stack.
-  vector<UResearch*> Researches;
+  vector<UResearch*> CompletedResearches;
 
   Team();
   Team( int iTeamId, FString str );
@@ -68,7 +67,7 @@ struct Team
   bool CanAfford( UClass* ClassType );
   bool CanBuild( UClass* ClassType );
   bool Spend( UClass* ClassType );
-
+  bool Refund( UClass* ClassType );
   // Usage of food by units in the game.
   int computeFoodUsage();
   int computeFoodSupply();

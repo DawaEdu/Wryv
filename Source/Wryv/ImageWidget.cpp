@@ -1,4 +1,6 @@
 #include "Wryv.h"
+
+#include "CursorTexture.h"
 #include "ImageWidget.h"
 #include "TheHUD.h"
 
@@ -84,4 +86,9 @@ void ImageWidget::render( FVector2D offset )
   HotSpot::render( offset );
 }
 
+void ImageWidget::Set( FCursorTexture cursorTexture )
+{
+  Tex = cursorTexture.Texture;
+  hotpoint = cursorTexture.Hotpoint;
+}
 

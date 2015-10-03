@@ -145,6 +145,28 @@ bool UWryvGameInstance::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& O
   return Super::Exec( InWorld, Cmd, Out );
 }
 
+AGameObject* UWryvGameInstance::GetData( UClass* ClassType )
+{
+  if( !ClassType )
+  {
+    error( "Cannot GetData() for NULL ClassType" );
+  }
+  //else if( !in( BaseUnitsData, ClassType ) )
+  else if( BaseUnitsData.find( ClassType ) == BaseUnitsData.end() )
+  {
+    // Add it in
+    info( FS( "First load of UClass `%s`", *ClassType->GetName() ) );
+    AGameObject* object = Make<AGameObject>( ClassType );
+    if( object )  BaseUnitsData[ ClassType ] = object;
+    else  error( FS( "Couldn't make object ClassType `%s`", *ClassType->GetName() ) );
+  }
+  return BaseUnitsData[ ClassType ];
+}
+
+UTexture* UWryvGameInstance::GetPortrait( UClass* ClassType ) {
+  return GetData( ClassType )->Stats.Portrait;
+}
+
 void UWryvGameInstance::BeginDestroy()
 {
   IsDestroyStarted = 1;

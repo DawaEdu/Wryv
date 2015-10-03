@@ -5,27 +5,28 @@
 #include <map>
 using namespace std;
 
-#include "Widget.h"
-#include "UnitsData.h"
-#include "Team.h"
-#include "CursorTexture.h"
 #include "GameFramework/HUD.h"
 //#include "Runtime/MediaAssets/Public/MediaTexture.h"
 #include "Runtime/Media/Public/IMediaPlayer.h"
 
+#include "CursorTexture.h"
+#include "Team.h"
+#include "UnitAction.h"
+#include "Widget.h"
 #include "TheHUD.generated.h"
 
-class APlayerControl;
+class FAssetRegistryModule;
+class CostWidget;
+class UCastSpellAction;
 class AFlyCam;
 class AGameObject;
-class SlotPalette;
-class ITextWidget;
-class CostWidget;
 class ImageWidget;
-class StackPanel;
-class UserInterface;
-class FAssetRegistryModule;
+class ITextWidget;
 class UMediaTexture;
+class SlotPalette;
+class StackPanel;
+class APlayerControl;
+class UserInterface;
 class AWidget3D;
 
 UCLASS()
@@ -52,7 +53,6 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SolidWhiteTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* NoTextureTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInstance* ClockMaterialInstance;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TSubclassOf<AWidget3D> SelectorClass;
   
   UPROPERTY() TArray<UMaterialInstanceDynamic*> MaterialInstances; // Referenced collection of material instances.
   // Required to prevent auto-cleanup of instanced materials
@@ -64,10 +64,7 @@ public:
 
   // Because canvas has to be valid for box selection to work it seems
   vector<AGameObject*> Selected;
-  static FName AttackTargetName;
-  static FName FollowTargetName;
-  static FName SelectedTargetName;
-
+  
   // The buttons currently showing on the user interface.
   UserInterface* ui;  // The root UI widget. It doesn't have a viz, but it parents all other display containers.
   bool Init;          // Global init for all objects
@@ -78,18 +75,26 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* MinimapTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial* WarBlot;
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )  UMaterial* WarBlot;
 
   // The font used to render the text in the HUD.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor EmptyCrosshairColor;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor HitCrosshairColor;
+
+  UCastSpellAction* NextSpell;
+  Abilities NextAbility; //Queued ability
 
   ATheHUD(const FObjectInitializer& PCIP);
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
   void InitWidgets();
-
+  enum CursorType { CrossHairs, Hand };
+  void SetCursorStyle( CursorType style, FLinearColor color );
+  void SetHitCursor();
+  void SetPointer();
   TArray<FAssetData> ScanFolder( FName folder );
   
   HotSpot* MouseMoved( FVector2D mouse );
@@ -98,9 +103,6 @@ public:
   void Select( vector<AGameObject*> objects );
   void Unselect( vector<AGameObject*> objects );
   void Status( FString msg );
-  void MarkAsSelected( AGameObject* object );
-  void MarkAsFollow( AGameObject* object );
-  void MarkAsAttack( AGameObject* object );
   void UpdateMouse();
 
   bool Valid() { return IsCanvasValid_WarnIfNot() ; }

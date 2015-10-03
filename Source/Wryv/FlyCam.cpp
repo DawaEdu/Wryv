@@ -20,8 +20,13 @@
 #include "TheHUD.h"
 #include "Tree.h"
 #include "UISounds.h"
+#include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
+
+FName AFlyCam::AttackTargetName = "AttackTarget";
+FName AFlyCam::FollowTargetName = "FollowTarget";
+FName AFlyCam::SelectedTargetName = "SelTarget";
 
 // Sets default values
 AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
@@ -55,6 +60,7 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   CheckerClass = 0;
   LineClass = 0;
   WaypointFlagClass = 0;
+  BlockedColor = FLinearColor( .9,.2,.2,.5 ); //dark-reddish color
 }
 
 // Called when the game starts or when spawned
@@ -120,6 +126,61 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   //music = UGameplayStatics::SpawnSoundAttached( bkgMusic, RootComponent );
   sfxVolume = 1.f;
 }
+
+void AFlyCam::MarkAsSelected( AGameObject* object )
+{
+  if( HasChildWithTag( object, SelectedTargetName ) ) {
+    LOG( "%s already has a %s", *object->Stats.Name, *SelectedTargetName.ToString() );
+    return;
+  }
+
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
+  widget->Tags.Add( SelectedTargetName );
+  float r = object->Radius() * 1.5f;
+  widget->SetActorScale3D( FVector(r,r,r) );
+  widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
+  object->AddChild( widget );
+}
+
+void AFlyCam::MarkAsFollow( AGameObject* object )
+{
+  // only select as follow target if its not already an attack target of something
+  // ( attack priorities over follow )
+  if( HasChildWithTag( object, FollowTargetName ) ) {
+    //LOG( "%s already marked as follow", *object->Name );
+    return; // already marked as an attack target
+  }
+
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
+  widget->Tags.Add( FollowTargetName );
+  float r = object->Radius() * 1.5f;
+  widget->SetActorScale3D( FVector(r,r,r) );
+  widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
+  object->AddChild( widget );
+}
+
+void AFlyCam::MarkAsAttack( AGameObject* object )
+{
+  // Check that it doesn't already have a Selector-typed child
+  if( HasChildWithTag( object, AttackTargetName ) ) {
+    //LOG( "%s already marked as attack", *object->Name );
+    return; // already marked as an attack target
+  }
+
+  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
+  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
+  
+  widget->Tags.Add( AttackTargetName );
+  float r = object->Radius() * 1.5f;
+  widget->SetActorScale3D( FVector( r,r,r ) );
+  widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
+  object->AddChild( widget );
+}
+
 
 void AFlyCam::ClearGhost()
 {
@@ -581,21 +642,10 @@ void AFlyCam::MouseUpRight()
   
 }
 
-void AFlyCam::MouseDownRight()
+// Targets selected units @ another unit or groundpos
+// (queued NextAction/left click or right click behavior).
+void AFlyCam::Target()
 {
-  if( !Game->hud->Selected.size() )
-  {
-    info( "Nothing to command" );
-    return;
-  }
-
-  if( ghost )
-  {
-    info( FS( "The building %s was cancelled", *ghost->Stats.Name ) );
-    ClearGhost();
-    return;
-  }
-
   FHitResult hit = Game->pc->RayPickSingle( getMousePos() );
   AGameObject* target = Cast<AGameObject>( hit.GetActor() );
   if( !target )
@@ -607,8 +657,9 @@ void AFlyCam::MouseDownRight()
   // Hit the floor target, which means send units to ground position
   if( target == floor )
   {
-    // Calculate offsets with respect to first command unit
+    // Calculate offsets with respect to first command unit.
     AGameObject* first = Game->hud->Selected[0];
+    //TODO: Change this so units maintain a separation distance, but DO NOT maintain offset
     FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to pos from first->Pos
     for( AGameObject * go : Game->hud->Selected )
     {
@@ -616,7 +667,7 @@ void AFlyCam::MouseDownRight()
       if( Game->pc->IsAnyKeyDown( {EKeys::LeftShift, EKeys::RightShift } ) )
       {
         // When shift is down, we have to add the command to the list of commands for this unit.
-        info( "enqueue" );
+        info( "Enqueue" );
         Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
       }
       else
@@ -643,6 +694,24 @@ void AFlyCam::MouseDownRight()
       }
     }
   }
+}
+
+void AFlyCam::MouseDownRight()
+{
+  if( !Game->hud->Selected.size() )
+  {
+    info( "Nothing to command" );
+    return;
+  }
+
+  if( ghost )
+  {
+    info( FS( "The building %s was cancelled", *ghost->Stats.Name ) );
+    ClearGhost();
+    return;
+  }
+
+  Target();
 }
 
 void AFlyCam::MouseMoved()
@@ -677,12 +746,12 @@ void AFlyCam::MouseMoved()
         if( !ghost->CanBePlaced() )
         {
           // Red, to indicate building cannot be placed here.
-          ghost->SetMaterialColors( "Multiplier", FLinearColor( .9,.2,.2,.5 ) );
+          ghost->SetMaterialColors( "Multiplier", BlockedColor );
         }
         else
         {
           // White to indicate placement success
-          ghost->SetMaterialColors( "Multiplier", FLinearColor( 1.,1.,1.,.5 ) );
+          ghost->SetMaterialColors( "Multiplier", FLinearColor::White );
         }
       }
     }

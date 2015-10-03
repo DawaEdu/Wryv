@@ -73,6 +73,9 @@
     <Filter Include="Source\Wryv\GameObject\Objects\Actionable">
       <UniqueIdentifier>{6dfb76c6-e306-45b3-9a12-45d66372e5e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Wryv\Structures\Data">
+      <UniqueIdentifier>{f9de7883-1008-4288-b405-6710f04c6207}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\Border.h">
@@ -204,9 +207,6 @@
     <ClInclude Include="..\..\Source\Wryv\UISounds.h">
       <Filter>Source\Wryv\Structures</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
-      <Filter>Source\Wryv\Structures</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UserInterface.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
@@ -276,9 +276,6 @@
     <ClInclude Include="..\..\Source\Wryv\GlobalFunctions.h">
       <Filter>Source\Wryv</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\PlayerStats.h">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClInclude>
@@ -327,8 +324,26 @@
     <ClInclude Include="..\..\Source\Wryv\TrainingAction.h">
       <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\BuildInProgress.h">
+    <ClInclude Include="..\..\Source\Wryv\UnitAction.h">
       <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\GameObject.h">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\InProgressBuilding.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\InProgressUnit.h">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Spell.h">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\PowerUpTimeOut.h">
+      <Filter>Source\Wryv\Structures\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\UnitsData.h">
+      <Filter>Source\Wryv\Structures\Data</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -503,9 +518,6 @@
     <ClCompile Include="..\..\Source\Wryv\GlobalFunctions.cpp">
       <Filter>Source\Wryv</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
-      <Filter>Source\Wryv\GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\PlayerStats.cpp">
       <Filter>Source\Wryv\GameObject</Filter>
     </ClCompile>
@@ -554,8 +566,20 @@
     <ClCompile Include="..\..\Source\Wryv\TrainingAction.cpp">
       <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\BuildInProgress.cpp">
+    <ClCompile Include="..\..\Source\Wryv\UnitAction.cpp">
       <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\GameObject.cpp">
+      <Filter>Source\Wryv\GameObject\Units</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\InProgressBuilding.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\InProgressUnit.cpp">
+      <Filter>Source\Wryv\GameObject\Objects\Actionable</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Spell.cpp">
+      <Filter>Source\Wryv\GameObject\Objects</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

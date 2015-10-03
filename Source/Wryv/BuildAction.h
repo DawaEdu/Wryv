@@ -4,9 +4,10 @@
 #include "BuildAction.generated.h"
 
 class ABuilding;
-class AGameObject;
+class APeasant;
 
-UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A motion action") )
+// Peasants have build actions.
+UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A Build action") )
 class WRYV_API UBuildAction : public UAction
 {
   GENERATED_UCLASS_BODY()
@@ -14,6 +15,6 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
   TSubclassOf< ABuilding > BuildingType;
   
-  virtual void Go(AGameObject* go);
-  virtual void OnComplete();
+  // The building type was selected for placement by the peasant indicated.
+  virtual void Click(APeasant* peasant);
 };

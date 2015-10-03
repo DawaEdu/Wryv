@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "Projectile.h"
@@ -10,6 +11,7 @@ AProjectile::AProjectile(const FObjectInitializer& PCIP) : AGameObject(PCIP)
   PrimaryActorTick.bCanEverTick = true;
   Shooter = 0;
   Gravity = -10.f;
+  MaxTravelHeight = 150.f;
 }
 
 void AProjectile::ai( float t )
@@ -70,4 +72,13 @@ void AProjectile::SetDestinationArc( FVector start, FVector end, float speed, fl
   Gravity = -Vel.Z*Vel.Z / (2.f*h); // Acceleration for a velocity of 0 @ len/2.
 
   SetPosition( start );
+}
+
+void AProjectile::Die()
+{
+  AGameObject::Die();
+  if( OnImpact )
+  {
+    Game->Make<AExplosion>( OnImpact, team, Pos );
+  }
 }

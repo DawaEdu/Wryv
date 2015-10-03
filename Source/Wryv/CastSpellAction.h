@@ -3,8 +3,8 @@
 #include "Action.h"
 #include "CastSpellAction.generated.h"
 
-class AGameObject;
-class AProjectile;
+class ACombatUnit;
+class ASpell;
 
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="Action for casting a spell") )
 class WRYV_API UCastSpellAction : public UAction
@@ -12,8 +12,13 @@ class WRYV_API UCastSpellAction : public UAction
   GENERATED_UCLASS_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
-  TSubclassOf< AProjectile > Projectile;
+  TSubclassOf< ASpell > Spell;
 
-  virtual void Go(AGameObject* go);
-  virtual void OnComplete();
+  // The spell acquires a target from the UI to be cast
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
+  bool AcquiresTarget;
+
+  ACombatUnit* Caster;
+
+  virtual void Click();
 };

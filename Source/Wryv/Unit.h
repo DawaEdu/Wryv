@@ -4,24 +4,49 @@
 #include <set>
 using namespace std;
 
-#include "GameFramework/Actor.h"
-
 #include "GameObject.h"
 #include "Unit.generated.h"
 
 class AItem;
+
+class UItemAction;
+class UUnitAction;
 
 UCLASS()
 class WRYV_API AUnit : public AGameObject
 {
 	GENERATED_UCLASS_BODY()
 public:
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USkeletalMeshComponent* Mesh;
-
-  //AUnit(const FObjectInitializer& PCIP);
-  virtual void BeginPlay() override;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)
+  USkeletalMeshComponent* Mesh;
   
+  // The abilities this unit has, including ability to build, etc.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
+  TArray< TSubclassOf< UUnitAction > > Abilities;
+  // COOLDOWNS: A list of these for each of our capabilities in 
+  vector< UUnitAction* > CountersAbility;
+
+  // The items the unit starts carrying
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
+  TArray< TSubclassOf< UItemAction > > StartingItems;
+  vector< UItemAction* > CountersItems;
+  // Items unit is holding in-play.
+
+  // Weapon properties: If attacks send a projectile, set object here.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
+  TSubclassOf< AProjectile > ReleasedProjectileWeapon;
+
+  UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
+  
+  //AUnit(const FObjectInitializer& PCIP);
+  virtual void InitIcons();
+  virtual void PostInitializeComponents() override;
+  virtual void BeginPlay() override;
+  bool UseAbility( int index );
+  bool UseItem( int index );
+
   // Function that runs whenever the unit is first clicked on or selected.
   virtual void Move( float t ) override;
+  void Shoot();
 
 };

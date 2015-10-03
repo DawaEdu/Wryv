@@ -8,7 +8,6 @@ using namespace std;
 #include "AI.h"
 #include "GlobalFunctions.h"
 #include "Team.h"
-#include "UnitsData.h"
 #include "WryvGameInstance.generated.h"
 
 class AFlyCam;
@@ -32,7 +31,7 @@ public:
   // Used for things like the CanAfford() function, so we can look-ahead the
   // cost of spawning an object before actually spawning it.
 private:
-  map<UClass*,FUnitsDataRow> BaseUnitsData;
+  map<UClass*,AGameObject*> BaseUnitsData;
 public:
   ATheHUD *hud;
   APlayerControl *pc;
@@ -91,26 +90,8 @@ public:
     return Make<T>( ClassType, 0, FVector( 0.f ) );
   }
 public:
-  FUnitsDataRow GetData( UClass* ClassType )
-  {
-    if( !ClassType )
-    {
-      error( "Cannot GetData() for NULL ClassType" );
-    }
-    //else if( !in( BaseUnitsData, ClassType ) )
-    else if( BaseUnitsData.find( ClassType ) == BaseUnitsData.end() )
-    {
-      // Add it in
-      info( FS( "First load of UClass `%s`", *ClassType->GetName() ) );
-      AGameObject* object = Make<AGameObject>( ClassType );
-      if( object )  BaseUnitsData[ ClassType ] = object->BaseStats;
-      else  error( FS( "Couldn't make object ClassType `%s`", *ClassType->GetName() ) );
-    }
-    return BaseUnitsData[ ClassType ];
-  }
-  UTexture* GetPortrait( UClass* ClassType ) {
-    return GetData( ClassType ).Portrait;
-  }
+  AGameObject* GetData( UClass* ClassType );
+  UTexture* GetPortrait( UClass* ClassType );
   virtual void BeginDestroy() override;
 };
 

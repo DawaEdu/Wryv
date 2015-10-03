@@ -6,6 +6,9 @@
 #include "Clock.h"
 #include "FlyCam.h"
 #include "GameObject.h"
+#include "Peasant.h"
+#include "Unit.h"
+#include "UnitAction.h"
 #include "WryvGameInstance.h"
 
 UTexture* AbilitiesPanel::BuildButtonTexture = 0;
@@ -66,18 +69,21 @@ void AbilitiesPanel::Set( AGameObject *go )
 {
   // start by hiding all abilities
   HideChildren();
-  if( !go ) return;
+  AUnit* unit = Cast< AUnit >( go );
+  if( !unit ) return;
 
-  vector<Clock*> abilitiesClocks = Populate<UAction>( go->CountersAbility );
+  unit->InitIcons();
+
+  vector<Clock*> abilitiesClocks = Populate<UUnitAction>( unit->CountersAbility );
 
   for( int i = 0; i < abilitiesClocks.size(); i++ )
   {
     Clock* clock = abilitiesClocks[ i ];
 
     // Attach button with invokation of i'th ability
-    clock->OnMouseDownLeft = [go,i]( FVector2D mouse ) {
+    clock->OnMouseDownLeft = [unit,i]( FVector2D mouse ) {
       // Invoke I'th action of the object
-      go->CountersAbility[i]->Go( go );
+      unit->CountersAbility[i]->Click();
       return Consumed;
     };
   }
@@ -95,16 +101,36 @@ BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int col
 void BuildPanel::Set( AGameObject *go )
 {
   HideChildren(); // Hide all buttons
-  if( ! go )  return;
+  
 
-  // the rest of the abilities can be set to null
-  for( int i = go->Stats.Abilities.Num(); i < GetNumSlots(); i++ )
+  if( APeasant* peasant = Cast<APeasant>( go ) )
   {
-    // Turn off the function object, jsut in case
-    GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
-    // hide slot 
-    GetSlot(i)->Hide();
+    
+    // the rest of the abilities can be set to null
+    int i = 0;
+    for( ; i < GetNumSlots(); i++ )
+    {
+      // Turn off the function object, jsut in case
+      GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+      // hide slot 
+      GetSlot(i)->Hide();
+    }
+
+    for( ; i < GetNumSlots(); i++ )
+    {
+      // Turn off the function object, jsut in case
+      GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+      // hide slot 
+      GetSlot(i)->Hide();
+    }
+
+
   }
+  else if( ABuilding* building = Cast<ABuilding>( go ) )
+  {
+    
+  }
+
   
 }
 

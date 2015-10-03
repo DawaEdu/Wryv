@@ -20,7 +20,7 @@ AResource::AResource( const FObjectInitializer& PCIP ) : Super( PCIP )
 void AResource::BeginPlay()
 {
   Super::BeginPlay();
-  AmountRemaining = Stats.Quantity;
+  AmountRemaining = Quantity;
 }
 
 void AResource::PostInitializeComponents()
@@ -42,7 +42,7 @@ void AResource::Harvest( APeasant* peasant )
   };
   if( !IsAny( acceptable ) )
   {
-    // This happens when you have a bad entry in BaseStats.
+    // This happens when you have a bad entry 
     error( FS( "Resource object type %s not recognized", *Stats.Name ) );
     return;
   }

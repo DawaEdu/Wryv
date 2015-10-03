@@ -6,13 +6,7 @@
 
 UAction::UAction( const FObjectInitializer & PCIP ) : Super( PCIP )
 {
-}
-
-void UAction::Go(AGameObject* go)
-{
-  Object = go;
-  info( FS( "Using Action %s [%s] on %s", *Text,
-    *GetEnumName( TEXT("Abilities"), Ability ), *Object->Stats.Name ) );
+  Icon = 0;
 }
 
 void UAction::OnRefresh()
@@ -22,8 +16,7 @@ void UAction::OnRefresh()
 
 void UAction::OnComplete()
 {
-  info( FS( "%s has completed action %s has completed", 
-    *Object->Stats.Name, *Text ) );
+  info( FS( "Action %s has completed", *Text ) );
 }
 
 void UAction::Step( float t )

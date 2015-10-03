@@ -1,8 +1,24 @@
 #include "Wryv.h"
+
 #include "CombatUnit.h"
+#include "Spell.h"
+#include "WryvGameInstance.h"
+
+#include "CastSpellAction.h"
 
 ACombatUnit::ACombatUnit( const FObjectInitializer& PCIP ):Super( PCIP )
 {
+}
+
+void ACombatUnit::InitIcons()
+{
+  AUnit::InitIcons();
+  for( int i = 0; i < Spells.Num(); i++ )
+  {
+    UCastSpellAction* action = NewObject< UCastSpellAction >( this, Spells[i] );
+    action->Caster = this;
+    CountersSpells.push_back(  );
+  }
 }
 
 void ACombatUnit::Move( float t )
@@ -24,6 +40,17 @@ void ACombatUnit::ai( float t )
 
   // Try to find an enemy unit to attack.
   AttackTarget = GetClosestEnemyUnit();
+  
+}
+
+void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType )
+{
+  ASpell* spell = Game->Make< ASpell >( SpellClassType, team, Pos );
+  spell->Attack( AttackTarget );
+}
+
+void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType, FVector groundLocation )
+{
   
 }
 

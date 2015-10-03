@@ -8,6 +8,9 @@
 AItem::AItem(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   PrimaryActorTick.bCanEverTick = true;
+
+  Mesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "itemsMesh" );
+  Mesh->AttachTo( DummyRoot ); 
 }
 
 void AItem::Hit( AGameObject* other )
@@ -19,6 +22,12 @@ void AItem::Hit( AGameObject* other )
     unit->CountersItems.push_back( NewObject<UItemAction>( unit, ButtonClass ) );
     Cleanup();
   }
+}
+
+void AItem::Use( AUnit* unit )
+{
+  PowerUpTimeOut pup( this, TimeLength, 0.f );
+  unit->BonusTraits.push_back( pup );
 }
 
 

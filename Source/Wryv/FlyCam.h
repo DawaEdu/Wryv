@@ -19,6 +19,7 @@ class AGroundPlane;
 class Pathfinder;
 class ATheHUD;
 class APlayerControl;
+class AWidget3D;
 
 inline bool operator<( const FLinearColor& c1, const FLinearColor& c2 )
 {
@@ -46,21 +47,24 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizPassibles;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> VizClass;
 
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  float CheckerSphereRadius;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> CheckerClass;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> LineClass;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  TSubclassOf<AShape> WaypointFlagClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> VizClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> CheckerClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> LineClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> WaypointFlagClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads ) TSubclassOf<AWidget3D> SelectorClass;
 
   // Use a TARRAY to keep sfx organized, includes music & effects
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterialInterface* BaseWhiteInterface;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  FLinearColor BlockedColor;
+
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* BaseWhiteMaterial;
   UPROPERTY() TArray<UMaterialInstanceDynamic*> ColorMaterials; //Reference counted collection of created colors.
   map<FLinearColor, UMaterialInstanceDynamic*> Colors;
 
-  // the name of the title level
+// the name of the title level
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  FName LevelMap;
 
   UAudioComponent* music;
@@ -73,7 +77,10 @@ public:
   
   UInputComponent* InputComponent;
   vector<AGameObject*> viz;
-  
+  static FName AttackTargetName;
+  static FName FollowTargetName;
+  static FName SelectedTargetName;
+
   // Sets default values for this pawn's properties
 	AFlyCam( const FObjectInitializer& PCIP );
   
@@ -83,7 +90,10 @@ public:
   // SetupPlayerInputComponent only exists in APawn, so we attach
   // functionality to each input component
   virtual void SetupPlayerInputComponent( UInputComponent* InputComponent ) override;
-  
+  void MarkAsSelected( AGameObject* object );
+  void MarkAsFollow( AGameObject* object );
+  void MarkAsAttack( AGameObject* object );
+
   void ClearGhost();
   // Start to load the map in levelName
   void LoadLevel( FName levelName );
@@ -108,6 +118,7 @@ public:
   bool SetOnGround( FVector& v );
   
   void FindFloor();
+  void Target();
   void MouseUpLeft();
   void MouseDownLeft();
   void MouseUpRight();

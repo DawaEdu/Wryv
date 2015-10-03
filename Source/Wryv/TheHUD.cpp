@@ -12,22 +12,20 @@
 #include "Resource.h"
 #include "TheHUD.h"
 #include "Unit.h"
-#include "UnitsData.h"
 #include "Widget.h"
 #include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
+#include "CastSpellAction.h"
+
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
-
-FName ATheHUD::AttackTargetName = "AttackTarget";
-FName ATheHUD::FollowTargetName = "FollowTarget";
-FName ATheHUD::SelectedTargetName = "SelTarget";
 
 ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "ATheHUD::ATheHUD(ctor)");
+  NextAbility = Abilities::NotSet;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
 }
@@ -105,6 +103,32 @@ void ATheHUD::InitWidgets()
   ui->SetScreen( Game->gm->state );
 }
 
+void ATheHUD::SetCursorStyle( CursorType style, FLinearColor color )
+{
+  switch( style )
+  {
+    case CursorType::CrossHairs:
+      ui->gameChrome->gameCanvas->cursor->Set( MouseCursorCrossHairs );
+      break;
+    case CursorType::Hand:
+      ui->gameChrome->gameCanvas->cursor->Set( MouseCursorHand );
+      break;
+    default:
+      break;
+  }
+  ui->gameChrome->gameCanvas->cursor->Color = color;
+}
+
+void ATheHUD::SetHitCursor()
+{
+  SetCursorStyle( CursorType::CrossHairs, EmptyCrosshairColor );
+}
+
+void ATheHUD::SetPointer()
+{
+  SetCursorStyle( CursorType::Hand, FLinearColor::White );
+}
+
 TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
 {
   // Create an AssetRegistry to list folder data
@@ -160,11 +184,11 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   // Remove all selection markers (previous selection)
   for( AGameObject* sel : Selected )
   {
-    RemoveTagged( sel, SelectedTargetName );
-    RemoveTagged( sel, FollowTargetName );
-    if( sel->FollowTarget )  RemoveTagged( sel->FollowTarget, FollowTargetName );
-    RemoveTagged( sel, AttackTargetName );
-    if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, AttackTargetName );
+    RemoveTagged( sel, Game->flycam->SelectedTargetName );
+    RemoveTagged( sel, Game->flycam->FollowTargetName );
+    if( sel->FollowTarget )  RemoveTagged( sel->FollowTarget, Game->flycam->FollowTargetName );
+    RemoveTagged( sel, Game->flycam->AttackTargetName );
+    if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, Game->flycam->AttackTargetName );
   }
 
   //if( Game->flycam->ghost )
@@ -191,9 +215,9 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   for( AGameObject * go : Selected )
   {
     // make an attack target if there is an attack target for the gameobject
-    MarkAsSelected( go );
-    if( go->AttackTarget )  MarkAsAttack( go->AttackTarget );
-    if( go->FollowTarget )  MarkAsFollow( go->FollowTarget );
+    Game->flycam->MarkAsSelected( go );
+    if( go->AttackTarget )  Game->flycam->MarkAsAttack( go->AttackTarget );
+    if( go->FollowTarget )  Game->flycam->MarkAsFollow( go->FollowTarget );
   }
 
   // Modify the UI to reflect selected gameobjects
@@ -218,17 +242,17 @@ void ATheHUD::Unselect( vector<AGameObject*> objects )
   for( AGameObject* go : objects )
   {
     // Remove any selectors on there
-    RemoveTagged( go, SelectedTargetName );
+    RemoveTagged( go, Game->flycam->SelectedTargetName );
 
     // If I'm the only selected unit with on follow target then remove follow target selection
     // If go is the only follower / attacker in Selected, then remove the marker.
     if( go->FollowTarget )
       if( Intersection( Selected, go->FollowTarget->Followers ).size() <= 1 )
-        RemoveTagged( go, FollowTargetName );
+        RemoveTagged( go, Game->flycam->FollowTargetName );
 
     if( go->AttackTarget )
       if( Intersection( Selected, go->AttackTarget->Attackers ).size() <= 1 )
-        RemoveTagged( go, AttackTargetName );
+        RemoveTagged( go, Game->flycam->AttackTargetName );
   }
 
   Selected -= objects;
@@ -241,60 +265,6 @@ void ATheHUD::Status( FString msg )
 {
   ui->statusBar->Set( msg );
   info( msg );
-}
-
-void ATheHUD::MarkAsSelected( AGameObject* object )
-{
-  if( HasChildWithTag( object, SelectedTargetName ) ) {
-    LOG( "%s already has a %s", *object->Stats.Name, *SelectedTargetName.ToString() );
-    return;
-  }
-
-  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
-  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
-  
-  widget->Tags.Add( SelectedTargetName );
-  float r = object->Radius() * 1.5f;
-  widget->SetActorScale3D( FVector(r,r,r) );
-  widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
-  object->AddChild( widget );
-}
-
-void ATheHUD::MarkAsFollow( AGameObject* object )
-{
-  // only select as follow target if its not already an attack target of something
-  // ( attack priorities over follow )
-  if( HasChildWithTag( object, FollowTargetName ) ) {
-    //LOG( "%s already marked as follow", *object->Stats.Name );
-    return; // already marked as an attack target
-  }
-
-  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
-  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
-  
-  widget->Tags.Add( FollowTargetName );
-  float r = object->Radius() * 1.5f;
-  widget->SetActorScale3D( FVector(r,r,r) );
-  widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
-  object->AddChild( widget );
-}
-
-void ATheHUD::MarkAsAttack( AGameObject* object )
-{
-  // Check that it doesn't already have a Selector-typed child
-  if( HasChildWithTag( object, AttackTargetName ) ) {
-    //LOG( "%s already marked as attack", *object->Stats.Name );
-    return; // already marked as an attack target
-  }
-
-  AWidget3D* widget = Game->Make<AWidget3D>( SelectorClass, object->team );
-  if( !widget ) { error( "Widget3d couldn't be created" ); return; }
-  
-  widget->Tags.Add( AttackTargetName );
-  float r = object->Radius() * 1.5f;
-  widget->SetActorScale3D( FVector( r,r,r ) );
-  widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
-  object->AddChild( widget );
 }
 
 void ATheHUD::DrawMaterial(UCanvas* Canvas, UMaterialInterface* Material, float ScreenX, float ScreenY, 

@@ -1,12 +1,14 @@
 #pragma once
 
-#include "UnitsData.h"
-#include "GameFramework/PlayerController.h"
-#include "Engine/EngineTypes.h"
 #include <vector>
 #include <set>
 using namespace std;
+
+#include "GameFramework/PlayerController.h"
+#include "Engine/EngineTypes.h"
+
 #include "Box2DU.h"
+
 #include "PlayerControl.generated.h"
 
 class AGameObject;

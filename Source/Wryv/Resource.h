@@ -18,12 +18,13 @@ public:
   UPROPERTY( VisibleAnywhere, BlueprintReadWrite, Category = Stats )  bool Jiggle;
   // This triggers the resource's destruction sequence to occur
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool ResourcesFinished;
-
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 Quantity;
+  
   //AResource(const FObjectInitializer& PCIP);
   void BeginPlay() override;
   void PostInitializeComponents() override;
   void Harvest( APeasant* peasant );
-  float ResourcesFraction() { return AmountRemaining / Stats.Quantity; }
+  float ResourcesFraction() { return AmountRemaining / Quantity; }
 };
 
 

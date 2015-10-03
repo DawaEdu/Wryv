@@ -1,20 +1,20 @@
 #include "Wryv.h"
 
+#include "Building.h"
 #include "BuildAction.h"
+#include "FlyCam.h"
 #include "GameObject.h"
 #include "GlobalFunctions.h"
+#include "WryvGameInstance.h"
 
 UBuildAction::UBuildAction( const FObjectInitializer & PCIP ) : Super( PCIP )
 {
 }
 
-void UBuildAction::Go(AGameObject* go)
+void UBuildAction::Click(APeasant* peasant)
 {
-  UAction::Go( go );
+  // flycam places ghost of building to build next.
+  Game->flycam->ghost = Game->Make< ABuilding >( BuildingType );
 }
 
-void UBuildAction::OnComplete()
-{
-  UAction::OnComplete();
-}
 

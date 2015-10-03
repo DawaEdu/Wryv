@@ -2,6 +2,8 @@
 
 #include "HotSpot.h"
 
+struct FCursorTexture;
+
 class ImageWidget : public HotSpot
 {
 public:
@@ -22,7 +24,8 @@ public:
   ImageWidget( UTexture* pic, FVector2D size );
   ImageWidget( FString name, UTexture* pic, FVector2D size );
   ImageWidget( FString name, UTexture* pic, FVector2D size, FLinearColor color );
-  
+  void Set( FCursorTexture cursorTexture );
+
   virtual ~ImageWidget(){}
   virtual void render( FVector2D offset ) override ;
 };

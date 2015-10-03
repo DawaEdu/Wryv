@@ -71,7 +71,7 @@ void AFogOfWar::DrawFogOfWar( UCanvas* canvas, int32 Width, int32 Height )
     AGameObject *go = Game->gm->playersTeam->units[i];
     FVector2D pos( go->Pos.X, go->Pos.Y );
     FVector2D unitizedPos = (pos - floorOrigin) / floorBoxSize;
-    float radiusUnitized = 0.25f; //go->Stats.SightRange / floorBoxSize.X;
+    float radiusUnitized = 0.25f; //go->SightRange / floorBoxSize.X;
     unitizedPos -= FVector2D( radiusUnitized, radiusUnitized );
     FVector2D blot = unitizedPos * CanvasSize;
     float radiusPX = radiusUnitized * CanvasSize.X;

@@ -13,20 +13,24 @@ using namespace std;
 #include "Command.h"
 #include "CooldownCounter.h"
 #include "GlobalFunctions.h"
+#include "PowerUpTimeOut.h"
 #include "SoundEffect.h"
 #include "UnitsData.h"
 
 #include "GameObject.generated.h"
 
+class ABuilding;
 class AItem;
 class AGameObject;
+class AProjectile;
 class AResource;
 class AShape;
 struct Team;
 
 class UAction;
+class UUnitAction;
 class UBuildAction;
-class UBuildInProgress;
+class UInProgressBuilding;
 class UCastSpellAction;
 class UItemAction;
 class UResearch;
@@ -36,18 +40,17 @@ UCLASS()
 class WRYV_API AGameObject : public AActor
 {
   GENERATED_UCLASS_BODY()
-  const static float WaypointAngleTolerance; // 
+  const static float WaypointAngleTolerance;
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
   static AGameObject* Nothing;
   static float CapDeadTime; // Dead units get cleaned up after this many seconds (time given for dead anim to play out)
   
-  // Stats.
+  // 
   int64 ID; // Unique Identity of the object.
   Team *team;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  FUnitsDataRow BaseStats;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsDataRow Stats;
   // The stats applied due to research bonuses.
-  vector<FUnitsDataRow> ResearchBonusStats;
+  //vector<FUnitsDataRow> ResearchBonusStats;
+
   // Level of the object.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Level;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Kills;
@@ -66,25 +69,10 @@ class WRYV_API AGameObject : public AActor
   FLinearColor vizColor;
   float vizSize;
   bool Recovering;
-
-  // 
-  // COOLDOWNS: A list of these for each of our capabilities in Stats.
-  vector< UAction* > CountersAbility;    // All classes
-  // List of objects that are currently being built by this object.
-  vector< UBuildAction* > CountersBuildings; // Todo: Peasant only
-  vector< UBuildInProgress* > CountersBuildQueue; // Todo: Peasant only
-  vector< UItemAction* > CountersItems;      // Todo: Units
-  vector< UResearch* > CountersResearch;   // Todo: For Buildings only
-  vector< UTrainingAction* > CountersTraining;   // Todo: For Buildings only
-  // Items unit is holding in-play.
-
   int64 LastBuildingID; // The ID of the last building we proposed to be placed.
-  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Attacks;
-
-  // 
   // Movement & Attack.
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Pos;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
@@ -93,6 +81,9 @@ class WRYV_API AGameObject : public AActor
   FVector Dest;
   vector<FVector> Waypoints;
   vector<AShape*> NavFlags; // Debug info for navigation flags
+
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsData BaseStats;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsData Stats;
 
   // Series of commands.
   deque<Command> commands;
@@ -109,9 +100,9 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
-  vector<AGameObject*> Followers, Attackers, RepulsionOverlaps;
+  vector<AGameObject*> Followers, Attackers, RepulsionOverlaps, HitOverlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
-
+  
   // 
   // UE4 & Utility
   template <typename T> vector<T*> GetComponentsByType() {
@@ -120,7 +111,8 @@ class WRYV_API AGameObject : public AActor
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
-  
+  virtual void InitIcons();
+
   // Net
   // Hashes the object (checking for network state desync)
   float Hash();
@@ -151,26 +143,16 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = Fighting)  float HpFraction();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
   // Pass thru to stats structure property
-  UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiplier; }
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiply; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasAttackTarget() { return AttackTarget != 0; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasFollowTarget() { return FollowTarget != 0; }
   // Called by blueprints (AttackAnimation) when attack is launched (for ranged weapons)
   // or strikes (for melee weapons).
-  UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
-  void Shoot();
   virtual void ReceiveAttack( AGameObject* from );
 
   void UpdateStats( float t );
 
-  // Use* functions use specific indexes from Abilities,
-  // Builds, Training, Researches, or Items slots.
-  bool UseAbility( int index );
-  bool UseBuild( int index );
-  bool UseTrain( int index );
-  bool UseResearch( int index );
-  bool UseItem( int index );
-  
   // 
   // Movement functions.
   void SetRot( const FRotator & ro );
@@ -230,6 +212,7 @@ class WRYV_API AGameObject : public AActor
   void StopMoving();
   // Stop command, which aborts current command, and cancels all queued commands.
   void Stop();
+  void HoldGround();
   
   // 
   // Unit relationship functions

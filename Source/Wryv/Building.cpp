@@ -13,6 +13,9 @@
 #include "Animation/AnimNode_AssetPlayerBase.h"
 #include "Runtime/Engine/Classes/Particles/ParticleEmitter.h"
 
+#include "Research.h"
+#include "TrainingAction.h"
+
 ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
   Complete = 0;
@@ -46,13 +49,37 @@ void ABuilding::PostInitializeComponents()
 void ABuilding::BeginPlay()
 {
   Super::BeginPlay();
-  TimeBuilding = Stats.TimeLength; // Start as completed (for ghost object placement).
+  TimeBuilding = BuildingTime; // Start as completed (for ghost object placement).
   Hp = Stats.HpMax;//  Start with 1 hp so that the building doesn't bust immediately
 }
 
+void ABuilding::InitIcons()
+{
+  AGameObject::InitIcons();
+  
+  for( int i = 0; i < Trains.Num(); i++ )
+  {
+    if( Trains[i] )
+    {
+      UTrainingAction* action = NewObject<UTrainingAction>( this, Trains[i] );
+      action->Building = this;
+      CountersTraining.push_back( action );
+    }
+  }
+
+  for( int i = 0; i < Researches.Num(); i++ )
+  {
+    if( Researches[i] )
+    {
+      UResearch* action = NewObject<UResearch>( this, Researches[i] );
+      action->Building = this;
+      CountersResearch.push_back( action );
+    }
+  }
+}
 void ABuilding::LosePeasant( APeasant* peasant )
 {
-  //Game->hud->Status( FS( "Building %s lost PrimaryPeasant builder %s", *Stats.Name, *peasant->Stats.Name ) );
+  //Game->hud->Status( FS( "Building %s lost PrimaryPeasant builder %s", *Name, *peasant->Name ) );
   
   // The building loses its peasant builder.
   if( peasant == PrimaryPeasant )
@@ -77,7 +104,7 @@ void ABuilding::Move( float t )
   AGameObject::Move( t ); // Updates Dead variable
   // Peasant's required to continue the building.
 
-  if( TimeBuilding < Stats.TimeLength )
+  if( TimeBuilding < BuildingTime )
   {
     // If the Primary Peasant is within building distance, contribute to building.
     // Other units repair the building.
@@ -134,6 +161,31 @@ void ABuilding::Tick( float t )
   }
 }
 
+bool ABuilding::UseTrain( int index )
+{
+  if( index < 0 || index >= Trains.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  
+  return 1;
+}
+
+bool ABuilding::UseResearch( int index )
+{
+  if( index < 0 || index >= CountersResearch.size() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  CountersResearch[ index ] -> Click();
+  
+  return 1;
+}
+
 void ABuilding::montageStarted_Implementation( UAnimMontage* Montage )
 {
   LOG( "PLAYING MONTAGE %d", Montage );
@@ -176,17 +228,38 @@ void ABuilding::PlaceBuilding( APeasant *p )
     Game->EnqueueCommand( Command( Command::Target, PrimaryPeasant->ID, ID ) );
 }
 
-void ABuilding::OnBuildingComplete()
+void ABuilding::DropBuilders( bool buildingSuccess )
 {
   if( PrimaryPeasant )
   {
-    PrimaryPeasant->JobDone();
+    if( buildingSuccess )
+      PrimaryPeasant->JobDone();
     PrimaryPeasant->SetPosition( ExitPosition->GetComponentLocation() );
   }
 
+  // All builders stop building this building.
+  for( AGameObject *go : Followers )
+  {
+    // All peasants who were repair/building this building stop repairing it.
+    if( APeasant * peasant = Cast<APeasant>( go ) )
+      if( peasant->RepairTarget == this )
+        go->Follow(0);
+  }
+}
+
+void ABuilding::OnBuildingComplete()
+{
+  DropBuilders(1);
   // Turn off the dust
   buildingDust->SetActive( false );
   Complete = 1;
+}
+
+void ABuilding::Cancel()
+{
+  DropBuilders(0);
+
+  Die();
 }
 
 void ABuilding::Die()
@@ -196,11 +269,7 @@ void ABuilding::Die()
   destructableMesh->ApplyRadiusDamage( 111, Pos, 10.f, 50000.f, 1 ); // Shatter the destructable.
 
   // If the building peasant was still there, let him discontinue building the building
-  if( PrimaryPeasant )
-  {
-    PrimaryPeasant->Target( 0 );
-    PrimaryPeasant = 0;
-  }
+  DropBuilders(0);
 
   AGameObject::Die();
 }

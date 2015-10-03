@@ -1,11 +1,22 @@
 #include "Wryv.h"
+
+#include "Building.h"
+#include "CombatUnit.h"
+#include "FlyCam.h"
 #include "GameCanvas.h"
+#include "Peasant.h"
+#include "PlayerControl.h"
 #include "TheHUD.h"
 #include "WryvGameInstance.h"
-#include "PlayerControl.h"
-#include "FlyCam.h"
-#include "Building.h"
-#include "Peasant.h"
+
+#include "Action.h"
+#include "BuildAction.h"
+#include "CastSpellAction.h"
+#include "InProgressBuilding.h"
+#include "InProgressUnit.h"
+#include "ItemAction.h"
+#include "TrainingAction.h"
+#include "UnitAction.h"
 
 FCursorTexture GameCanvas::MouseCursorHand;
 FCursorTexture GameCanvas::MouseCursorCrossHairs;
@@ -24,15 +35,60 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   // Attach functionality
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
-    // Presence of the ghost indicates a building is queued to be placed by the UI.
-    if( !Game->flycam->ghost )
-    {
-      // Box-shaped selection here
-      SelectStart( mouse );
+    FHitResult hitResult = Game->pc->RayPickSingle( Game->flycam->getMousePos() );
+    AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+    if( !hit ) {
+      warning( FS( "No object was clicked by the mouse" ) );
+      return NotConsumed;
     }
-    else
+
+    if( Game->hud->NextSpell )
     {
-      // Places the selected object without forming a new selection.
+      // Cast the spell using any selected units that can invoke the spell
+      for( AGameObject *go : Game->hud->Selected )
+      {
+        if( ACombatUnit* cu = Cast<ACombatUnit>( go ) )
+        {
+          cu->CastSpell( Game->hud->NextSpell->Spell, hitResult.ImpactPoint );
+          // Revert cursor to pointer
+          Game->hud->SetCursorStyle( ATheHUD::Hand, FLinearColor::White );
+        }
+      }
+    }
+
+    // Get the mouse location of the click
+    for( AGameObject* go : Game->hud->Selected )
+    {
+      switch( Game->hud->NextAbility )
+      {
+        case Abilities::Movement:
+          // Explicit movement, without attack possible.
+          if( hit == Game->flycam->floor )
+            go->SetDestination( hitResult.ImpactPoint );
+          else
+            go->Follow( hit );  // otherwise, follow clicked unit
+          break;
+        case Abilities::Attack:
+          // Attack only, even friendly units.
+          go->Attack( hit );
+          break;
+        case Abilities::Stop:
+          // Stops units from moving
+          go->Stop();
+          break;
+        case Abilities::HoldGround:
+          go->HoldGround();
+          break;
+        default:
+          error( "Ability NotSet" );
+          break;
+      }
+      Game->hud->SetCursorStyle( ATheHUD::Hand, FLinearColor::White );
+    }
+
+    if( Game->flycam->ghost )
+    {
+      // Presence of the ghost indicates a building is queued to be placed by the UI.
       ABuilding *ghost = Game->flycam->ghost;
 
       // the src peasant must be present
@@ -63,9 +119,14 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
         LOG( "Cannot place building here" );
       }
     }
-    
+    else // No ghost is set
+    {
+      // Box-shaped selection here
+      SelectStart( mouse );
+    }
     return Consumed;
   };
+
   OnMouseUpLeft = [this]( FVector2D mouse ) {
     // Box shaped selection of units.
     // Filtration is done after selection,
@@ -73,11 +134,26 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     SelectEnd();
     return Consumed;
   };
+
   OnHover = [this]( FVector2D mouse ) {
     // Regular hover event
-    Set( mouse );
+    Set( mouse ); // Moves the mouse cursor to where px coords are.
+
+    // If spell queued, highlight crosshairs red, else revert to default crosshairs color
+    if( Game->hud->NextAbility == Abilities::Attack  ||  Game->hud->NextSpell ) 
+    {
+      // Highlight what's under the mouse.
+      FHitResult hitResult = Game->pc->RayPickSingle( mouse );
+      AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+      if( hit != Game->flycam->floor )
+        Game->hud->SetCursorStyle( ATheHUD::CursorType::CrossHairs, Game->hud->HitCrosshairColor );
+      else
+        Game->hud->SetCursorStyle( ATheHUD::CursorType::CrossHairs, Game->hud->EmptyCrosshairColor );
+    }
+
     return NotConsumed;
   };
+
   OnMouseDragLeft = [this]( FVector2D mouse ) {
     DragBox( mouse );
     return Consumed;

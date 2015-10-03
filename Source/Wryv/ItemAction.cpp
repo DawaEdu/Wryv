@@ -2,15 +2,21 @@
 
 #include "GameObject.h"
 #include "GlobalFunctions.h"
+#include "Item.h"
 #include "ItemAction.h"
+#include "Unit.h"
+#include "WryvGameInstance.h"
 
 UItemAction::UItemAction( const FObjectInitializer & PCIP ) : Super( PCIP )
 {
+  Unit = 0;
 }
 
-void UItemAction::Go(AGameObject* go)
+void UItemAction::Click()
 {
-  UAction::Go( go );
+  // instantiate the item & use it.
+  AItem* item = Game->Make<AItem>( ItemClass );
+  item->Use( Unit );
 }
 
 void UItemAction::OnComplete()

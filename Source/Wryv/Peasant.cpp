@@ -16,7 +16,7 @@
 #include "WryvGameMode.h"
 
 #include "BuildAction.h"
-#include "BuildInProgress.h"
+#include "InProgressBuilding.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
@@ -60,6 +60,37 @@ void APeasant::PostInitializeComponents()
   Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
 }
 
+void APeasant::InitIcons()
+{
+  AUnit::InitIcons();
+
+  for( int i = 0; i < Builds.Num(); i++ )
+  {
+    if( Builds[i] )
+    {
+      UBuildAction* action = NewObject<UBuildAction>( this, Builds[i] );
+      Buildables.push_back( action );
+    }
+  }
+
+
+}
+
+bool APeasant::UseBuild( int index )
+{
+  if( index < 0 || index >= Builds.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  // Construct an instance of 
+  UBuildAction* buildingAction = NewObject<UBuildAction>(
+    this, Builds[index] );
+  buildingAction->Click( this );
+  return 1;
+}
+
 bool APeasant::Build( UBuildAction* buildAction, FVector pos )
 {
   if( team->CanAfford( buildAction->BuildingType ) )
@@ -68,10 +99,12 @@ bool APeasant::Build( UBuildAction* buildAction, FVector pos )
     ABuilding* building = Game->Make<ABuilding>( buildAction->BuildingType, team, pos );
 
     // Construct the counter & add it to counters for this object
-    UBuildInProgress* buildInProgress = NewObject<UBuildInProgress>( 
-      this, UBuildInProgress::StaticClass() );
-    buildInProgress->BuildingInProgress = building;
-    CountersBuildQueue.push_back( buildInProgress );
+    UInProgressBuilding* buildInProgress = NewObject<UInProgressBuilding>( 
+      this, UInProgressBuilding::StaticClass() );
+    buildInProgress->Building = building;
+    buildInProgress->Icon = building->Stats.Portrait;
+    buildInProgress->Peasant = this;
+    CountersBuildingsQueue.push_back( buildInProgress );
 
     // Make the building and ask the peasant to join in building it.
     building->PlaceBuilding( this );
@@ -138,7 +171,7 @@ void APeasant::Repair( float t )
       return;
     }
 
-    float hpRecovered = hpRecovered = RepairTarget->Stats.RepairRate * t;
+    float hpRecovered = RepairTarget->Stats.RepairRate * t;
     if( RepairTarget->PrimaryPeasant == this )
     {
       return; // This is the primary builder, so he uses no additional resources when building.
@@ -152,9 +185,9 @@ void APeasant::Repair( float t )
     
     // repairs Hp gradually to a building at a fraction of the building's original construction cost.
     // cost the team resources for Repairing this building.
-    float goldCost    = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.GoldCost;
-    float lumberCost  = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.LumberCost;
-    float stoneCost   = RepairTarget->Stats.RepairHPFractionCost * hpRecovered * RepairTarget->Stats.StoneCost;
+    float goldCost   = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.GoldCost;
+    float lumberCost = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.LumberCost;
+    float stoneCost  = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.StoneCost;
     
     // Can only repair if won't dip values below zero
     if( team->Gold >= goldCost   &&   team->Lumber >= lumberCost   &&   team->Stone >= stoneCost )
@@ -224,7 +257,7 @@ void APeasant::AttackCycle()
 {
   if( AResource *MiningTarget = Cast<AResource>( AttackTarget ) )
   {
-    //LOG( "%s mines from %s", *Stats.Name, *AttackTarget->Stats.Name );
+    //LOG( "%s mines from %s", *Name, *AttackTarget->Name );
     // can only progress mining if sufficiently close.
     // use distance to object - radius to determine distance you are standing away from object
     // The attackRange of a peasant is used to get the resource gathering range
@@ -242,7 +275,7 @@ void APeasant::AttackCycle()
   else
   {
     // Its a regular attack target, pass to AttackCycle to roll the usual attack
-    AGameObject::AttackCycle();
+    AUnit::AttackCycle();
   }
 }
 

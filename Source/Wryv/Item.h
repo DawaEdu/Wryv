@@ -16,7 +16,16 @@ public:
   // When the item is picked up, this is the class of the button.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
   TSubclassOf<UItemAction> ButtonClass;
+  // Mesh for the item.
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
+  UStaticMeshComponent* Mesh;
+
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
+  int32 Quantity;
+
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Picture )
+  float TimeLength;
 
   virtual void Hit( AGameObject* other ) override;
-
+  void Use( AUnit* unit );
 };

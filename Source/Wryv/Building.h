@@ -5,6 +5,7 @@
 
 class APeasant;
 class UParticleEmitter;
+class UInProgressUnit;
 
 UCLASS()
 class WRYV_API ABuilding : public AGameObject
@@ -17,14 +18,28 @@ class WRYV_API ABuilding : public AGameObject
   // The MONTAGE for building the building. Montages must be used to call SetPosition() on.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UAnimMontage* buildingMontage;
 
+  // Repair costs a fraction of GoldCost, LumberCost, StoneCost per HP recovered.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float RepairHPFractionCost;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float BuildingTime;
+
   // Time to wait after exploding for cleanup
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float MaxExplosionTime;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveRadius;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float ExplosiveForce;
 
-  // The researches this building is able to do
+  // Food this structure supplies (Farms + townhall)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties) int32 FoodProvided;
+  
+  // List of types this building can train.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)
-  TArray< UResearch* > Researches;
+  TArray< TSubclassOf< UTrainingAction > > Trains;
+  vector< UTrainingAction* > CountersTraining;
+  vector< UInProgressUnit* > CountersInProgress;
+  
+  // Researches that this Building can do
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  TArray< TSubclassOf< UResearch > > Researches;
+  vector< UResearch* > CountersResearch;
 
   //ABuilding(const FObjectInitializer& PCIP);
   APeasant* PrimaryPeasant;      // The main peasant creating the building ( doesn't use resource to build )
@@ -33,24 +48,30 @@ class WRYV_API ABuilding : public AGameObject
   float ExplodedTime;     // The length of time the building has been exploded for
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
+  void InitIcons();
   void LosePeasant( APeasant* peasant );
   virtual void Move( float t ) override;
   virtual void Tick( float t ) override;
+  bool UseTrain( int index );
+  bool UseResearch( int index );
+
   // Tell you if building can be placed @ Pos
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
   void montageStarted( UAnimMontage* Montage );
   bool CanBePlaced();
   void PlaceBuilding( APeasant *p );
+  void DropBuilders( bool buildingSuccess );
   void OnBuildingComplete();
   FVector GetExitPosition();
-  UFUNCTION(BlueprintCallable, Category = Building)  float PercentBuilt() { return TimeBuilding / Stats.TimeLength; }
-  UFUNCTION(BlueprintCallable, Category = Building)  float BuildTime() { return Stats.TimeLength; }
-  UFUNCTION(BlueprintCallable, Category = Building)  bool BuildingDone() { return TimeBuilding >= Stats.TimeLength; }
+  UFUNCTION(BlueprintCallable, Category = Building)  float PercentBuilt() { return TimeBuilding / BuildingTime; }
+  UFUNCTION(BlueprintCallable, Category = Building)  float BuildTime() { return BuildingTime; }
+  UFUNCTION(BlueprintCallable, Category = Building)  bool BuildingDone() { return TimeBuilding >= BuildingTime; }
   // Tells you if the building needs a peasant or not.
   UFUNCTION(BlueprintCallable, Category = Building)  bool NeedsPeasant() {
     return !PrimaryPeasant && !Complete;
   }
   // The HP added
-  float GetHPAdd( float t ) { return t * Stats.HpMax / Stats.TimeLength; }
+  float GetHPAdd( float t ) { return t * Stats.HpMax / BuildingTime; }
+  void Cancel();
   virtual void Die();
 };

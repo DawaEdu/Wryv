@@ -17,9 +17,12 @@
 
 #include "Action.h"
 #include "BuildAction.h"
-#include "BuildInProgress.h"
+#include "CastSpellAction.h"
+#include "InProgressBuilding.h"
+#include "InProgressUnit.h"
 #include "ItemAction.h"
 #include "TrainingAction.h"
+#include "UnitAction.h"
 
 const float AGameObject::WaypointAngleTolerance = 30.f; // 
 const float AGameObject::WaypointReachedToleranceDistance = 250.f; // The distance to consider waypoint as "reached"
@@ -30,7 +33,7 @@ float AGameObject::CapDeadTime = 10.f;
 // Sets default values
 AGameObject::AGameObject( const FObjectInitializer& PCIP )
 {
-  //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *BaseStats.Name );
+  //LOG( "%s [%s]->AGameObject::AGameObject()", *GetName(), *Name );
   PrimaryActorTick.bCanEverTick = true;
   ID = 0;
   team = 0;
@@ -45,18 +48,20 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   IsReadyToRunNextCommand = 0;
   AttackReady = 0;
   HoldingGround = 0;
-
+  
   DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
   SetRootComponent( DummyRoot );
   hitBounds = PCIP.CreateDefaultSubobject<UCapsuleComponent>( this, "HitVolumex222" );
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
+
+
 }
 
 void AGameObject::PostInitializeComponents()
 {
-  //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *BaseStats.Name );
+  //LOG( "%s [%s]->AGameObject::PostInitializeComponents()", *GetName(), *Name );
   Super::PostInitializeComponents();
 
   if( RootComponent )
@@ -78,58 +83,6 @@ void AGameObject::PostInitializeComponents()
 
   Recovering = 1;
 
-  // Create instances of each class type
-  for( int i = 0; i < Stats.Abilities.Num(); i++ )
-  {
-    if( Stats.Abilities[i] )
-    {
-      UAction* action = NewObject<UAction>( this, Stats.Abilities[i] );
-      CountersAbility.push_back( action );
-    }
-  }
-
-  for( int i = 0; i < Stats.Builds.Num(); i++ )
-  {
-    if( Stats.Builds[i] )
-    {
-      UBuildAction* action = NewObject<UBuildAction>( this, Stats.Builds[i] );
-      CountersBuildings.push_back( action );
-    }
-  }
-  
-  for( int i = 0; i < Stats.Trains.Num(); i++ )
-  {
-    if( Stats.Trains[i] )
-    {
-      UTrainingAction* action = NewObject<UTrainingAction>( this, Stats.Trains[i] );
-      CountersTraining.push_back( action );
-    }
-  }
-  
-  for( int i = 0; i < Stats.Researches.Num(); i++ )
-  {
-    if( Stats.Researches[i] )
-    {
-      UResearch* action = NewObject<UResearch>( this, Stats.Researches[i] );
-      CountersResearch.push_back( action );
-    }
-  }
-  
-  for( int i = 0; i < Stats.StartingItems.Num(); i++ )
-  {
-    if( Stats.StartingItems[i] )
-    {
-      UItemAction* action = NewObject<UItemAction>( this, Stats.StartingItems[i] );
-      CountersItems.push_back( action );
-    }
-  }
-  
-  
-  //ConstructCooldowns< ABuilding, UAction >( Stats.Builds, CountersBuildQueue );
-  //ConstructCooldowns< AUnit,     UAction >( Stats.Trains, CountersTraining );
-  //ConstructCooldowns< UResearch, UAction >( Stats.Researches, CountersResearch );
-  //ConstructCooldowns< UAction,   UAction >( Stats.Items, CountersItems );
-
 }
 
 // Called when the game starts or when spawned
@@ -137,14 +90,19 @@ void AGameObject::BeginPlay()
 {
   Super::BeginPlay();
 
-  //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *BaseStats.Name );
-  Team* newTeam = Game->gm->teams[ BaseStats.TeamId ];
+  //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *Name );
+  Team* newTeam = Game->gm->teams[ Stats.TeamId ];
   SetTeam( newTeam );
 
   ID = Game->NextId();
 }
 
 void AGameObject::OnMapLoaded()
+{
+  
+}
+
+void AGameObject::InitIcons()
 {
   
 }
@@ -208,7 +166,8 @@ void AGameObject::SetSize( FVector size )
 
 FVector AGameObject::GetTip()
 {
-  return Pos + FVector( 0,0, hitBounds->GetScaledCapsuleHalfHeight()*2.f );
+  // The base is the bottom of the unit.
+  return Pos + GetActorUpVector() * hitBounds->GetScaledCapsuleHalfHeight()*2.f;
 }
 
 FVector AGameObject::GetCentroid()
@@ -263,7 +222,7 @@ bool AGameObject::isFollowTargetWithinRange()
 float AGameObject::HpFraction()
 {
   if( ! Stats.HpMax ) {
-    error( FS( "HpMax not set for %s", *Stats.Name ) );
+    error( FS( "HpMax==0.f for %s", *Stats.Name ) );
     return 1.f;
   }
   else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
@@ -273,74 +232,10 @@ float AGameObject::SpeedPercent()
 {
   if( ! Stats.SpeedMax )
   {
-    error( FS( "SpeedMax not set for %s", *Stats.Name ) );
+    error( FS( "SpeedMax==0.f for %s", *Stats.Name ) );
     return 100.f;
   }
   return 100.f * Speed / Stats.SpeedMax;
-}
-
-void AGameObject::AttackCycle()
-{
-  if( !AttackTarget )
-  {
-    LOG( "The target is missing, attack cycle should not have been called." );
-    return;
-  }
-
-  if( AttackTarget )
-  {
-    if( AttackTarget->Dead )
-    {
-      error( "Attacking a dead target" );
-      return;
-    }
-
-    if( Stats.ReleasedProjectileWeapon )
-    {
-      Shoot();
-    }
-    else
-    {
-      // Sword attack
-      AttackTarget->ReceiveAttack( this );
-    }
-  }
-}
-
-void AGameObject::Shoot()
-{
-  //info( FS( "%s is shooting a %s to %s", *Stats.Name, *GetTypesName(Stats.ReleasedProjectileWeapon),
-  //  *AttackTarget->Stats.Name ) );
-  FVector launchPos = GetTip();
-  
-  // Try and get the launch socket of the mesh. if it doesn't have one, use the top of the object.
-  vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
-  // Check all the meshes for a mesh with socket named "Weapon"
-  for( UMeshComponent* mesh : meshes )
-  {
-    if( mesh->DoesSocketExist( "Weapon" ) )
-    {
-      launchPos = mesh->GetSocketLocation( "Weapon" );
-      info( FS( "Launch socket @ %f %f %f", launchPos.X, launchPos.Y, launchPos.Z ) );
-    }
-  }
-
-  LOG( "%s launching a projectile of type %s",
-    *Stats.Name, *Stats.ReleasedProjectileWeapon->GetName() );
-  AProjectile* projectile = Game->Make<AProjectile>( Stats.ReleasedProjectileWeapon, team, launchPos );
-  if( !projectile )
-  {
-    error( FS( "Projectile couldn't be launched from %s", *Stats.Name ) );
-  }
-  else
-  {
-    projectile->Shooter = this;
-    projectile->Attack( AttackTarget );
-    projectile->AttackTargetOffset = AttackTargetOffset;
-    
-    projectile->SetDestinationArc( launchPos, AttackTarget->GetCentroid(),
-      projectile->BaseStats.SpeedMax, projectile->BaseStats.MaxTravelHeight );
-  }
 }
 
 void AGameObject::ReceiveAttack( AGameObject* from )
@@ -362,7 +257,7 @@ void AGameObject::UpdateStats( float t )
 
   // Recover HP at stock recovery rate
   if( Recovering ) {
-    Hp += Stats.RepairHPFractionCost*t;
+    Hp += Stats.RepairRate*t;
     Clamp( Hp, 0.f, Stats.HpMax );
   }
 
@@ -372,88 +267,6 @@ void AGameObject::UpdateStats( float t )
     if( BonusTraits[i].timeRemaining <= 0 )
       BonusTraits.erase( BonusTraits.begin() + i );
   }
-}
-
-bool AGameObject::UseAbility( int index )
-{
-  if( index < 0 || index > CountersAbility.size() )
-  {
-    error( FS( "%s cannot use ability %d, OOB",
-      *Stats.Name, index ) );
-    return 0;
-  }
-
-  if( !CountersAbility[index]->IsReady() )
-  {
-    info( FS( "%s: Ability %s was not ready",
-      *Stats.Name, *CountersAbility[index]->Text ) );
-    return 0;
-  }
-  
-  CountersAbility[index]->Go( this );
-  return 1;
-}
-
-bool AGameObject::UseBuild( int index )
-{
-  if( index < 0 || index >= Stats.Builds.Num() )
-  {
-    error( FS( "index %d OOB", index ) );
-    return 0;
-  }
-
-  // Construct an instance of 
-  UBuildAction* buildingAction = NewObject<UBuildAction>(
-    this, Stats.Builds[index] );
-  buildingAction->Go( this );
-  return 1;
-}
-
-bool AGameObject::UseTrain( int index )
-{
-  if( index < 0 || index >= Stats.Trains.Num() )
-  {
-    error( FS( "index %d OOB", index ) );
-    return 0;
-  }
-
-  UTrainingAction* trainingUnit = NewObject<UTrainingAction>(
-    this, Stats.Trains[index] );
-  CountersTraining.push_back( trainingUnit );
-  return 1;
-}
-
-bool AGameObject::UseResearch( int index )
-{
-  if( index < 0 || index >= Stats.Researches.Num() )
-  {
-    error( FS( "index %d OOB", index ) );
-    return 0;
-  }
-
-  UResearch* researchUnit = NewObject<UResearch>(
-    this, Stats.Researches[index] );
-  CountersResearch.push_back( researchUnit );
-  return 1;
-}
-
-bool AGameObject::UseItem( int index )
-{
-  // Item instances already populate the CounterItems
-  if( index < 0 || index >= CountersItems.size() )
-  {
-    error( FS( "%s cannot consume item %d / %d, OOR",
-      *Stats.Name, index, CountersItems.size() ) );
-    return 0;
-  }
-
-  // use the item. qty goes down by 1
-  // we don't affect the UI here, only
-  CountersItems[index]->Quantity--;
-  if( !CountersItems[index]->Quantity ) {
-    removeIndex( CountersItems, index );
-  }
-  return 1;
 }
 
 void AGameObject::SetRot( const FRotator & ro )
@@ -534,7 +347,7 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
   bool bFromSweep, const FHitResult & SweepResult )
 {
-  //info( FS( "OnHitContactBegin %s with %s", *Stats.Name, *OtherActor->GetName() ) );
+  //info( FS( "OnHitContactBegin %s with %s", *Name, *OtherActor->GetName() ) );
   if( OtherActor == this )
   {
     // Don't do anything with reports of collision with self.
@@ -547,6 +360,7 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
   {
     // Both were gameobjects
     THIS->Hit( THAT );
+    HitOverlaps += THAT; // Retain collection of objects i'm overlapping with
   }
   else
   {
@@ -557,6 +371,10 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
 void AGameObject::OnHitContactEnd_Implementation( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex )
 {
   //LOG( "OnHitContactEnd" );
+  if( AGameObject* THAT = Cast<AGameObject>( OtherActor ) )
+  {
+    HitOverlaps -= THAT;
+  }
 }
 
 void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
@@ -668,7 +486,7 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
 {
   FVector targetToMe = Pos - target->Pos;
   float len = targetToMe.Size();
-  //info( FS( "%s attacking %s is %f units from it", *Stats.Name, *AttackTarget->Stats.Name, len ) );
+  //info( FS( "%s attacking %s is %f units from it", *Name, *AttackTarget->Name, len ) );
   // If we're outside the attack range.. move in.
   if( len < fallbackDistance )
   {
@@ -719,7 +537,7 @@ void AGameObject::exec( const Command& cmd )
         // builds the assigned building using peasant (id)
         if( APeasant* peasant = Cast<APeasant>( this ) )
         {
-          UBuildAction* buildAction = peasant->CountersBuildings[ cmd.targetObjectId ];
+          UBuildAction* buildAction = peasant->Buildables[ cmd.targetObjectId ];
           info( FS( "The unit [%s] is building a %s @ %f %f %f",
             *peasant->GetName(), *buildAction->BuildingType->GetName(),
             cmd.pos.X,cmd.pos.Y,cmd.pos.Z ) );
@@ -735,7 +553,8 @@ void AGameObject::exec( const Command& cmd )
       break;
     case Command::CommandType::CreateUnit:
       {
-        UseBuild( cmd.targetObjectId ); // C++ command
+        APeasant* peasant = Cast<APeasant>( this );
+        peasant->UseBuild( cmd.targetObjectId ); // C++ command
       }
       break;
     case Command::CommandType::GoToGroundPosition:
@@ -770,7 +589,8 @@ void AGameObject::exec( const Command& cmd )
       break;
     case Command::CommandType::UseAbility:
       {
-        UseAbility( cmd.targetObjectId );
+        AUnit* unit = Cast<AUnit>( this );
+        unit->UseAbility( cmd.targetObjectId );
       }
       break;
     default:
@@ -782,7 +602,7 @@ void AGameObject::exec( const Command& cmd )
 void AGameObject::Move( float t )
 {
   if( Dead ) {
-    //error( FS( "Dead Unit %s had Move called for it", *Stats.Name ) );
+    //error( FS( "Dead Unit %s had Move called for it", *Name ) );
     DeadTime += t;
     if( DeadTime >= MaxDeadTime )
     {
@@ -911,7 +731,7 @@ void AGameObject::Follow( AGameObject* go )
     }
     
     FollowTarget->Followers += this;
-    Game->hud->MarkAsFollow( FollowTarget );
+    Game->flycam->MarkAsFollow( FollowTarget );
   }
 
   AttackReady = 0; // Do not stop to engage other units.
@@ -931,7 +751,7 @@ void AGameObject::Attack( AGameObject* go )
     }
 
     AttackTarget->Attackers += this;
-    Game->hud->MarkAsAttack( AttackTarget );
+    Game->flycam->MarkAsAttack( AttackTarget );
   }
 
   AttackReady = 0; // Do not stop to engage other units
@@ -943,7 +763,7 @@ void AGameObject::SetDestination( FVector d )
     flag->Destroy();
   NavFlags.clear();
   
-  //LOG( "%s moving from %f %f %f to %f %f %f", *Stats.Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
+  //LOG( "%s moving from %f %f %f to %f %f %f", *Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
     error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
     return;
@@ -1033,6 +853,11 @@ void AGameObject::Stop()
   StopMoving();  // Clear old waypoint queue
 }
 
+void AGameObject::HoldGround()
+{
+  
+}
+
 bool AGameObject::isAllyTo( AGameObject* go )
 {
   return team->isAllyTo( go ); // Check with my team
@@ -1048,14 +873,14 @@ void AGameObject::DropTargets()
   // Tell my old follow target (if any) that I'm no longer following him
   if( FollowTarget )
   {
-    //LOG( "%s losing follower %s", *Stats.Name, *FollowTarget->Stats.Name );
+    //LOG( "%s losing follower %s", *Name, *FollowTarget->Name );
     FollowTarget->LoseFollower( this );
   }
 
   // If the AttackTarget was already set, tell it loses the old attacker (this).
   if( AttackTarget )
   {
-    //LOG( "%s losing attacker %s", *Stats.Name, *AttackTarget->Stats.Name );
+    //LOG( "%s losing attacker %s", *Name, *AttackTarget->Name );
     AttackTarget->LoseAttacker( this );
   }
 }
@@ -1067,8 +892,8 @@ void AGameObject::LoseFollower( AGameObject* formerFollower )
   formerFollower->FollowTarget = 0;
   // if I lost all followers, update the hud
   if( !Followers.size() ) {
-    //LOG( "%s doesn't need follow ring", *Stats.Name );
-    RemoveTagged( this, Game->hud->FollowTargetName );
+    //LOG( "%s doesn't need follow ring", *Name );
+    RemoveTagged( this, Game->flycam->FollowTargetName );
   }
 }
 
@@ -1082,8 +907,8 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
   // If there are no more attackers, unselect in ui
   if( !Attackers.size() )
   {
-    //LOG( "%s doesn't need attack ring", *Stats.Name );
-    RemoveTagged( this, Game->hud->AttackTargetName );
+    //LOG( "%s doesn't need attack ring", *Name );
+    RemoveTagged( this, Game->flycam->AttackTargetName );
   }
 }
 
@@ -1196,7 +1021,7 @@ void AGameObject::SetTeam( Team* newTeam )
   // a SetTeam function here.
   team = newTeam;
   team->units.push_back( this );
-  BaseStats.TeamId = Stats.TeamId = team->teamId;
+  Stats.TeamId = team->teamId;
   
   // Grab all meshes with material parameters & set color of each
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
@@ -1229,11 +1054,6 @@ void AGameObject::Die()
 
   // Remove from selection.
   if( Game->hud ) Game->hud->Unselect( { this } );
-
-  if( Stats.OnExploded )
-  {
-    Game->Make<AGameObject>( Stats.OnExploded, team, Pos );
-  }
 }
 
 void AGameObject::Cleanup()
@@ -1258,7 +1078,7 @@ void AGameObject::BeginDestroy()
   // For odd-time created objects (esp in PIE) they get put into the team without ever actually
   // being played with, so they don't die properly.
   if( team ) {
-    //warning( FS( "Unit %s was removed from team in BeginDestroy()", *Stats.Name ) );
+    //warning( FS( "Unit %s was removed from team in BeginDestroy()", *Name ) );
     team->RemoveUnit( this );
   }
 
@@ -1269,7 +1089,7 @@ void AGameObject::BeginDestroy()
   }
 
   // Check if object is selected, only possible game launched/ready
-  //info( FS( "%s was destroyed", *Stats.Name ) );
+  //info( FS( "%s was destroyed", *Name ) );
   
   Super::BeginDestroy(); // PUT THIS LAST or the object may become invalid
 }
