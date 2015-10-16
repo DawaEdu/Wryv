@@ -3,6 +3,7 @@
 #include "CursorTexture.h"
 #include "ImageWidget.h"
 #include "TheHUD.h"
+#include "WryvGameInstance.h"
 
 UTexture* ImageWidget::NoTextureTexture = 0;
 
@@ -12,6 +13,7 @@ void ImageWidget::ImageWidgetDefaults()
   hotpoint = FVector2D(0,0);
   uv = FVector2D(1,1);
   Rotation = 0.f;
+  PivotPoint = FVector2D(0,0);
 }
 
 ImageWidget::ImageWidget( FString name ) : HotSpot( name ) { 
@@ -62,6 +64,19 @@ ImageWidget::ImageWidget( FString name, UTexture* pic, FVector2D size, FLinearCo
   // Don't assign size from tex
 }
 
+void ImageWidget::SetTexture( UTexture* texture )
+{
+  Tex = texture;
+  dirty = 1;
+}
+
+void ImageWidget::SetTexture( FCursorTexture cursorTexture )
+{
+  Tex = cursorTexture.Texture;
+  hotpoint = cursorTexture.Hotpoint;
+  dirty = 1;
+}
+
 void ImageWidget::render( FVector2D offset )
 {
   if( hidden ) return;
@@ -72,23 +87,17 @@ void ImageWidget::render( FVector2D offset )
     // no item is present
     LOG( "Texture not set for ImageWidget `%s`, setting to NULL texture", *Name );
     // render should not be called when the texture is hidden
-    Tex = NoTextureTexture;
+    Tex = NoTextureTexture; //!! Possibly remove
   }
 
   // The renderPosition is just the computed position minus center hotpoint
   FVector2D renderPos = Pos() - hotpoint + offset;
-
+  //info( FS( "%s: (%f, %f) (%f, %f)", *Name, renderPos.X, renderPos.Y, Size.X, Size.Y ) );
   // If hidden, do not draw
-  ((AHUD*)hud)->DrawTexture( Tex, renderPos.X, renderPos.Y, 
+  ((AHUD*)Game->hud)->DrawTexture( Tex, renderPos.X, renderPos.Y, 
     Size.X, Size.Y, 0, 0, uv.X, uv.Y, Color,
     EBlendMode::BLEND_Translucent, 1.f, 0, Rotation, PivotPoint );
   
   HotSpot::render( offset );
-}
-
-void ImageWidget::Set( FCursorTexture cursorTexture )
-{
-  Tex = cursorTexture.Texture;
-  hotpoint = cursorTexture.Hotpoint;
 }
 

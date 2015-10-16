@@ -3,6 +3,7 @@
 #include "Building.h"
 #include "GameObject.h"
 #include "GlobalFunctions.h"
+#include "WryvGameInstance.h"
 
 #include "InProgressUnit.h"
 #include "TrainingAction.h"
@@ -11,31 +12,20 @@ UTrainingAction::UTrainingAction( const FObjectInitializer & PCIP ) : Super( PCI
 {
 }
 
-void UTrainingAction::Click(ABuilding* building)
+UTexture* UTrainingAction::GetIcon()
 {
-  Building = building;
-  
-  // Construct an in-progress counter & add it to counters for this object
-  UInProgressUnit* unitInProgress = NewObject<UInProgressUnit>( 
-    this, UInProgressUnit::StaticClass() );
-  unitInProgress->UnitType = UnitType; // Class of the unit that is being created
-  unitInProgress->OwningBuilding = Building; // Cancellation req goes thru to building owning icon
-  unitInProgress->Icon = Icon; // same icon as button to generate unit
-  
-  Building->CountersInProgress.push_back( unitInProgress );
+  return Game->GetData( UnitType ).Portrait;
 }
 
-void UTrainingAction::OnRefresh()
+float UTrainingAction::GetCooldownTotalTime()
 {
-  UAction::OnRefresh();
-  // When a training action hits refresh, it actually completes
-  OnComplete();
+  return Game->GetData( UnitType ).Cooldown;
 }
 
-void UTrainingAction::OnComplete()
+bool UTrainingAction::Click()
 {
-  UAction::OnComplete();
-  // remove the training action from the original object's queue
-  int index = removeElement( Building->CountersTraining, this );
+  Building->UseTrain( UActionIndex );
+  return 1;
 }
+
 

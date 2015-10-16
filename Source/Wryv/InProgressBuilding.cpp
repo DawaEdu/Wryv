@@ -12,28 +12,43 @@ UInProgressBuilding::UInProgressBuilding( const FObjectInitializer & PCIP ) : Su
   Peasant = 0;
 }
 
+UTexture* UInProgressBuilding::GetIcon()
+{
+  return Building->Stats.Portrait;
+}
+
+float UInProgressBuilding::GetCooldownTotalTime()
+{
+  return Building->Stats.Cooldown;
+}
+
 void UInProgressBuilding::SetBuilding(ABuilding* building)
 {
   Building = building;
-  cooldown.TotalTime = Building->BuildingTime;
 }
 
-void UInProgressBuilding::Cancel()
+bool UInProgressBuilding::Click()
 {
-  if( Building )
+  if( !Peasant )
   {
-    Building->Cancel();
-    removeElement( Peasant->CountersBuildingsQueue, this );
+    error( "UInProgressBuilding didn't have Peasant set" );
+    return 0;
   }
+
+  Peasant->CancelBuilding( UActionIndex );
+
+  return 1;
 }
 
-void UInProgressBuilding::OnComplete()
+void UInProgressBuilding::OnCooldown()
 {
-  UAction::OnComplete();
+  UAction::OnCooldown();
 }
 
 void UInProgressBuilding::Step( float t )
 {
-  // The step function pulls from the building in progress
+  // The step function pulls from the building in progress.
+  // It doesn't use the t param because the building will pause
+  // if the peasant leaves it.
   cooldown.Time = Building->TimeBuilding;
 }

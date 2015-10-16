@@ -246,6 +246,28 @@ template <typename T> bool pop_back( vector<T>& v, int eltNumber )
   return 0;
 }
 
+template <typename T> int IndexOfIsA( TArray<T*>& tarray, UClass* uclass )
+{
+  static_assert( is_base_of< UObject, T >::value, "IndexOfIsA<T>: T must derive from UObject" );
+  for( int i = 0; i < tarray.Num(); i++ )
+    if( tarray[i]->IsA( uclass ) )
+      return i;
+  // not found
+  return -1;
+}
+
+template <typename T> FString GetNames( const TArray<T*> tarray )
+{
+  static_assert( is_base_of< UObject, T >::value, "GetNames<T>: T must derive from UObject" );
+  FString fs;
+  for( int i = 0; i < tarray.Num() - 1; i++ )
+    fs += tarray[i]->GetName() + FString( ", " );
+  if( tarray.Num() )
+    fs += tarray[ tarray.Num() - 1 ]->GetName();
+
+  return fs;
+}
+
 template <typename T> set<T*> Intersection( const set<T*>& A, const set<T*>& B )
 {
   set<T*> intns;
@@ -555,7 +577,7 @@ inline UClass* GetUClass( const FStringClassReference& scr )
 }
 
 // 
-template <typename T> T* Construct( UObject* parent, const FStringClassReference& scr )
+template <typename T> T* Construct( const FStringClassReference& scr )
 {
   UClass* uclass = GetUClass( scr );
   if( !uclass )
@@ -564,7 +586,13 @@ template <typename T> T* Construct( UObject* parent, const FStringClassReference
     return 0;
   }
 
-  T* object = NewObject<T>( parent, uclass );
+  T* object = NewObject<T>( GetTransientPackage(), uclass );
+  return object;
+}
+
+template <typename T> T* Construct( UClass* uclass )
+{
+  T* object = NewObject<T>( GetTransientPackage(), uclass, FName( *uclass->GetName() ) );
   return object;
 }
 

@@ -21,7 +21,8 @@ void StackPanel::render( FVector2D offset )
 
   // Doesn't render the texture if it isn't set,
   // so that clear background is allowed
-  if( Tex )  ImageWidget::render( offset );
+  if( Tex )  ImageWidget::render( offset );  //!! If remove NoTextureTexture, can remove this
+
   // render children
   HotSpot::render( offset );
 }

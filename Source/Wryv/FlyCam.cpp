@@ -4,6 +4,7 @@
 
 #include "AIProfile.h"
 #include "Building.h"
+#include "Enums.h"
 #include "FlyCam.h"
 #include "GameObject.h"
 #include "GlobalFunctions.h"
@@ -19,7 +20,6 @@
 #include "Stone.h"
 #include "TheHUD.h"
 #include "Tree.h"
-#include "UISounds.h"
 #include "Widget3D.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
@@ -521,7 +521,7 @@ AGameObject* AFlyCam::MakeLine( FVector Start, FVector End, FLinearColor color )
 void AFlyCam::RetrievePointers()
 {
   Game->pc = Cast<APlayerControl>( GetWorld()->GetFirstPlayerController() );
-  HotSpot::hud = Game->hud = Cast<ATheHUD>( Game->pc->GetHUD() );
+  Game->hud = Cast<ATheHUD>( Game->pc->GetHUD() );
   Game->gm = (AWryvGameMode*)GetWorld()->GetAuthGameMode();
   Game->gs = (AWryvGameState*)GetWorld()->GetGameState();
   Game->flycam = this;

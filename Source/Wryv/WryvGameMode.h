@@ -6,7 +6,9 @@
 using namespace std;
 
 #include "GameFramework/GameMode.h"
+
 #include "AIProfile.h"
+#include "Enums.h"
 #include "Team.h"
 #include "WryvGameMode.generated.h"
 
@@ -14,14 +16,6 @@ using namespace std;
 // the currently loaded game instance.
 class UAIProfile;
 class ACombatUnit;
-
-UENUM()
-enum GameStates
-{
-  Title = 0             UMETA(DisplayName = "Title"),
-  MapSelect             UMETA(DisplayName = "MapSelect"),
-  Running               UMETA(DisplayName = "Running"),
-};
 
 UCLASS()
 class WRYV_API AWryvGameMode : public AGameMode

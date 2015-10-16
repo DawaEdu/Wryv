@@ -9,6 +9,8 @@ class WRYV_API ATree : public AResource
 	GENERATED_UCLASS_BODY()
 public:
   //ATree(const FObjectInitializer& PCIP);
+  virtual UClass* GetCPPClass() { return StaticClass(); }
+
 };
 
 

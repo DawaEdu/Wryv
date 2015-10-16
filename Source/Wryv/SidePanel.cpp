@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "SidePanel.h"
 
 UTexture* SidePanel::RightPanelTexture = 0;
@@ -10,28 +11,16 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   Pad = spacing;
 
   Portraits = new PortraitsPanel( FVector2D( size.X, size.X ) );
-  StackBottom( Portraits, HFull );
-
   Stats = new StatsPanel();
-  StackBottom( Stats, HFull );
-  
-  actions = new ActionsPanel( "ActionsPanel", FVector2D( size.X/3, size.X/3 ) );
-  StackBottom( actions, HFull );
-
+  Actions = new ActionsPanel( "ActionsPanel", FVector2D( size.X/3, size.X/3 ) );
   minimap = new Minimap( 4.f, FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
-  StackBottom( minimap, HCenter );
-    
+  
   // Add the leftBorder in as last child, because it takes up full height,
   // and stackpanel will stack it in below the border
-  SolidWidget* leftBorder = new SolidWidget( "panel leftborder",
+  leftBorder = new SolidWidget( "panel leftborder",
     FVector2D( 4, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
   leftBorder->Margin = - Pad + FVector2D( -4, 0 );
-  Add( leftBorder );
-
-  recomputeSizeToContainChildren();
-
   controls = new Controls();
-  Add( controls );
 
   OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     //LOG( "Sidepanel Absorbed click" );
@@ -46,12 +35,39 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
     return Consumed;
   };
 
+  Restack();
 }
 
 void SidePanel::Set( vector<AGameObject*> objects )
 {
-  AGameObject* go = first( objects );
   Portraits->Set( objects );
+  AGameObject* go = first( objects );
   Stats->Set( go );
-  actions->Set( go );
+  Actions->Set( go );
 }
+
+void SidePanel::Restack()
+{
+  children.clear();
+
+  StackBottom( Portraits, HFull );
+  StackBottom( Stats, HFull );
+  StackBottom( Actions, HFull );
+  StackBottom( minimap, HCenter );
+  Add( leftBorder );
+  Add( controls );
+}
+
+void SidePanel::render( FVector2D offset )
+{
+  bool statsDirty = Stats->dirty;
+  StackPanel::render( offset );
+  // when the stats panel gets updated, before rendering it, we have to restack the elements
+  if( statsDirty )
+  {
+    Restack();
+    StackPanel::render( offset ); // re-render after re-stacking
+  }
+}
+
+

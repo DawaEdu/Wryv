@@ -17,9 +17,13 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UTexture* BuffIcon;
   // How many of this item player has
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  int32 Quantity;
-  AUnit* Unit;
+  UPROPERTY() AUnit* AssociatedUnit;
+  UPROPERTY() FString AssociatedUnitName;
 
-  virtual void Click();
-  virtual void OnComplete() override;
-  
+  virtual UTexture* GetIcon() override;
+  virtual float GetCooldownTotalTime() override;
+  virtual bool Click();
+  virtual void Step( float t );
+  void PopulateClock( Clock* inClock, int i );
+
 };

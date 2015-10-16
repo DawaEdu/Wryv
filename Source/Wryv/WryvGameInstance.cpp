@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "Command.h"
 #include "FlyCam.h"
 #include "GameObject.h"
@@ -145,7 +146,7 @@ bool UWryvGameInstance::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& O
   return Super::Exec( InWorld, Cmd, Out );
 }
 
-AGameObject* UWryvGameInstance::GetData( UClass* ClassType )
+FUnitsData UWryvGameInstance::GetData( UClass* ClassType )
 {
   if( !ClassType )
   {
@@ -157,14 +158,17 @@ AGameObject* UWryvGameInstance::GetData( UClass* ClassType )
     // Add it in
     info( FS( "First load of UClass `%s`", *ClassType->GetName() ) );
     AGameObject* object = Make<AGameObject>( ClassType );
-    if( object )  BaseUnitsData[ ClassType ] = object;
+    if( object ) {
+      BaseUnitsData[ ClassType ] = object->BaseStats;
+      object->Destroy();
+    }
     else  error( FS( "Couldn't make object ClassType `%s`", *ClassType->GetName() ) );
   }
   return BaseUnitsData[ ClassType ];
 }
 
 UTexture* UWryvGameInstance::GetPortrait( UClass* ClassType ) {
-  return GetData( ClassType )->Stats.Portrait;
+  return GetData( ClassType ).Portrait;
 }
 
 void UWryvGameInstance::BeginDestroy()

@@ -6,14 +6,16 @@ void TextWidget::Measure()
 {
   // ERROR IF THE HUD is not currently ready
   // to draw (ie canvas size won't be available)
-  if( hud->Valid() ){
+  if( Game->hud->isValid() )
+  {
+    Game->hud->GetTextSize( Text, Size.X, Size.Y, Font, Scale );
+    //info( FS( "The text `%s` measures %f %f", *Text, Size.X, Size.Y ) );
     dirty = 0;
   }
-  else{
-    LOG(  "The Canvas is not ready");
+  else
+  {
+    warning( FS( "TextWidget [%s]::The Canvas is not ready", *Name ) );
   }
-
-  hud->GetTextSize( Text, Size.X, Size.Y, Font, Scale );
 }
 
 // We call Measure() each call to render() since text cannot be measured except when
@@ -21,10 +23,12 @@ void TextWidget::Measure()
 void TextWidget::render( FVector2D offset )
 {
   if( hidden ) return;
-  if( dirty )
-    Measure();  // when measure succeeds dirty=0
+  if( dirty ) {
+    Measure();
+  }
+
   FVector2D pos = Pos() + offset;
-  hud->DrawText( Text, Color, pos.X, pos.Y, Font, Scale );
+  Game->hud->DrawText( Text, Color, pos.X, pos.Y, Font, Scale );
   HotSpot::render( offset );
 }
 

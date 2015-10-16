@@ -14,10 +14,10 @@ APlayerStartPosition::APlayerStartPosition( const FObjectInitializer& PCIP ) : S
 void APlayerStartPosition::PostInitializeComponents()
 {
   Super::PostInitializeComponents();
-  aiProfile = Construct<UAIProfile>( this, aiLevel );
+  aiProfile = Construct<UAIProfile>( aiLevel );
   if( !aiProfile )
   {
-    aiProfile = NewObject< UAIProfile >( this, UAIProfile::StaticClass() );
+    aiProfile = Construct< UAIProfile >( UAIProfile::StaticClass() );
     aiProfile->ai.aiLevel = AILevel::AINone; // Default player controlled
   }
 

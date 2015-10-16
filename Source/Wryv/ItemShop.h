@@ -16,6 +16,7 @@ public:
   AUnit* patron;
 
   // A listing of the items contained inside the shop
+
   TArray< TSubclassOf< AItem > > Inventory;
 
   virtual void BeginPlay() override;

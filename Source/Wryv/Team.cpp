@@ -109,15 +109,15 @@ bool Team::Has( UClass* ClassType )
 
 bool Team::CanAfford( UClass* ClassType )
 {
-  AGameObject* go = Game->GetData( ClassType );
-  return Gold >= go->Stats.GoldCost && Lumber >= go->Stats.LumberCost && Stone >= go->Stats.StoneCost;
+  FUnitsData data = Game->GetData( ClassType );
+  return Gold >= data.GoldCost && Lumber >= data.LumberCost && Stone >= data.StoneCost;
 }
 
 bool Team::CanBuild( UClass* ClassType )
 {
   // Requirements for building an object of a certain type.
   // Must have an object of required types to build, as well as afford.
-  TArray< TSubclassOf< ABuilding > > requirements = Game->GetData( ClassType )->Stats.Requirements;
+  TArray< TSubclassOf< ABuilding > > requirements = Game->GetData( ClassType ).Requirements;
   for( int i = 0; i < requirements.Num(); i++ )
   {
     if( !Has( requirements[i] ) )
@@ -134,20 +134,20 @@ bool Team::Spend( UClass* ClassType )
     return 0;
   }
 
-  AGameObject* go = Game->GetData( ClassType );
-  Gold   -= go->Stats.GoldCost;
-  Lumber -= go->Stats.LumberCost;
-  Stone  -= go->Stats.StoneCost;
+  FUnitsData data = Game->GetData( ClassType );
+  Gold   -= data.GoldCost;
+  Lumber -= data.LumberCost;
+  Stone  -= data.StoneCost;
   return 1;
 }
 
 bool Team::Refund( UClass* ClassType )
 {
   // Refund cost of ClassType back to team.
-  AGameObject* go = Game->GetData( ClassType );
-  Gold   += go->Stats.GoldCost;
-  Lumber += go->Stats.LumberCost;
-  Stone  += go->Stats.StoneCost;
+  FUnitsData data = Game->GetData( ClassType );
+  Gold   += data.GoldCost;
+  Lumber += data.LumberCost;
+  Stone  += data.StoneCost;
   return 1;
 }
 
@@ -236,14 +236,10 @@ void Team::runAI( float t )
     if( peasant->Idling() )
     {
       vector< TSubclassOf<AResource> > resType = GetNeededResourceTypes();
-      FString msg = FS( "%s: Needed resource types: ", *peasant->GetName() );
-      for( TSubclassOf<AResource> type : resType )
-        msg += type->GetName();
-      info( msg );
       AResource *res = peasant->FindAndTargetNewResource( peasant->Pos, resType, peasant->Stats.SightRange );
       if( res )
       {
-        info( FS( "Peasant %s assigned to gather %s", *peasant->Stats.Name, *res->Stats.Name ) );
+        //info( FS( "Peasant %s assigned to gather %s", *peasant->Stats.Name, *res->Stats.Name ) );
       }
       else
       {

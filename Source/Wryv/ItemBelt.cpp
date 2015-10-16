@@ -13,57 +13,75 @@ ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVec
   SlotPalette( "itembelt", bkg, rows, cols, entrySize, pad )
 {
   Align = BottomCenter;
+  
+  // Consume all of MouseUp, MouseDown events to prevent clickthru to other ui elts
+  OnMouseUpLeft = []( FVector2D mouse ) {
+    info( "Mouse upleft in itembelt" );
+    return Consumed;
+  };
+
+  OnMouseDownLeft = []( FVector2D mouse ) {
+    info( "Mouse downleft in itembelt" );
+    return Consumed;
+  };
+}
+
+void ItemBelt::ClearTextures()
+{
+  // Clears the textures inside the belt, so no references to texes that aren't
+  // being used exist
+  for( int i = 0; i < children.size(); i++ )
+    ((Clock*)children[i])->Tex = 0;
 }
 
 void ItemBelt::Set( AGameObject* go )
 {
-  // No items in the belt. Empty the belt.
+  ClearTextures(); // Clear textures from previously selected object
+  HideChildren();  // hide all clocks
+
   if( AUnit* unit = Cast<AUnit>( go ) )
   {
     // repopulate the # grid slots according to # items unit has
-    if( unit->CountersItems.size() )
+    // Populate the toolbelt, etc
+    if( unit->CountersItems.Num() > children.size() )
     {
-      // Populate the toolbelt, etc
-      int itemRows = 1 + ( (unit->CountersItems.size() - 1) / 4 ); // 1 + ( 5 - 1 )/4
-      int itemCols = 4;
-      itemCols = unit->CountersItems.size() % 4;
-      if( !itemCols )  itemCols = 4;
-
-      vector<Clock*> clocks = SetNumSlots( itemRows, itemCols );
-    
-      // The function associated with the Item is hooked up here.
-      // Inventory size dictates #items.
-      for( int i = 0; i < clocks.size(); i++ )
-      {
-        Clock* slot = clocks[i];
-
-        UItemAction* itemAction = unit->CountersItems[i];
-        SetSlotTexture( i, itemAction->Icon );
-
-        // Trigger the gameobject to consume i'th item.
-        GetSlot( i )->OnMouseDownLeft = [this,i,unit](FVector2D mouse) -> EventCode {
-          unit->UseItem( i );
-          return Consumed;
-        };
-
-        GetSlot(i)->OnHover = [itemAction,slot](FVector2D mouse) -> EventCode
-        {
-          // display a tooltip describing the current item.
-          // or could add as a child of the img widget
-          ITextWidget* tooltip = Game->hud->ui->gameChrome->tooltip;
-          tooltip->Set( itemAction->Text );
-          tooltip->Align = HCenter | OnTopOfParent;
-          // put the tooltip as a child of the slot
-          slot->Add( tooltip );
-          return Consumed;
-        };
-      }
+      error( FS( "Unit %s has %d items, but the itembelt maxes out @ %d items",
+        *unit->GetName(), unit->CountersItems.Num(), GetNumActiveSlots() ) );
+      Resize( 1, unit->CountersItems.Num() );
     }
+
+    // Correct associated unit with the Counters.
+    for( int i = 0; i < unit->CountersItems.Num(); i++ )
+    {
+      //info( FS( "initial: %s/%s",
+      //  *unit->CountersItems[i]->AssociatedUnit->GetName(), 
+      //  *unit->CountersItems[i]->AssociatedUnitName ) );
+      unit->CountersItems[i]->AssociatedUnit = unit;
+      unit->CountersItems[i]->AssociatedUnitName = unit->GetName();
+      //info( FS( "After correcting AssociatedUnit: %s/%s",
+      //  *unit->CountersItems[i]->AssociatedUnit->GetName(), 
+      //  *unit->CountersItems[i]->AssociatedUnitName ) );
+    }
+
+    Show();
+    SetNumSlots( 1, unit->CountersItems.Num() );
+    Populate<UItemAction>( unit->CountersItems, 0 );
+  }
+  else if( ABuilding* building = Cast<ABuilding>( go ) )
+  { 
+    // building doesn't have any objects that go into itembelt yet.
+    Show();
   }
   else
   {
-    // Clear the old items.
-    SetNumSlots(0, 0);
+    // otherwise leave itembelt empty with hidden children
+    Hide();
   }
 }
+
+void ItemBelt::render( FVector2D offset )
+{
+  SlotPalette::render( offset );
+}
+
 

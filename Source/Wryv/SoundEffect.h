@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Wryv.h"
-#include "UISounds.h"
+#include "Enums.h"
 #include "SoundEffect.generated.h"
 
 USTRUCT()

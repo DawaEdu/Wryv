@@ -19,5 +19,5 @@ public:
   ResourcesWidget( FString name, int pxSize, int spacing );
   virtual ~ResourcesWidget(){}
   void SetValues( int goldCost, int lumberCost, int stoneCost );
-  virtual void Move( float t );
+  virtual void Update( float t );
 };

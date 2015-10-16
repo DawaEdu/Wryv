@@ -15,33 +15,33 @@ class WRYV_API APeasant : public AUnit
   GENERATED_UCLASS_BODY()
 public:
   // How much the mining target can hold.
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USoundBase* JobsDoneSound;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USceneComponent* ResourceCarry;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  USoundBase* JobsDoneSound;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  USceneComponent* ResourceCarry;
 
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  UStaticMeshComponent* GoldPiece;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  UStaticMeshComponent* LumberPiece;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  UStaticMeshComponent* StonePiece;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  UStaticMeshComponent* GoldPiece;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  UStaticMeshComponent* LumberPiece;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  UStaticMeshComponent* StonePiece;
   
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 GoldCarryCapacity;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 LumberCarryCapacity;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 StoneCarryCapacity;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 GoldCarryCapacity;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 LumberCarryCapacity;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 StoneCarryCapacity;
   // The rate at which a resource is gathered
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  float GatheringRate;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  float GatheringRate;
   
   // The unit is carrying something
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Carrying;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  bool Carrying;
   // Plays the shrug animation
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool Shrugging;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  bool Shrugging;
 
   // Buildings we can build using this unit
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
   TArray< TSubclassOf< UBuildAction > > Builds;
-  // List of objects that are currently being built by this object.
-  vector< UBuildAction* > Buildables; // Buildings themselves
 
+  // List of objects that are currently being built by this object.
+  UPROPERTY() TArray< UBuildAction* > Buildables; // Buildings themselves
   // Buildings that this peasant is constructing. This will contain a queue
   // of things in case the peasant has queued several buildings.
-  vector< UInProgressBuilding* > CountersBuildingsQueue;
+  UPROPERTY() TArray< UInProgressBuilding* > CountersBuildingsQueue;
 
   // These are set when the peasant is repairing a building or unit.
   ABuilding* RepairTarget;  // The building we are repairing.
@@ -57,6 +57,7 @@ public:
   void PostInitializeComponents();
   virtual void InitIcons();
   bool UseBuild( int index );
+  bool CancelBuilding( int index );
   bool Build( UBuildAction* buildAction, FVector pos );
   virtual void Target( AGameObject* target ) override;
   virtual void DropTargets() override;
@@ -68,6 +69,7 @@ public:
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   void ReturnResources();
   void AddMined( TSubclassOf<AResource> resourceType, float resAmount );
+  virtual void MoveCounters( float t );
   virtual void Move( float t );
   virtual bool Idling();
   virtual void ai( float t );

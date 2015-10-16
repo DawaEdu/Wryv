@@ -19,7 +19,7 @@ void APlayerControl::SetupInputComponent()
 {
   PlayerInput->AddActionMapping( FInputActionKeyMapping( "KKey", EKeys::K, 0, 0, 0, 0 ) );
   static const FName InputComponentName( TEXT( "PlayerControllerInputComponent" ) );
-  InputComponent = NewObject<UInputComponent>( this, InputComponentName );
+  InputComponent = NewObject<UInputComponent>( GetTransientPackage(), InputComponentName );
 
   // Read collision profiles
   TArray< TSharedPtr< FName > > profileNames;

@@ -24,12 +24,12 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
   TArray< TSubclassOf< UUnitAction > > Abilities;
   // COOLDOWNS: A list of these for each of our capabilities in 
-  vector< UUnitAction* > CountersAbility;
+  UPROPERTY() TArray< UUnitAction* > CountersAbility;
 
   // The items the unit starts carrying
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
   TArray< TSubclassOf< UItemAction > > StartingItems;
-  vector< UItemAction* > CountersItems;
+  UPROPERTY() TArray< UItemAction* > CountersItems;
   // Items unit is holding in-play.
 
   // Weapon properties: If attacks send a projectile, set object here.
@@ -40,10 +40,13 @@ public:
   
   //AUnit(const FObjectInitializer& PCIP);
   virtual void InitIcons();
+  void AddItem( UClass* ItemClass );
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
   bool UseAbility( int index );
   bool UseItem( int index );
+
+  virtual void MoveCounters( float t ) override;
 
   // Function that runs whenever the unit is first clicked on or selected.
   virtual void Move( float t ) override;

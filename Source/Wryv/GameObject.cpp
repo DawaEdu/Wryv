@@ -82,7 +82,7 @@ void AGameObject::PostInitializeComponents()
   Speed = 0.f;
 
   Recovering = 1;
-
+  //InitIcons();
 }
 
 // Called when the game starts or when spawned
@@ -95,6 +95,7 @@ void AGameObject::BeginPlay()
   SetTeam( newTeam );
 
   ID = Game->NextId();
+  InitIcons();
 }
 
 void AGameObject::OnMapLoaded()
@@ -248,13 +249,28 @@ void AGameObject::ReceiveAttack( AGameObject* from )
     Hp = 0.f;
 }
 
+void AGameObject::ApplyBonus( FUnitsData bonusStats )
+{
+  BonusTraits.push_back( PowerUpTimeOut( bonusStats ) );
+}
+
 void AGameObject::UpdateStats( float t )
 {
   // Refreshes Stats completely
   Stats = BaseStats;
   for( int i = 0; i < BonusTraits.size(); i++ )
-    Stats += BonusTraits[i].Powerup->Stats;
+  {
+    // Tick stat
+    BonusTraits[i].Tick( t );
+    if( BonusTraits[i].IsReady() )
+    {
+      // Apply the stat on refresh interval
+      Stats += BonusTraits[i].BonusStats;
+      BonusTraits[i].Refresh();
+    }
+  }
 
+  // Traits with an an Interval only apply every Interval seconds
   // Recover HP at stock recovery rate
   if( Recovering ) {
     Hp += Stats.RepairRate*t;
@@ -265,7 +281,10 @@ void AGameObject::UpdateStats( float t )
   for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
     BonusTraits[i].timeRemaining -= t;
     if( BonusTraits[i].timeRemaining <= 0 )
+    {
       BonusTraits.erase( BonusTraits.begin() + i );
+      Game->hud->ui->dirty = 1;
+    }
   }
 }
 
@@ -599,6 +618,11 @@ void AGameObject::exec( const Command& cmd )
   }
 }
 
+void AGameObject::MoveCounters( float t )
+{
+  
+}
+
 void AGameObject::Move( float t )
 {
   if( Dead ) {
@@ -611,6 +635,8 @@ void AGameObject::Move( float t )
     }
     return; // Cannot move if dead
   }
+
+  MoveCounters( t );
 
   // If explicitly asked to DoNextCommand.
   if( IsReadyToRunNextCommand )
@@ -636,18 +662,18 @@ void AGameObject::Move( float t )
   }
 
   
-  if( Hp <= 0 ) {
+  if( Hp <= 0 )
+  {
     Die();
-    return;
   }
-  else {
+  else
+  {
     UpdateStats( t );
     // Update & Cache Unit's stats this frame, including HP recovery
+    // Call the ai for this object type
+    //ai( t );
+    FlushPosition();
   }
-
-  // Call the ai for this object type
-  //ai( t );
-  FlushPosition();
 }
 
 bool AGameObject::Idling()
@@ -719,6 +745,10 @@ void AGameObject::Target( AGameObject* target )
 
 void AGameObject::Follow( AGameObject* go )
 {
+  if( go == this ) {
+    error( "Following self" );
+    return;
+  }
   Stop(); // DropTargets & Clear Old Waypoint queue
 
   FollowTarget = go;
@@ -739,6 +769,10 @@ void AGameObject::Follow( AGameObject* go )
 
 void AGameObject::Attack( AGameObject* go )
 {
+  if( go == this ) {
+    error( "Attacking self" );
+    return;
+  }
   Stop(); // DropTargets & Clear Old Waypoint queue
 
   AttackTarget = go;
@@ -964,7 +998,8 @@ AGameObject* AGameObject::GetClosestObjectOfType( TSubclassOf<AGameObject> Class
   map< float, AGameObject* > m;
   for( AGameObject* go : team->units )
   {
-    if( go->IsA( ClassType ) )  skip;
+    //info( FS( "%s IsA %s", *go->GetName(), *go->GetClass()->GetName() ) );
+    if( !go->IsA( ClassType ) )  skip;
     float d = outerDistance( go );
     m[d] = go;
   }

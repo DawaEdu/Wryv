@@ -15,9 +15,19 @@ void ACombatUnit::InitIcons()
   AUnit::InitIcons();
   for( int i = 0; i < Spells.Num(); i++ )
   {
-    UCastSpellAction* action = NewObject< UCastSpellAction >( this, Spells[i] );
+    UCastSpellAction* action = Construct< UCastSpellAction >( Spells[i] );
     action->Caster = this;
-    CountersSpells.push_back(  );
+    CountersSpells.push_back( action );
+  }
+}
+
+void ACombatUnit::MoveCounters( float t )
+{
+  AUnit::MoveCounters( t );
+
+  for( UCastSpellAction* castSpell : CountersSpells )
+  {
+    castSpell->Step( t );
   }
 }
 

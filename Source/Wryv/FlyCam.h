@@ -6,9 +6,9 @@ using namespace std;
 
 #include <GameFramework/Pawn.h>
 
+#include "Enums.h"
 #include "FogOfWar.h"
 #include "SoundEffect.h"
-#include "UISounds.h"
 #include "FlyCam.generated.h"
 
 class ABuilding;

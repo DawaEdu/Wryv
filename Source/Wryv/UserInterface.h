@@ -1,26 +1,27 @@
 #pragma once
 
-#include "Screen.h"
-#include "TitleScreen.h"
+#include "Border.h"
 #include "GameChrome.h"
 #include "MapSelectionScreen.h"
 #include "MissionObjectivesScreen.h"
+#include "Screen.h"
 #include "StatusBar.h"
-#include "Border.h"
+#include "TitleScreen.h"
 
 // The root UI component
 class UserInterface : public Screen
 {
 public:
+  StatusBar*                statusBar;
   GameChrome*               gameChrome;
-
+  Clock* clock;
   // In-game screens.
   TitleScreen*              titleScreen;
   MapSelectionScreen*       mapSelectionScreen;
   MissionObjectivesScreen*  missionObjectivesScreen;
-  StatusBar*                statusBar;
   
   HotSpot*                  drag;
+  bool                      dirty;
 
   UserInterface( FVector2D size );
   // Don't need to explicitly delete children of the UI object,
@@ -28,5 +29,6 @@ public:
   virtual ~UserInterface(){ /* no delete */ }
   void SetScreen( int mode );
   void SetSize( FVector2D size );
+  virtual void Update( float t ) override;
 };
 

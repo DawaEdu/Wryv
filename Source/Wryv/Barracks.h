@@ -7,5 +7,6 @@ UCLASS()
 class WRYV_API ABarracks : public ABuilding
 {
 	GENERATED_UCLASS_BODY()
-  
 };
+
+

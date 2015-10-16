@@ -56,7 +56,7 @@ void ATheHUD::InitWidgets()
   ResourcesWidget::StoneTexture = StoneIconTexture;
   SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
   SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
-  StackPanel::StackPanelTexture = StackPanelTexture;
+  StackPanel::StackPanelTexture = VoronoiBackground;
   AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
   ImageWidget::NoTextureTexture = NoTextureTexture;
   GameCanvas::MouseCursorHand = MouseCursorHand;
@@ -65,8 +65,8 @@ void ATheHUD::InitWidgets()
   Controls::ResumeButtonTexture = ResumeButtonTexture;
   SidePanel::RightPanelTexture = RightPanelTexture;
   Minimap::MinimapTexture = MinimapTexture;
-  CostWidget::CostWidgetBackground = TooltipBackgroundTexture;
-  Tooltip::TooltipBackgroundTexture = TooltipBackgroundTexture;
+  CostWidget::CostWidgetBackground = VoronoiBackground;
+  Tooltip::TooltipBackgroundTexture = VoronoiBackground;
 
   FVector2D canvasSize( Canvas->SizeX, Canvas->SizeY );
   ui = new UserInterface( canvasSize );
@@ -108,10 +108,10 @@ void ATheHUD::SetCursorStyle( CursorType style, FLinearColor color )
   switch( style )
   {
     case CursorType::CrossHairs:
-      ui->gameChrome->gameCanvas->cursor->Set( MouseCursorCrossHairs );
+      ui->gameChrome->gameCanvas->cursor->SetTexture( MouseCursorCrossHairs );
       break;
     case CursorType::Hand:
-      ui->gameChrome->gameCanvas->cursor->Set( MouseCursorHand );
+      ui->gameChrome->gameCanvas->cursor->SetTexture( MouseCursorHand );
       break;
     default:
       break;
@@ -127,6 +127,26 @@ void ATheHUD::SetHitCursor()
 void ATheHUD::SetPointer()
 {
   SetCursorStyle( CursorType::Hand, FLinearColor::White );
+}
+
+void ATheHUD::SetNextAbility( Abilities nextAbility )
+{
+  NextAbility = nextAbility;
+
+  // depending on the action style, set color
+  switch( nextAbility )
+  {
+    case Abilities::Attack:
+      SetCursorStyle( CrossHairs, FLinearColor::Red );
+      break;
+    case Abilities::Movement:
+      SetCursorStyle( CrossHairs, FLinearColor::Blue );
+      break;
+    case Abilities::Stop:
+    case Abilities::HoldGround:
+      SetCursorStyle( Hand, FLinearColor::Blue );
+      break;
+  }
 }
 
 TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
@@ -164,7 +184,9 @@ HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
 HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
 {
   if( !Init )  return 0;
-
+  //if( ui && ui->drag )
+  //  info( FS( "Drag element is %s", *ui->drag->Name ) );
+  
   // Drag events are when the left mouse button is down.
   if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
   {
@@ -197,10 +219,10 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   //}
 
   // Cannot select objects of these types
-  set< TSubclassOf<AGameObject> > forbiddenTypes = { AGroundPlane::StaticClass(), AWidget3D::StaticClass() };
+  set< TSubclassOf<AGameObject> > forbiddenTypes = { AGroundPlane::StaticClass(), AShape::StaticClass() };
   function< bool (AGameObject*) > filter = [ forbiddenTypes ]( AGameObject *go ) -> bool {
     // remove objects of forbidden types.
-    return go->Dead || go->IsAny( forbiddenTypes );
+    return go->Dead || go->IsAny( forbiddenTypes ); // True means remove from sel.
   };
   objects |= filter;
 
@@ -326,7 +348,6 @@ void ATheHUD::DrawHUD()
 {
   // Canvas is only initialized here.
   Super::DrawHUD();
-  HotSpot::hud = this;
   InitWidgets();
   RenderPortrait();
   
@@ -336,7 +357,7 @@ void ATheHUD::DrawHUD()
   RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
   
   ui->SetSize( FVector2D( Canvas->SizeX, Canvas->SizeY ) );
-  ui->Move( Game->gm->T ); // Ticked here, in case reflow is needed
+  ui->Update( Game->gm->T ); // Ticked here, in case reflow is needed
   ui->render();
 }
 

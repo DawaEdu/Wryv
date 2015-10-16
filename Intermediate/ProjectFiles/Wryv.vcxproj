@@ -259,12 +259,15 @@
     <None Include="..\..\Config\DefaultInput.ini" />
     <ClCompile Include="..\..\Source\Wryv\Action.cpp" />
     <ClCompile Include="..\..\Source\Wryv\InProgressBuilding.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\InProgressResearch.cpp" />
     <ClCompile Include="..\..\Source\Wryv\InProgressUnit.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Spell.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UnitAction.cpp" />
     <ClCompile Include="..\..\Source\Wryv\ActionsPanel.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Action.h" />
+    <ClInclude Include="..\..\Source\Wryv\UnitsData.h" />
     <ClInclude Include="..\..\Source\Wryv\InProgressBuilding.h" />
+    <ClInclude Include="..\..\Source\Wryv\InProgressResearch.h" />
     <ClInclude Include="..\..\Source\Wryv\InProgressUnit.h" />
     <ClInclude Include="..\..\Source\Wryv\Spell.h" />
     <ClInclude Include="..\..\Source\Wryv\UnitAction.h" />
@@ -349,9 +352,7 @@
     <ClInclude Include="..\..\Source\Wryv\Pathfinder.h" />
     <ClCompile Include="..\..\Source\Wryv\Peasant.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Peasant.h" />
-    <ClCompile Include="..\..\Source\Wryv\PlayerStats.cpp" />
     <ClCompile Include="..\..\Source\Wryv\PlayerControl.cpp" />
-    <ClInclude Include="..\..\Source\Wryv\PlayerStats.h" />
     <ClInclude Include="..\..\Source\Wryv\PlayerControl.h" />
     <ClCompile Include="..\..\Source\Wryv\PlayerStartPosition.cpp" />
     <ClCompile Include="..\..\Source\Wryv\PortraitsPanel.cpp" />
@@ -402,7 +403,7 @@
     <ClInclude Include="..\..\Source\Wryv\Townhall.h" />
     <ClInclude Include="..\..\Source\Wryv\TrainingAction.h" />
     <ClInclude Include="..\..\Source\Wryv\Tree.h" />
-    <ClInclude Include="..\..\Source\Wryv\UISounds.h" />
+    <ClInclude Include="..\..\Source\Wryv\Enums.h" />
     <ClCompile Include="..\..\Source\Wryv\Townhall.cpp" />
     <ClCompile Include="..\..\Source\Wryv\TrainingAction.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Tree.cpp" />
@@ -410,7 +411,6 @@
     <ClInclude Include="..\..\Source\Wryv\Unit.h" />
     <ClInclude Include="..\..\Source\Wryv\PowerUpTimeOut.h" />
     <ClCompile Include="..\..\Source\Wryv\UserInterface.cpp" />
-    <ClInclude Include="..\..\Source\Wryv\UnitsData.h" />
     <ClInclude Include="..\..\Source\Wryv\UserInterface.h" />
     <ClCompile Include="..\..\Source\Wryv\Widget.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Widget.h" />

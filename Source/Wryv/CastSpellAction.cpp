@@ -6,6 +6,7 @@
 #include "GlobalFunctions.h"
 #include "Spell.h"
 #include "TheHUD.h"
+#include "UnitsData.h"
 #include "WryvGameInstance.h"
 
 UCastSpellAction::UCastSpellAction( const FObjectInitializer & PCIP ) : Super( PCIP )
@@ -13,7 +14,17 @@ UCastSpellAction::UCastSpellAction( const FObjectInitializer & PCIP ) : Super( P
   AcquiresTarget = 0;
 }
 
-void UCastSpellAction::Click()
+UTexture* UCastSpellAction::GetIcon()
+{
+  return Game->GetData( Spell ).Portrait;
+}
+
+float UCastSpellAction::GetCooldownTotalTime()
+{
+  return Game->GetData( Spell ).Cooldown;
+}
+
+bool UCastSpellAction::Click()
 {
   if( AcquiresTarget )
   {
@@ -28,6 +39,11 @@ void UCastSpellAction::Click()
     // Cast immediately @ AttackTarget.
     Caster->CastSpell( Spell );
   }
+  return 1;
 }
 
-
+bool UCastSpellAction::Hover()
+{
+  UAction::Hover();
+  return 1;
+}

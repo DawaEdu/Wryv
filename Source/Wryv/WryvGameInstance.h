@@ -4,10 +4,12 @@
 using namespace std;
 
 #include "Engine/GameInstance.h"
-#include "Command.h"
+
 #include "AI.h"
+#include "Command.h"
 #include "GlobalFunctions.h"
 #include "Team.h"
+#include "UnitsData.h"
 #include "WryvGameInstance.generated.h"
 
 class AFlyCam;
@@ -31,7 +33,7 @@ public:
   // Used for things like the CanAfford() function, so we can look-ahead the
   // cost of spawning an object before actually spawning it.
 private:
-  map<UClass*,AGameObject*> BaseUnitsData;
+  map<UClass*,FUnitsData> BaseUnitsData;
 public:
   ATheHUD *hud;
   APlayerControl *pc;
@@ -61,7 +63,7 @@ public:
   {
     if( !team )
     {
-      LOG( "Make(): team was null!" );
+      info( FS( "Make(): team was null when making unit of type %s!", *ClassType->GetName() ) );
       // select the neutral team.
       team = gm->neutralTeam;
     }
@@ -90,7 +92,7 @@ public:
     return Make<T>( ClassType, 0, FVector( 0.f ) );
   }
 public:
-  AGameObject* GetData( UClass* ClassType );
+  FUnitsData GetData( UClass* ClassType );
   UTexture* GetPortrait( UClass* ClassType );
   virtual void BeginDestroy() override;
 };

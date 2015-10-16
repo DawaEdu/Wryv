@@ -1,7 +1,7 @@
 #include "Wryv.h"
 #include "ITextWidget.h"
 
-ITextWidget::ITextWidget( FString name, UTexture* pic, FString ftext, int textAlignment, 
+ITextWidget::ITextWidget( FString name, UTexture* pic, FString ftext, Alignment textAlignment, 
   UFont* font, float scale ) : ImageWidget( name, pic )
 {
   if( pic ) Name += pic->GetName();
@@ -14,7 +14,7 @@ ITextWidget::ITextWidget( FString name, UTexture* pic, FString ftext, int textAl
   FixedSize = 0;// when size not supplied, assumed to wrap the textwidget inside
 }
 
-ITextWidget::ITextWidget( FString name, UTexture* pic, FVector2D size, FString ftext, int textAlignment,
+ITextWidget::ITextWidget( FString name, UTexture* pic, FVector2D size, FString ftext, Alignment textAlignment,
   UFont* font, float scale ) : ImageWidget( pic, size )
 {
   Name = name;
@@ -24,24 +24,40 @@ ITextWidget::ITextWidget( FString name, UTexture* pic, FVector2D size, FString f
   Text->Align = textAlignment;
   Add( Text );
   Pad = FVector2D( 8,8 );
-  FixedSize = 1;// size supplied in ctor maintained
+  FixedSize = 1;  // size supplied in ctor maintained
 }
 
-void ITextWidget::Set( FString text )
+void ITextWidget::ClearExtras()
+{
+  for( int i = 0; i < children.size(); i++ )
+    if( children[i] != Text )
+    {
+      children[i]->Orphan();
+      delete children[i];
+    }
+}
+
+void ITextWidget::SetText( FString text, int alignment )
 {
   Text->Set( text );
+  Text->Align = alignment;
   dirty = 1;
 }
 
-void ITextWidget::Set( int v )
+void ITextWidget::SetText( FString text )
 {
-  Set( FS( "%d", v ) );
+  SetText( text, Text->Align );
+}
+
+void ITextWidget::SetText( int v )
+{
+  SetText( FS( "%d", v ) );
 }
 
 // on redraw, remeasure the bounds to wrap the contained text
 void ITextWidget::render( FVector2D offset )
 {
-  if( hidden ) return;  //!! somehow causes not to render
+  if( hidden ) return;
 
   // Re-measure the text also
   if( dirty && !FixedSize )

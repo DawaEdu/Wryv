@@ -3,20 +3,12 @@
 #include <vector>
 using namespace std;
 
+#include "Enums.h"
 #include "Wryv.h"
 #include "AI.generated.h"
 
 struct Team;
 class AResource;
-
-UENUM()
-enum AILevel
-{
-  AINone    UMETA(DisplayName = "AINone"),
-  AIEasy    UMETA(DisplayName = "AIEasy"),
-  AIMedium  UMETA(DisplayName = "AIMedium"),
-  AIHard    UMETA(DisplayName = "AIHard")
-};
 
 // The artificial intelligence for the team. Parameters for the AI.
 USTRUCT()

@@ -21,7 +21,7 @@ public:
 
 class BuildPanel : public SlotPalette
 {
-  ActionsPanel *actions;
+  ActionsPanel *Actions;
 public:
   BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
@@ -31,13 +31,13 @@ public:
 // from a game object's capabilities
 class AbilitiesPanel : public SlotPalette
 {
-  ActionsPanel* actions;
+  ActionsPanel* Actions;
 public:
   // The Build button appears for Peasant-class units that build buildings.
   static UTexture* BuildButtonTexture;
   Clock* buildButton;
 
-  // parent container is the actions panel
+  // parent container is the Actions panel
   AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   void Set( AGameObject *go );
 };

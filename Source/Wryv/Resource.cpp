@@ -31,12 +31,6 @@ void AResource::PostInitializeComponents()
 void AResource::Harvest( APeasant* peasant )
 {
   // Just mined it. Get the resource.
-  if( AmountRemaining <= 0 )
-  {
-    error( FS( "Peasant %s is mining an empty resource", *peasant->GetName() ) );
-    return;
-  }
-  
   set< TSubclassOf<AResource> > acceptable = { 
     AGoldmine::StaticClass(), ATree::StaticClass(), AStone::StaticClass()
   };
@@ -49,8 +43,8 @@ void AResource::Harvest( APeasant* peasant )
 
   float dmg = peasant->DamageRoll();
   // Use "damage" to determine mined qty
-  peasant->Mining = StaticClass();
-  peasant->AddMined( StaticClass(), dmg );
+  peasant->Mining = GetCPPClass();
+  peasant->AddMined( peasant->Mining, dmg );
   AmountRemaining -= dmg;
 
   if( AmountRemaining <= 0 )

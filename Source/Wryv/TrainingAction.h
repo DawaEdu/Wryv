@@ -22,8 +22,7 @@ public:
   ABuilding* Building;
 
   // When you click this button, it kicks off building a unit of UnitType.
-  virtual void Click(ABuilding* building);
-  virtual void OnRefresh();
-  virtual void OnComplete();
-  
+  virtual UTexture* GetIcon() override;
+  virtual float GetCooldownTotalTime();
+  virtual bool Click();
 };

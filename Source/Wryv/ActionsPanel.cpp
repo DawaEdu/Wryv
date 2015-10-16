@@ -8,8 +8,11 @@
 #include "GameObject.h"
 #include "Peasant.h"
 #include "Unit.h"
-#include "UnitAction.h"
 #include "WryvGameInstance.h"
+
+#include "Research.h"
+#include "TrainingAction.h"
+#include "UnitAction.h"
 
 UTexture* AbilitiesPanel::BuildButtonTexture = 0;
 
@@ -53,13 +56,14 @@ AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows,
   SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
   Align = TopCenter;
-  actions = iActions;
-  if( GetNumSlots() )
+  Actions = iActions;
+  if( GetNumActiveSlots() )
   {
-    buildButton = GetSlot( GetNumSlots() - 1 );
+    buildButton = GetClock( GetNumActiveSlots() - 1 );
     buildButton->Tex = BuildButtonTexture;
-    buildButton->OnMouseDownLeft = [this]( FVector2D mouse ) {
-      actions->ShowAbilitiesPanel();
+    buildButton->OnMouseDownLeft = [this]( FVector2D mouse ) -> EventCode
+    {
+      Actions->ShowAbilitiesPanel();
       return Consumed;
     };
   }
@@ -69,23 +73,16 @@ void AbilitiesPanel::Set( AGameObject *go )
 {
   // start by hiding all abilities
   HideChildren();
-  AUnit* unit = Cast< AUnit >( go );
-  if( !unit ) return;
-
-  unit->InitIcons();
-
-  vector<Clock*> abilitiesClocks = Populate<UUnitAction>( unit->CountersAbility );
-
-  for( int i = 0; i < abilitiesClocks.size(); i++ )
+  
+  if( AUnit* unit = Cast< AUnit >( go ) )
   {
-    Clock* clock = abilitiesClocks[ i ];
-
-    // Attach button with invokation of i'th ability
-    clock->OnMouseDownLeft = [unit,i]( FVector2D mouse ) {
-      // Invoke I'th action of the object
-      unit->CountersAbility[i]->Click();
-      return Consumed;
-    };
+    Populate<UUnitAction>( unit->CountersAbility, 0 );
+  }
+  else if( ABuilding* building = Cast< ABuilding >( go ) )
+  {
+    Populate<UTrainingAction>( building->TrainingAvailable, 0 );
+    // Put the researches in also
+    Populate<UResearch>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
   }
 }
 
@@ -95,42 +92,29 @@ BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int col
   SlotPalette( "BuildPanel", bkg, rows, cols, entrySize, pad )
 {
   Align = TopCenter;
-  actions = iActions;
+  Actions = iActions;
 }
 
 void BuildPanel::Set( AGameObject *go )
 {
   HideChildren(); // Hide all buttons
   
-
+  // TODO: Populate with peasant's buildables.
+  // Enable the build button etc.
   if( APeasant* peasant = Cast<APeasant>( go ) )
   {
-    
     // the rest of the abilities can be set to null
-    int i = 0;
-    for( ; i < GetNumSlots(); i++ )
+    for( int i = 0; i < GetNumActiveSlots(); i++ )
     {
       // Turn off the function object, jsut in case
-      GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+      GetClock(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
       // hide slot 
-      GetSlot(i)->Hide();
+      GetClock(i)->Hide();
     }
-
-    for( ; i < GetNumSlots(); i++ )
-    {
-      // Turn off the function object, jsut in case
-      GetSlot(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
-      // hide slot 
-      GetSlot(i)->Hide();
-    }
-
-
   }
   else if( ABuilding* building = Cast<ABuilding>( go ) )
   {
     
   }
-
-  
 }
 

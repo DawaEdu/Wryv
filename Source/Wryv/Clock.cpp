@@ -1,14 +1,20 @@
 #include "Wryv.h"
+
 #include "Clock.h"
-#include "WryvGameInstance.h"
 #include "TheHUD.h"
 #include "FlyCam.h"
+#include "WryvGameInstance.h"
 
-Clock::Clock( FString name, FVector2D size, UTexture* tex, FLinearColor pieColor ) : 
-  ITextWidget( name, tex, size, "0%", Alignment::BottomRight ), clockColor( pieColor )
+FLinearColor Clock::DefaultColor( 1,1,1,1 );
+
+Clock::Clock( FString name, FVector2D size, UTexture* tex, FLinearColor pieColor, Alignment alignment ) : 
+  ClockColor( pieColor ),
+  ITextWidget( name, tex, size, "0%", alignment )
 {
   // Spawn the clock material instance to apply to this widget
-  clockMaterial = CreateClockMaterial( pieColor );
+  clockMaterial = CreateClockMaterial( ClockColor );
+  PieFillFraction = 0.f;
+  DisplayPercentageText = 0;
   // Keep reference collected copy of material.
   Game->hud->MaterialInstances.Add( clockMaterial );
 }
@@ -19,42 +25,71 @@ Clock::~Clock()
   Game->hud->MaterialInstances.Remove( clockMaterial );
 }
 
+void Clock::ClearExtras()
+{
+  ITextWidget::ClearExtras();
+}
+
 UMaterialInstanceDynamic* Clock::CreateClockMaterial( FLinearColor pieColor )
 {
-  UMaterialInstanceDynamic* clock = UMaterialInstanceDynamic::Create( Game->hud->ClockMaterialInstance, Game->hud );
+  // Creates from the instance
+  UMaterialInstanceDynamic* clock = UMaterialInstanceDynamic::Create(
+    Game->hud->ClockMaterialInstance, GetTransientPackage() );
   // Reset parameter values
-  clock->SetScalarParameterValue( FName( "Fraction" ), 0.f );
+  clock->SetScalarParameterValue( FName( "Fraction" ), .25f );
   clock->SetVectorParameterValue( FName( "Color" ), pieColor );
   return clock;
 }
 
-void Clock::Set( float fraction )
+void Clock::SetFillFraction( float fraction )
 {
-  // Progress animations on clock faces
-  if( !clockMaterial->IsValidLowLevel() )
-    clockMaterial = CreateClockMaterial( clockColor );
-  else if( clockMaterial->IsValidLowLevel() )
-    clockMaterial->SetScalarParameterValue( FName( "Fraction" ), fraction );
-  FString fs = FS( "%.0f%%", fraction*100.f );
-  // Print the time remaining into the widget
-  ITextWidget::Set( fs );
+  PieFillFraction = fraction;
+  dirty = 1;
+}
+
+void Clock::SetFillFraction( float fraction, Alignment textAlign )
+{
+  Text->Align = textAlign;
+  SetFillFraction( fraction );
 }
 
 void Clock::render( FVector2D offset )
 {
-  if( hidden ) return ;
+  if( hidden )
+  {
+    return ;
+  }
 
+  // Re-create the clock material if it went invalid
+  if( !clockMaterial->IsValidLowLevel() )
+  {
+    warning( FS( "Clock material for %s became invalid, recreating", *Name ) );
+    clockMaterial = CreateClockMaterial( ClockColor );
+  }
+
+  if( dirty )
+  {
+    if( clockMaterial->IsValidLowLevel() )
+    {
+      clockMaterial->SetScalarParameterValue( FName( "Fraction" ), PieFillFraction );
+      if( DisplayPercentageText )
+        SetText( FS( "%.0f%%", PieFillFraction*100.f ) );
+    }
+    else
+      error( "The MID clock material became invalid, couldn't set parameter" );
+    dirty = 0;
+  }
+
+  // Render text beneath clock material
   ITextWidget::render( offset );
-  
+
   // Put the overlay on top.
   FVector2D pos = Pos() + offset;
+
   if( clockMaterial->IsValidLowLevel() )
-  {
-    ((AHUD*)hud)->DrawMaterial( clockMaterial, pos.X, pos.Y, Size.X, Size.Y, 0, 0, 1, 1 );
-  }
+    ((AHUD*)Game->hud)->DrawMaterial( clockMaterial, pos.X, pos.Y, Size.X, Size.Y, 0, 0, 1, 1 );
   else
-  {
-    LOG( "Clock::render(): The MID became invalid" );
-  }
+    error( "The MID clock material became invalid, cannot draw" );
 }
+
 

@@ -13,6 +13,8 @@
 #include "Animation/AnimNode_AssetPlayerBase.h"
 #include "Runtime/Engine/Classes/Particles/ParticleEmitter.h"
 
+#include "InProgressUnit.h"
+#include "InProgressResearch.h"
 #include "Research.h"
 #include "TrainingAction.h"
 
@@ -49,38 +51,40 @@ void ABuilding::PostInitializeComponents()
 void ABuilding::BeginPlay()
 {
   Super::BeginPlay();
-  TimeBuilding = BuildingTime; // Start as completed (for ghost object placement).
-  Hp = Stats.HpMax;//  Start with 1 hp so that the building doesn't bust immediately
+  TimeBuilding = Stats.TimeLength; // Start as completed (for ghost object placement).
+  Hp = Stats.HpMax; // Start with 1 hp so that the building doesn't bust immediately
 }
 
 void ABuilding::InitIcons()
 {
   AGameObject::InitIcons();
   
-  for( int i = 0; i < Trains.Num(); i++ )
+  TrainingAvailable.Empty();
+  for( int i = 0; i < TrainClasses.Num(); i++ )
   {
-    if( Trains[i] )
+    if( TrainClasses[i] )
     {
-      UTrainingAction* action = NewObject<UTrainingAction>( this, Trains[i] );
+      UTrainingAction* action = Construct<UTrainingAction>( TrainClasses[i] );
       action->Building = this;
-      CountersTraining.push_back( action );
+      TrainingAvailable.Push( action );
     }
   }
 
-  for( int i = 0; i < Researches.Num(); i++ )
+  ResearchesAvailable.Empty();
+  for( int i = 0; i < ResearchClasses.Num(); i++ )
   {
-    if( Researches[i] )
+    if( ResearchClasses[i] )
     {
-      UResearch* action = NewObject<UResearch>( this, Researches[i] );
+      UResearch* action = Construct<UResearch>( ResearchClasses[i] );
       action->Building = this;
-      CountersResearch.push_back( action );
+      ResearchesAvailable.Push( action );
     }
   }
 }
+
 void ABuilding::LosePeasant( APeasant* peasant )
 {
   //Game->hud->Status( FS( "Building %s lost PrimaryPeasant builder %s", *Name, *peasant->Name ) );
-  
   // The building loses its peasant builder.
   if( peasant == PrimaryPeasant )
   {
@@ -99,12 +103,25 @@ void ABuilding::LosePeasant( APeasant* peasant )
   }
 }
 
+void ABuilding::MoveCounters( float t )
+{
+  AGameObject::MoveCounters( t );
+  for( int i = 0; i < TrainingAvailable.Num(); i++ )
+    TrainingAvailable[i]->Step( t );
+  for( int i = 0; i < CountersUnitsInProgress.Num(); i++ )
+    CountersUnitsInProgress[i]->Step( t );
+  for( int i = 0; i < ResearchesAvailable.Num(); i++ )
+    ResearchesAvailable[i]->Step( t );
+  for( int i = 0; i < CountersResearchInProgress.Num(); i++ )
+    CountersResearchInProgress[i]->Step( t );
+}
+
 void ABuilding::Move( float t )
 {
   AGameObject::Move( t ); // Updates Dead variable
   // Peasant's required to continue the building.
 
-  if( TimeBuilding < BuildingTime )
+  if( TimeBuilding < Stats.TimeLength )
   {
     // If the Primary Peasant is within building distance, contribute to building.
     // Other units repair the building.
@@ -163,25 +180,46 @@ void ABuilding::Tick( float t )
 
 bool ABuilding::UseTrain( int index )
 {
-  if( index < 0 || index >= Trains.Num() )
+  if( index < 0 || index >= TrainingAvailable.Num() )
   {
     error( FS( "index %d OOB", index ) );
     return 0;
   }
 
+  // Construct an in-progress counter & add it to counters for this object
+  UInProgressUnit* unitInProgress = Construct<UInProgressUnit>( UInProgressUnit::StaticClass() );
+  unitInProgress->Set( TrainingAvailable[ index ] );
+  CountersUnitsInProgress.Push( unitInProgress );
+
+  // Change to UI:
+  Game->hud->ui->dirty = 1; // Refresh with selected units
   
   return 1;
 }
 
 bool ABuilding::UseResearch( int index )
 {
-  if( index < 0 || index >= CountersResearch.size() )
+  if( index < 0 || index >= ResearchesAvailable.Num() )
   {
     error( FS( "index %d OOB", index ) );
     return 0;
   }
 
-  CountersResearch[ index ] -> Click();
+  // Start the clock on there
+  UResearch* research = ResearchesAvailable[ index ];
+  
+  // Spend money required to upgrade
+  team->Gold   -= research->GoldCost;
+  team->Lumber -= research->LumberCost;
+  team->Stone  -= research->StoneCost;
+  
+  UInProgressResearch* iPResearch = Construct<UInProgressResearch>( UInProgressResearch::StaticClass() );
+  iPResearch->Set( research );
+  iPResearch->UActionIndex = index;
+  CountersResearchInProgress.Push( iPResearch );
+  
+  // Change to UI:
+  Game->hud->ui->dirty = 1; // Refresh with selected units
   
   return 1;
 }
@@ -228,13 +266,18 @@ void ABuilding::PlaceBuilding( APeasant *p )
     Game->EnqueueCommand( Command( Command::Target, PrimaryPeasant->ID, ID ) );
 }
 
+void ABuilding::ReleaseUnit( TSubclassOf< AUnit > UnitClass )
+{
+  Game->Make< AUnit >( UnitClass, team, GetExitPosition() );
+}
+
 void ABuilding::DropBuilders( bool buildingSuccess )
 {
   if( PrimaryPeasant )
   {
     if( buildingSuccess )
       PrimaryPeasant->JobDone();
-    PrimaryPeasant->SetPosition( ExitPosition->GetComponentLocation() );
+    PrimaryPeasant->SetPosition( GetExitPosition() );
   }
 
   // All builders stop building this building.
@@ -258,7 +301,6 @@ void ABuilding::OnBuildingComplete()
 void ABuilding::Cancel()
 {
   DropBuilders(0);
-
   Die();
 }
 

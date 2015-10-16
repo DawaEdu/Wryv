@@ -34,7 +34,7 @@ void ResourcesWidget::SetValues( int goldCost, int lumberCost, int stoneCost )
   Stone->Set( stoneCost );
 }
 
-void ResourcesWidget::Move( float t )
+void ResourcesWidget::Update( float t )
 {
   // spent=200, diff=-200
   //    diff = 200 - 400;

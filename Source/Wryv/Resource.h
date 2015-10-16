@@ -13,7 +13,7 @@ public:
   typedef TSubclassOf<AResource> /* as */ Type;
 
   float AmountRemaining;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USkeletalMeshComponent* Mesh;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cosmetics )  USkeletalMeshComponent* Mesh;
   // Sets the tree to jiggling.
   UPROPERTY( VisibleAnywhere, BlueprintReadWrite, Category = Stats )  bool Jiggle;
   // This triggers the resource's destruction sequence to occur
@@ -23,6 +23,7 @@ public:
   //AResource(const FObjectInitializer& PCIP);
   void BeginPlay() override;
   void PostInitializeComponents() override;
+  virtual UClass* GetCPPClass() { return StaticClass(); }
   void Harvest( APeasant* peasant );
   float ResourcesFraction() { return AmountRemaining / Quantity; }
 };

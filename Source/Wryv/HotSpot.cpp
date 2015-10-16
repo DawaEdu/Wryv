@@ -2,14 +2,12 @@
 #include "HotSpot.h"
 #include "TextWidget.h"
 
-ATheHUD* HotSpot::hud = 0;
-
 void HotSpot::HotSpotDefaults()
 {
   SetName( "HotSpot" );
   //TooltipText = "Tip";
 
-  Align = None; // Absolute positioning as default
+  Align = Alignment::TopLeft;
   Layout = Pixels; // pixel positioning (can also use percentages of parent widths)
   hidden = 0;
   eternal = 1;

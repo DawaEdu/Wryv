@@ -50,7 +50,7 @@ public:
   }
 
   // Adds a slot
-  ITextWidget* AddText( FString ftext, int textAlignment )
+  ITextWidget* AddText( FString ftext, Alignment textAlignment )
   {
     ITextWidget* text = new ITextWidget( FS("mss text %s",*ftext),
       MapSlotEntryBkg, MapFileEntrySize, ftext, textAlignment );

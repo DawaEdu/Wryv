@@ -16,6 +16,7 @@ public:
   vector< UCastSpellAction* > CountersSpells;
 
   virtual void InitIcons();
+  virtual void MoveCounters( float t ) override;
   virtual void Move( float t ) override;
   virtual void ai( float t ) override;
 

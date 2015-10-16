@@ -3,6 +3,7 @@
 #include <map>
 using namespace std;
 
+#include "Item.h"
 #include "PlayerControl.h"
 #include "TheHUD.h"
 #include "Unit.h"
@@ -25,29 +26,51 @@ void AUnit::InitIcons()
   AGameObject::InitIcons();
 
   // Create instances of each class type
-  CountersAbility.clear();
   for( int i = 0; i < Abilities.Num(); i++ )
   {
     if( Abilities[i] )
     {
-      UUnitAction* action = NewObject<UUnitAction>( this, Abilities[i] );
+      UUnitAction* action = Construct<UUnitAction>( Abilities[i] );
       action->Unit = this;
-      info( FS( "Ability %s has been added %s", *action->GetName(), *action->Unit->GetName() ) );
-      CountersAbility.push_back( action );
+      CountersAbility.Push( action );
     }
   }
 
-  CountersItems.clear();
   for( int i = 0; i < StartingItems.Num(); i++ )
   {
-    if( StartingItems[i] )
+    AddItem( StartingItems[i] );
+  }
+
+}
+
+void AUnit::AddItem( UClass* ItemClass )
+{
+  if( !ItemClass )
+  {
+    error( FS( "%s::AddItem() ItemClass was null", *GetName() ) );
+    return;
+  }
+
+  int i = IndexOfIsA( CountersItems, ItemClass );
+  if( i >= 0 )
+  {
+    // Same class of item, increase qty
+    if( CountersItems[i]->IsA( ItemClass ) )
     {
-      UItemAction* action = NewObject<UItemAction>( this, StartingItems[i] );
-      action->Unit = this;
-      info( FS( "Ability %s has been added %s", *action->GetName(), *action->Unit->GetName() ) );
-      CountersItems.push_back( action );
+      CountersItems[i]->Quantity++;
+      info( FS( "%s already had a %s, increased qty now have %d",
+        *GetName(), *CountersItems[i]->GetName(), CountersItems[i]->Quantity ) );
+      return;
     }
   }
+
+  // 
+  info( FS( "Constructing action %s", *ItemClass->GetName() ) );
+  UItemAction* action = Construct<UItemAction>( ItemClass );
+  action->AssociatedUnit = this;
+  action->AssociatedUnitName = GetName();
+  CountersItems.Push( action );
+  
 }
 
 void AUnit::PostInitializeComponents()
@@ -62,44 +85,53 @@ void AUnit::BeginPlay()
 
 bool AUnit::UseAbility( int index )
 {
-  if( index < 0 || index > CountersAbility.size() )
+  if( index < 0 || index > CountersAbility.Num() )
   {
-    error( FS( "%s cannot use ability %d, OOB",
-      *Stats.Name, index ) );
+    error( FS( "%s cannot use ability %d, OOB", *Stats.Name, index ) );
     return 0;
   }
 
-  if( !CountersAbility[index]->IsReady() )
-  {
-    info( FS( "%s: Ability %s was not ready",
-      *Stats.Name, *CountersAbility[index]->Text ) );
-    return 0;
-  }
-  
-  if( AUnit* unit = Cast<AUnit>(this) )
-    CountersAbility[index]->Click();
-  else
-    error( "not a unit" );
+  UUnitAction* unitAction = CountersAbility[ index ];
+  info( FS( "Using Action %s [%s] on %s", *unitAction->Text,
+    *GetEnumName( TEXT("Abilities"), unitAction->Ability ), *Stats.Name ) );
+  Game->hud->SetNextAbility( unitAction->Ability.GetValue() );
+
   return 1;
 }
 
 bool AUnit::UseItem( int index )
 {
   // Item instances already populate the CounterItems
-  if( index < 0 || index >= CountersItems.size() )
+  if( index < 0 || index >= CountersItems.Num() )
   {
     error( FS( "%s cannot consume item %d / %d, OOR",
-      *Stats.Name, index, CountersItems.size() ) );
+      *Stats.Name, index, CountersItems.Num() ) );
     return 0;
   }
 
-  // use the item. qty goes down by 1
+  info( FS( "%s is using item %s", *GetName(), *CountersItems[index]->GetName() ) );
+  UItemAction* itemAction = CountersItems[index];
+  BonusTraits.push_back( PowerUpTimeOut( Game->GetData( itemAction->ItemClass ) ) );
+
+  // Use the item. qty goes down by 1
   // we don't affect the UI here, only
-  CountersItems[index]->Quantity--;
-  if( !CountersItems[index]->Quantity ) {
-    removeIndex( CountersItems, index );
-  }
+  itemAction->Quantity--;
+  if( itemAction->Quantity <= 0 )
+    CountersItems.RemoveAt( index );
+
+  Game->hud->ui->dirty = 1;
   return 1;
+}
+
+void AUnit::MoveCounters( float t )
+{
+  AGameObject::MoveCounters( t );
+
+  for( int i = 0; i < CountersAbility.Num(); i++ )
+    CountersAbility[i]->Step( t );
+
+  for( int i = 0; i < CountersItems.Num(); i++ )
+    CountersItems[i]->Step( t );
 }
 
 void AUnit::Move( float t )

@@ -17,6 +17,7 @@
 
 #include "BuildAction.h"
 #include "InProgressBuilding.h"
+#include "InProgressUnit.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
@@ -47,7 +48,6 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   Shrugging = 0;
   Mining = 0;
 
-  //RepairTarget = 0;
   LastResourcePosition = FVector(0,0,0);
 }
 
@@ -68,27 +68,40 @@ void APeasant::InitIcons()
   {
     if( Builds[i] )
     {
-      UBuildAction* action = NewObject<UBuildAction>( this, Builds[i] );
-      Buildables.push_back( action );
+      UBuildAction* action = Construct<UBuildAction>( Builds[i] );
+      action->Peasant = this;
+      Buildables.Push( action );
     }
   }
-
-
 }
 
 bool APeasant::UseBuild( int index )
 {
-  if( index < 0 || index >= Builds.Num() )
+  if( index < 0 || index >= Buildables.Num() )
   {
     error( FS( "index %d OOB", index ) );
     return 0;
   }
 
-  // Construct an instance of 
-  UBuildAction* buildingAction = NewObject<UBuildAction>(
-    this, Builds[index] );
-  buildingAction->Click( this );
+  Game->flycam->ghost = Game->Make< ABuilding >( Buildables[index]->BuildingType );
+  
   return 1;
+}
+
+bool APeasant::CancelBuilding( int index )
+{
+  if( index < 0 || index >= CountersBuildingsQueue.Num() )
+  {
+    error( FS( "index %d OOB", index ) );
+    return 0;
+  }
+
+  // Cancels ith building
+  UInProgressBuilding* buildingAction = CountersBuildingsQueue[ index ];
+  buildingAction->Building->Cancel();
+  
+  return 1;
+
 }
 
 bool APeasant::Build( UBuildAction* buildAction, FVector pos )
@@ -99,12 +112,10 @@ bool APeasant::Build( UBuildAction* buildAction, FVector pos )
     ABuilding* building = Game->Make<ABuilding>( buildAction->BuildingType, team, pos );
 
     // Construct the counter & add it to counters for this object
-    UInProgressBuilding* buildInProgress = NewObject<UInProgressBuilding>( 
-      this, UInProgressBuilding::StaticClass() );
+    UInProgressBuilding* buildInProgress = Construct<UInProgressBuilding>( UInProgressBuilding::StaticClass() );
     buildInProgress->Building = building;
-    buildInProgress->Icon = building->Stats.Portrait;
     buildInProgress->Peasant = this;
-    CountersBuildingsQueue.push_back( buildInProgress );
+    CountersBuildingsQueue.Push( buildInProgress );
 
     // Make the building and ask the peasant to join in building it.
     building->PlaceBuilding( this );
@@ -234,13 +245,12 @@ AResource* APeasant::FindAndTargetNewResource( FVector fromPos,
         if( AResource* res = Cast<AResource>( objects[j] ) )
         {
           Target( res );
-          info( FS( "Peasant %s is now mining %s", *Stats.Name, *res->Stats.Name ) );
+          //info( FS( "Peasant %s is now mining %s", *Stats.Name, *res->Stats.Name ) );
           return res;
         }
         else
         {
-          error( FS( "%s is Type %s but cannot cast to resource",
-            *objects[j]->GetName(), *types[j]->GetName() ) );
+          error( FS( "%s is Type %s but cannot cast to resource", *objects[j]->GetName(), *types[j]->GetName() ) );
         }
       }
     }
@@ -413,6 +423,14 @@ void APeasant::ReturnResources()
 void APeasant::AddMined( TSubclassOf<AResource> resourceType, float resAmount )
 {
   MinedResources[ resourceType ] += resAmount; 
+}
+
+void APeasant::MoveCounters( float t )
+{
+  for( UInProgressBuilding* ipb : CountersBuildingsQueue )
+    ipb->Step( t );
+  for( UBuildAction* build : Buildables )
+    build->Step( t );
 }
 
 void APeasant::Move( float t )

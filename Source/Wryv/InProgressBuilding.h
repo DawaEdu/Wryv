@@ -6,7 +6,6 @@
 class ABuilding;
 
 // A UInProgressBuilding is a counter for a building that is being built.
-
 UCLASS( meta=(ShortTooltip="Something that is being built indicated") )
 class WRYV_API UInProgressBuilding : public UAction
 {
@@ -16,10 +15,13 @@ public:
   ABuilding* Building;
   APeasant* Peasant;
 
+  virtual UTexture* GetIcon() override;
+  virtual float GetCooldownTotalTime();
+
   // Cancels the in-progress building.
   void SetBuilding(ABuilding* building);
 
-  virtual void Cancel();
-  virtual void OnComplete();
+  virtual bool Click();
+  virtual void OnCooldown();
   virtual void Step( float t );
 };

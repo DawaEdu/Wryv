@@ -1,20 +1,35 @@
 #include "Wryv.h"
-#include "UserInterface.h"
+
+#include "Clock.h"
 #include "TheHUD.h"
+#include "UserInterface.h"
 #include "WryvGameInstance.h"
 
 UserInterface::UserInterface( FVector2D size ) :
   Screen( "UI-root", size )
 {
-  titleScreen = 0;
-  gameChrome = new GameChrome( "GameChrome", size );
-  Add( gameChrome );
-  mapSelectionScreen = 0, missionObjectivesScreen = 0;
-  // Initialize the status bar
+  // Initialize the status bar before gamechrome, since statusbar height is used
   statusBar = new StatusBar( FLinearColor::Black );
   Add( statusBar );
   HotSpot::TooltipWidget = statusBar->Text;
+  info( FS( "Status bar height %f", statusBar->Size.Y ) );
+  
+  gameChrome = new GameChrome( "GameChrome", size );
+  gameChrome->buildQueue->Margin.Y = statusBar->Size.Y;
+  gameChrome->itemBelt->Margin.Y = statusBar->Size.Y;
+  Add( gameChrome );
 
+  // Adjust the BuildQueue's margin 
+  titleScreen = 0;
+  mapSelectionScreen = 0;
+  missionObjectivesScreen = 0;
+  drag = 0;
+  dirty = 0;
+  // Clock materials stopped drawing in 4.9
+  //clock = new Clock( "clock", FVector2D(200,200), Game->hud->GoldIconTexture, FLinearColor::Black );
+  //clock->Margin = FVector2D( 200,200 );
+  //clock->Set( 0.25, Alignment::CenterCenter );
+  //gameChrome->Add( clock );
 }
 
 void UserInterface::SetScreen( int mode )
@@ -39,6 +54,19 @@ void UserInterface::SetSize( FVector2D size )
   gameChrome->Size = size;
 }
 
+void UserInterface::Update( float t )
+{
+  if( dirty )
+  {
+    // Refresh.
+    gameChrome->Select( gameChrome->Selected );
+    dirty = 0;
+  }
 
+  // Clock test, for testing clock material in ue 4.9
+  //static float tr = 0.f;
+  //tr+=t;
+  //clock->Set( tr / 10.f, Alignment::CenterCenter );
+}
 
 

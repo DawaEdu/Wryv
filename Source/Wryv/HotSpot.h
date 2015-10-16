@@ -21,14 +21,15 @@ class ATheHUD;
 
 
 // None (null) alignment means positioned absolutely
-enum HAlign { None=0, Left=1<<0, HCenter=1<<1, Right=1<<2, 
+enum HAlign { Left=1<<0, HCenter=1<<1, Right=1<<2, 
   ToLeftOfParent=1<<3, ToRightOfParent=1<<4, HFull=1<<5 };
 enum VAlign { Top=1<<10, VCenter=1<<11, Bottom=1<<12,
   OnTopOfParent=1<<13, BelowBottomOfParent=1<<14, VFull=1<<15 };
 enum Alignment {
-  TopLeft=Top|Left, TopRight=Top|Right, TopCenter=Top|HCenter,
+  None=0,
+  TopLeft=Top|Left,        TopRight=Top|Right,           TopCenter=Top|HCenter,
   CenterLeft=Left|VCenter, CenterCenter=VCenter|HCenter, CenterRight=VCenter|Right,
-  BottomLeft=Left|Bottom, BottomCenter=Bottom|HCenter, BottomRight=Bottom|Right,
+  BottomLeft=Left|Bottom,  BottomCenter=Bottom|HCenter,  BottomRight=Bottom|Right,
   Full=HFull|VFull
 };
 enum LayoutMode { Pixels, Percentages };
@@ -59,7 +60,6 @@ class HotSpot
 {
 public:
   static TextWidget *TooltipWidget; // Reference to the widget to send tooltip to on flyover
-  static ATheHUD* hud;
 
   string CName; //the name of the widget, visible in C++ debugger
   FString Name; //name of the widget
@@ -82,11 +82,11 @@ public:
   // Associations with AGameObject's contained in this hotspot. Empty if no objects
   // are associated with the spot (used for item slots)
   //vector<AGameObject*> Objects;
-
+  bool dirty;  // Set if the widget's bounds need to be remeasured
+  
 protected:
   HotSpot* Parent;
   vector<HotSpot*> children;  // Children of this hotspot.
-  bool dirty;  // Set if the widget's bounds need to be remeasured
   //bool bubbleUp; // When set, the event can bubbles up through the widget
 public:
   
@@ -125,7 +125,8 @@ protected:
       children[i]->render( offset + Pos() );
   }
 public:
-  virtual void Move( float t )
+  // Updates a UI widget
+  virtual void Update( float t )
   {
     displayTime -= t;
 
@@ -141,7 +142,7 @@ public:
 
     // tick the children
     for( int i = 0; i < children.size(); i++ )
-      children[i]->Move( t );
+      children[i]->Update( t );
 
     Clean();
   }
@@ -169,6 +170,17 @@ public:
     children.push_back( w );
     PostAdd();
     return w;
+  }
+  // Positions a widget in current parent (with TopLeft alignment)
+  // as if child of some other hotspot
+  void PositionAsChild( HotSpot* parent, int alignment )
+  {
+    Align = alignment;
+    HotSpot* oldParent = Parent;
+    parent->Add( this ); // loses old parent
+    FVector2D posInParent = Pos();
+    oldParent->Add( this );
+    Margin = posInParent;
   }
   void SetByCorners( FVector2D TL, FVector2D BR )
   {
@@ -259,12 +271,18 @@ public:
   // If you need RELATIVE bounds, use the SIZE of the
   // Absolute bounds.
   FBox2DU GetAbsBounds( FVector2D offset ){
+    //if( dirty ) { 
+    //  warning( FS( "Getting bounds of dirty element %s", *Name ) );
+    //  // to make the widget clean, we have to call render. render
+    //  // will re-measure any bounds.
+    //  render();
+    //}
     FBox2DU bounds;
     // If this gets called on a hidden widget,
     // just return a single-point bound on the offset.
     // This won't count to the parent.
     if( hidden ) {
-      bounds += offset;
+      bounds += offset; // ZERO SIZE @ offset (not Pos())
       return bounds;
     }
     // bound this and all children
@@ -287,11 +305,7 @@ public:
     FBox2DU bounds ;
     if( !children.size() || hidden )
     {
-      //warning( FS( "Widget %s had NO CHILDREN || hidden!", *Name ) );
-      // return the bounds of the container instead
-      //bounds += GetAbsBounds();
-      // give 0 size box @ POS
-      bounds += Pos(); //
+      bounds += Pos(); // ZERO SIZE bounds @ Pt
     }
     else for( int i = 0; i < children.size(); i++ ) {
       if( children[i]->hidden )  skip;
@@ -307,14 +321,14 @@ public:
   }
 
   void Show() { hidden = 0; }
-  void Hide() { hidden = 1; }
+  virtual void Hide() { hidden = 1; }
   // ShowChildren without affecting parent
-  void ShowChildren(){
+  virtual void ShowChildren(){
     for( int i = 0; i < children.size(); i++ )
       children[i]->Show();
   }
   // HideChildren without affecting parent
-  void HideChildren(){
+  virtual void HideChildren(){
     for( int i = 0; i < children.size(); i++ )
       children[i]->Hide();
   }

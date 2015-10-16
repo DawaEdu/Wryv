@@ -51,39 +51,37 @@ class WRYV_API AGameObject : public AActor
   // The stats applied due to research bonuses.
   //vector<FUnitsDataRow> ResearchBonusStats;
 
-  // Level of the object.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Level;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) int32 Kills;
-
   // The amount that this object multiplies incoming repulsion forces by.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  float RepelMultiplier;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USceneComponent* DummyRoot;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  UCapsuleComponent* hitBounds;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)  USphereComponent* repulsionBounds;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  float RepelMultiplier;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USceneComponent* DummyRoot;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  UCapsuleComponent* hitBounds;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USphereComponent* repulsionBounds;
 
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
-  UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UnitProperties)  bool Dead;            // Whether unit is dead or not.
+  UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Stats)  bool Dead;// Whether unit is dead or not.
   float DeadTime, MaxDeadTime; // how long the object has been dead for
   FLinearColor vizColor;
   float vizSize;
   bool Recovering;
   int64 LastBuildingID; // The ID of the last building we proposed to be placed.
+  int32 LastBuildIndex;
+
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Greets;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Oks;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> Attacks;
   // Movement & Attack.
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Pos;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Dir;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  float Speed;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FVector Vel;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Pos;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Dir;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  float Speed;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
   vector<AShape*> NavFlags; // Debug info for navigation flags
 
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsData BaseStats;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  FUnitsData Stats;
+  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)  FUnitsData BaseStats;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FUnitsData Stats;
 
   // Series of commands.
   deque<Command> commands;
@@ -97,8 +95,8 @@ class WRYV_API AGameObject : public AActor
 
   Command& GetCurrentCommand(){ return commands.front(); }
 
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* FollowTarget;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = UnitProperties)  AGameObject* AttackTarget;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  AGameObject* FollowTarget;
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  AGameObject* AttackTarget;
   // Cached collections of followers & attackers
   vector<AGameObject*> Followers, Attackers, RepulsionOverlaps, HitOverlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
@@ -151,6 +149,7 @@ class WRYV_API AGameObject : public AActor
   inline float DamageRoll() { return Stats.BaseAttackDamage + randFloat( Stats.BonusAttackDamage ); }
   virtual void ReceiveAttack( AGameObject* from );
 
+  void ApplyBonus( FUnitsData bonusStats );
   void UpdateStats( float t );
 
   // 
@@ -181,6 +180,7 @@ class WRYV_API AGameObject : public AActor
   void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
   void DisplayWaypoints();
   void exec( const Command& cmd );
+  virtual void MoveCounters( float t );
   // Base Movement function. Called each frame.
   //   * Fixed time step
   //   * Predictable call order
@@ -250,14 +250,18 @@ class WRYV_API AGameObject : public AActor
   template <typename T>
   bool IsAny( set< TSubclassOf< T > > types )
   {
-    static_assert( is_base_of< AGameObject, T >::value, "Populate<T>: T must derive from AGameObject" );
+    static_assert( is_base_of< AGameObject, T >::value, "IsAny<T>: T must derive from AGameObject" );
 
     for( TSubclassOf<AGameObject> uc : types )
     {
       if( this->IsA( uc ) )
       {
-        info( FS( "%s IsA( %s )", *Stats.Name, *(*uc)->GetName() ) );
+        //info( FS( "%s IsA( %s )", *Stats.Name, *(*uc)->GetName() ) );
         return 1;
+      }
+      else
+      {
+        //info( FS( "%s Is NOT A( %s )", *Stats.Name, *(*uc)->GetName() ) );
       }
     }
     return 0;

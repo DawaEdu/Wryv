@@ -1,5 +1,8 @@
 #include "Wryv.h"
+
 #include "GameChrome.h"
+#include "TheHUD.h"
+#include "WryvGameInstance.h"
 
 GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 {
@@ -9,11 +12,8 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
   rightPanel = new SidePanel( FVector2D( 280, size.Y ), FVector2D(8,8) );
   Add( rightPanel );
 
-  itemBelt = new ItemBelt( SlotPalette::SlotPaletteTexture, 1, 4, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
+  itemBelt = new ItemBelt( SlotPalette::SlotPaletteTexture, 1, 8, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
   Add( itemBelt );
-
-  buffs = new Buffs( "Buffs", 0 );
-  Add( buffs );
 
   buildQueue = new BuildQueue( "Building Queue", FVector2D( 128, 128 ) );
   Add( buildQueue );
@@ -42,10 +42,12 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 void GameChrome::Select( vector<AGameObject*> objects )
 {
   Selected = objects;
+  rightPanel->Set( Selected ); // portraits of all
+
   AGameObject* go = first( Selected );
-  rightPanel->Set( Selected );
-  itemBelt->Set( Cast<AUnit>(go) );
+  itemBelt->Set( go );
   buildQueue->Set( go );
-  buffs->Set( go );
 }
+
+
 
