@@ -69,6 +69,7 @@ public:
   UserInterface* ui;  // The root UI widget. It doesn't have a viz, but it parents all other display containers.
   bool Init;          // Global init for all objects
   FBox2D selectBox;
+  bool SkipNextMouseUp; // for UI commands that absorb the mouse up.
 
   // The uClass of the selected object highlight
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* PortraitTexture;

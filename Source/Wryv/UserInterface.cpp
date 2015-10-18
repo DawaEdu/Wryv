@@ -18,6 +18,7 @@ UserInterface::UserInterface( FVector2D size ) :
   gameChrome->buildQueue->Margin.Y = statusBar->Size.Y;
   gameChrome->itemBelt->Margin.Y = statusBar->Size.Y;
   Add( gameChrome );
+  gameChrome->Select( {} ); // empty selection
 
   // Adjust the BuildQueue's margin 
   titleScreen = 0;
@@ -30,6 +31,8 @@ UserInterface::UserInterface( FVector2D size ) :
   //clock->Margin = FVector2D( 200,200 );
   //clock->Set( 0.25, Alignment::CenterCenter );
   //gameChrome->Add( clock );
+
+
 }
 
 void UserInterface::SetScreen( int mode )

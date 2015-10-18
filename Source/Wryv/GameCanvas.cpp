@@ -45,7 +45,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     if( Game->hud->NextSpell )
     {
       // Cast the spell using any selected units that can invoke the spell
-      for( AGameObject *go : Game->hud->Selected )
+      for( AGameObject* go : Game->hud->Selected )
       {
         if( ACombatUnit* cu = Cast<ACombatUnit>( go ) )
         {
@@ -64,13 +64,18 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
         case Abilities::Movement:
           // Explicit movement, without attack possible.
           if( hit == Game->flycam->floor )
-            go->SetDestination( hitResult.ImpactPoint );
+            go->GoToGroundPosition( hitResult.ImpactPoint );
           else
             go->Follow( hit );  // otherwise, follow clicked unit
+          Game->hud->SkipNextMouseUp = 1;
           break;
         case Abilities::Attack:
           // Attack only, even friendly units.
-          go->Attack( hit );
+          if( hit == Game->flycam->floor )
+            go->AttackGroundPosition( hitResult.ImpactPoint );  // ready to attack enemy units
+          else
+            go->Attack( hit );
+          Game->hud->SkipNextMouseUp = 1;
           break;
         case Abilities::Stop:
           // Stops units from moving
@@ -83,7 +88,13 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
           error( "Ability NotSet" );
           break;
       }
-      Game->hud->SetCursorStyle( ATheHUD::Hand, FLinearColor::White );
+    }
+
+    if( Game->hud->NextAbility )
+    {
+      // an ability was set, use it & revert to normal cursor
+      Game->hud->SetNextAbility( Abilities::NotSet );
+      return Consumed;
     }
 
     if( Game->flycam->ghost )

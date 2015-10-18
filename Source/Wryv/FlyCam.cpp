@@ -473,23 +473,34 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
   return material;
 }
 
-void AFlyCam::Visualize( UClass* shapeType, FVector& v, float s, FLinearColor color )
+void AFlyCam::Visualize( FVector& v, float s, FLinearColor color, float time )
 {
-  AGameObject* go = Game->Make<AGameObject>( shapeType, Game->gm->neutralTeam, v );
-  go->SetSize( FVector(s) );
-  go->SetColor( color );
-  viz.push_back( go );
+  AShape* shape = Game->Make<AShape>( VizClass, Game->gm->neutralTeam, v );
+  shape->SetSize( FVector( s ) );
+  shape->SetColor( color );
+  shape->MaxLifeTime = time;
+  viz.push_back( shape );
 }
 
-void AFlyCam::Visualize( UClass* shapeType, vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor )
+void AFlyCam::Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor, float time )
 {
   for( int i = 0; i < v.size(); i++ )
   {
     //LOG( "Pathway is (%f %f %f)", v[i].X, v[i].Y, v[i].Z );
     float p = (float)i / v.size();
     FLinearColor color = FLinearColor::LerpUsingHSV( startColor, endColor, p );
-    Visualize( shapeType, v[i], s, color );
+    Visualize( v[i], s, color, time );
   }
+}
+
+void AFlyCam::DrawDebug( FVector pt, float size, FLinearColor color, float time )
+{
+  DrawDebugPoint( GetWorld(), pt, size, color.ToFColor(0), 0, time, 0 );
+}
+
+void AFlyCam::DrawDebug( FVector start, FVector end, FLinearColor color, float time )
+{
+  DrawDebugLine( GetWorld(), start, end, color.ToFColor(0), 0, time, 0, 5.f );
 }
 
 void AFlyCam::ClearViz()
@@ -567,7 +578,7 @@ bool AFlyCam::SetOnGround( FVector& v )
   {
     // no hit, no change
     warning( FS( "Point %f %f %f cannot hit the ground", v.X, v.Y, v.Z ) );
-    Visualize( VizClass, v, 50.f, FLinearColor::Blue );
+    Visualize( v, 50.f, FLinearColor::Blue, 10.f );
     return 0;
   }
 }
@@ -625,16 +636,14 @@ void AFlyCam::FindFloor()
 
 void AFlyCam::MouseUpLeft()
 {
-  //LOG( "MouseUpLeft");
+  // Passes thru to HUD
   Game->hud->MouseUpLeft( getMousePos() );
 }
 
 void AFlyCam::MouseDownLeft()
 {
   // Covers all click behavior.
-  if( Game->hud->MouseDownLeft( getMousePos() ) ) {
-    return;
-  }
+  Game->hud->MouseDownLeft( getMousePos() );
 }
 
 void AFlyCam::MouseUpRight()
@@ -653,45 +662,79 @@ void AFlyCam::Target()
     info( "Right clicked on nothing" );
     return;
   }
+  FVector P = hit.ImpactPoint;
 
   // Hit the floor target, which means send units to ground position
   if( target == floor )
   {
-    // Calculate offsets with respect to first command unit.
-    AGameObject* first = Game->hud->Selected[0];
-    //TODO: Change this so units maintain a separation distance, but DO NOT maintain offset
-    FVector offset = hit.ImpactPoint - first->Pos; // Offset to apply to get to pos from first->Pos
-    for( AGameObject * go : Game->hud->Selected )
+    // Arrange the units in some formation around hit.ImpactPoint.
+    // Units targeted in group cannot have the same destination.
+    // The group of units will be travelling in an average direction
+    FVector avgPos(0.f,0.f,0.f);
+    for( AGameObject* go : Game->hud->Selected )
+      avgPos += go->Pos;
+    avgPos /= Game->hud->Selected.size();
+
+    FVector travelDir = P - avgPos;
+    if( float len = travelDir.Size() )
     {
+      travelDir /= len;
+    }
+    else
+    {
+      warning( "Travel length 0" );
+      return;
+    }
+
+    // The side vector is going to be a result of crossing with the up vector
+    FVector right = FVector::CrossProduct( UnitZ, travelDir );
+    DrawDebug( P, P + travelDir*50.f, FLinearColor::Green, 10.f );
+    DrawDebug( P, P + right*50.f, FLinearColor::Red, 10.f );
+
+    float largestRadius = Game->hud->Selected.front()->Radius();
+    for( int i = 0; i < Game->hud->Selected.size(); i++ )
+      if( Game->hud->Selected[i]->Radius() > largestRadius )
+        largestRadius = Game->hud->Selected[i]->Radius();
+    largestRadius *= 2.f; // Double-spacing
+
+    int numGridPos = FMath::CeilToInt( sqrtf( Game->hud->Selected.size() ) );
+    vector<FVector> dests( numGridPos*numGridPos );
+
+    // form the grid centered around the center point
+    for( int i = 0; i < Game->hud->Selected.size(); i++ )
+    {
+      int x = i % numGridPos;
+      int y = i / numGridPos;
+      float xP = largestRadius * (x - numGridPos/2.f);
+      float yP = largestRadius * (y - numGridPos/2.f);
+      FVector pos = P   +   right*xP + travelDir*yP;
+      DrawDebug( pos, 10.f, FLinearColor::Red, 10.f );
+      
+      AGameObject* go = Game->hud->Selected[i];
       //go->GoToGroundPosition( go->Pos + offset ); // C++ Code Command
-      if( Game->pc->IsAnyKeyDown( {EKeys::LeftShift, EKeys::RightShift } ) )
+      if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
       {
         // When shift is down, we have to add the command to the list of commands for this unit.
-        info( "Enqueue" );
-        Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
+        Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, pos ) ); // Network command
       }
       else
       {
         // When shift is NOT down, we have to clear the unit's command set.
         info( "Replacing prev cmd" );
-        Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, go->Pos + offset ) ); // Network command
+        Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, pos ) ); // Network command
       }
     }
   }
   else // Some object was right-clicked.
   {
-    // An actor was hit by the click. Detect if friendly or not.
+    // An actor was hit by the click. Detect if friendly or not, and
+    // launch a targetting cmd to it
     for( AGameObject* go : Game->hud->Selected )
     {
-      //go->Target( target );
       if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
-      {
         Game->EnqueueCommand( Command( Command::Target, go->ID, target->ID ) );
-      }
       else
-      {
         Game->SetCommand( Command( Command::Target, go->ID, target->ID ) );
-      }
     }
   }
 }

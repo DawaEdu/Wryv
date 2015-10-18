@@ -41,6 +41,8 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   FollowTarget = AttackTarget = 0;
   RepelMultiplier = 1.f;
   Dead = 0;
+  LifeTime = 0.f;
+  MaxLifeTime = FLT_MAX; // start out with infinite lifetime
   DeadTime = 0.f;
   MaxDeadTime = CapDeadTime;
   vizColor = FLinearColor::MakeRandomColor();
@@ -55,7 +57,6 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
-
 
 }
 
@@ -229,14 +230,14 @@ float AGameObject::HpFraction()
   else  return Hp / Stats.HpMax;  // if max hp not set, just return hp it has
 }
 
-float AGameObject::SpeedPercent()
+float AGameObject::SpeedFraction()
 {
   if( ! Stats.SpeedMax )
   {
     error( FS( "SpeedMax==0.f for %s", *Stats.Name ) );
     return 100.f;
   }
-  return 100.f * Speed / Stats.SpeedMax;
+  return Speed / Stats.SpeedMax;
 }
 
 void AGameObject::ReceiveAttack( AGameObject* from )
@@ -278,7 +279,8 @@ void AGameObject::UpdateStats( float t )
   }
 
   // Tick all the traits
-  for( int i = BonusTraits.size() - 1; i >= 0; i-- ) {
+  for( int i = BonusTraits.size() - 1; i >= 0; i-- )
+  {
     BonusTraits[i].timeRemaining -= t;
     if( BonusTraits[i].timeRemaining <= 0 )
     {
@@ -320,8 +322,8 @@ void AGameObject::CheckWaypoint()
 
 void AGameObject::SetPosition( FVector v )
 {
-  // Can check if there's something there.
-  // While encountering objects, keep searching adjacent to the picked objects until finding empty place.
+  // Pops to position.
+  // Can search adjacent to the picked objects until finding empty place.
   Pos = Dest = v;
 }
 
@@ -336,22 +338,27 @@ void AGameObject::FlushPosition()
 FVector AGameObject::Repel( AGameObject* go )
 {
   float r = 1.f;
-  if( AttackTarget == go )
-    // For attack target, use the hitBounds for the radius
-    r = repulsionBounds->GetScaledSphereRadius()   +   go->repulsionBounds->GetScaledSphereRadius();
-  else
+  if( AttackTarget == go )  // For attack target, use both object's hitBounds for the radius
     r = hitBounds->GetScaledCapsuleHalfHeight()   +   go->hitBounds->GetScaledCapsuleHalfHeight();
+  else // use the repulsionBounds
+    r = repulsionBounds->GetScaledSphereRadius()   +   go->repulsionBounds->GetScaledSphereRadius();
 
-  // The object will overlap in the future position, so don't move.
-  // Get radius of other actor
-  FVector from = Pos - go->Pos;
-  if( float x = from.Size() )
+  //
+  // ME <---- GO
+  FVector repel = Pos - go->Pos;
+  float repelMag = repel.Size();
+  if( repelMag )
   {
-    from /= x;
-    if( x < 1.f + r )
+    // reduce repel magnitude by dot product
+    FVector repelDir = repel / repelMag;
+    // If these line up, then repel magnitude is high
+    repelMag *= FVector::DotProduct( Dir, -repelDir );
+    if( repelMag > 0   &&   repelMag < 1.f + r )
     {
-      return RepelMultiplier * SpeedPercent()/100.f * 
-        log( 1.f + r - x )/log( 1.f + r ) * from;
+      // draw a repulsion vector from the OTHER object.
+      Game->flycam->DrawDebug( Pos, Pos + repelDir*repelMag, FLinearColor::Red, 0.f );
+      return RepelMultiplier * SpeedFraction() * 
+        log( 1.f + r - repelMag )/log( 1.f + r ) * repelDir;
     }
     else
     {
@@ -411,6 +418,7 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   // Make sure other component with defined overlap is AGameObject derivative.
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
+    info( FS( "%s has begun overlapping %s", *GetName(), *OtherActor->GetName() ) );
     RepulsionOverlaps += go;
   }
 }
@@ -418,7 +426,6 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
 void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex )
 {
   //LOG( "OnRepulsionContactEnd" );
-  
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
     RepulsionOverlaps -= go;
@@ -426,18 +433,18 @@ void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPri
 }
 
 // Adds repulsion forces from any adjacent gameobjects (to avoid collisions)
-void AGameObject::AddRepulsionForcesFromOverlappedUnits()
+FVector AGameObject::GetRepulsionForcesFromOverlappedUnits()
 {
   FVector forces( 0,0,0 );
 
   // If there is no attack target, don't use repel forces.
   for( AGameObject * go : RepulsionOverlaps )
   {
-    FVector repel = Repel( go );
-    forces += repel; // gather repelling force from other object
+    forces += Repel( go ); // gather repelling force from other object
   }
+  
   // Add in repulsion forces to the position.
-  Pos += forces;
+  return forces;
 }
 
 void AGameObject::Walk( float t )
@@ -485,8 +492,8 @@ void AGameObject::Walk( float t )
       LOG( "object %s has left the ground plane", *Stats.Name );
     }
 
-    if( !AttackTarget )
-      AddRepulsionForcesFromOverlappedUnits();
+    FVector repulsionForces = GetRepulsionForcesFromOverlappedUnits();
+    Pos += repulsionForces;
   }
 }
 
@@ -517,7 +524,7 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   {
     targetToMe /= len;
     // set the fallback distance to being size of bounding radius of other unit
-    SetDestination( target->Pos + targetToMe*(fallbackDistance*.997f) );
+    GoToGroundPosition( target->Pos + targetToMe*(fallbackDistance*.997f) );
   }
 }
 
@@ -588,9 +595,7 @@ void AGameObject::exec( const Command& cmd )
       break;
     case Command::CommandType::HoldGround:
       {
-        Stop();
-        AttackReady = 1;   // Ready to attack any in-range units who are NOT AttackTarget.
-        HoldingGround = 1; // Do not run out to engage nearby units, unless in range.
+        HoldGround();
       }
       break;
     case Command::CommandType::Target:
@@ -662,7 +667,7 @@ void AGameObject::Move( float t )
   }
 
   
-  if( Hp <= 0 )
+  if( Hp <= 0   ||   LifeTime >= MaxLifeTime )
   {
     Die();
   }
@@ -715,15 +720,13 @@ float AGameObject::Radius()
 void AGameObject::GoToGroundPosition( FVector groundPos )
 {
   Stop(); // DropTargets() & clear old Destination waypoints
-  SetDestination( groundPos );
-  AttackReady = 0; // Do NOT stop to engage enemy units
+  SetDestination( groundPos, 0 );
 }
 
 void AGameObject::AttackGroundPosition( FVector groundPos )
 {
   Stop(); // DropTargets() & clear old Destination waypoints
-  SetDestination( groundPos );
-  AttackReady = 1;
+  SetDestination( groundPos, 1 );
 }
 
 void AGameObject::Target( AGameObject* target )
@@ -791,11 +794,13 @@ void AGameObject::Attack( AGameObject* go )
   AttackReady = 0; // Do not stop to engage other units
 }
 
-void AGameObject::SetDestination( FVector d )
+void AGameObject::SetDestination( FVector d, bool attack )
 {
-  for( AShape* flag : NavFlags )
-    flag->Destroy();
-  NavFlags.clear();
+  HoldingGround = 0;
+  AttackReady = attack;  // Do or Do NOT stop to engage enemy units
+  ////for( AShape* flag : NavFlags )
+  ////  flag->Destroy();
+  ////NavFlags.clear();
   
   //LOG( "%s moving from %f %f %f to %f %f %f", *Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
   if( !Stats.SpeedMax ) {
@@ -870,7 +875,7 @@ void AGameObject::SetDestination( FVector d )
     }
   }
 
-  Flags( Waypoints, FLinearColor::Black );
+  /////Flags( Waypoints, FLinearColor::Black );
   Dest = Waypoints.front();
   pop_front( Waypoints );
 }
@@ -889,7 +894,9 @@ void AGameObject::Stop()
 
 void AGameObject::HoldGround()
 {
-  
+  Stop();
+  AttackReady = 1;   // Ready to attack any in-range units who are NOT AttackTarget.
+  HoldingGround = 1; // Do not run out to engage nearby units, unless in range.
 }
 
 bool AGameObject::isAllyTo( AGameObject* go )
@@ -1023,11 +1030,6 @@ void AGameObject::Flags( vector<FVector> points, FLinearColor color )
     flag->text = FS( "%d", i+1 );
     NavFlags.push_back( flag );
   }
-}
-
-void AGameObject::Viz( FVector pt )
-{
-  Game->flycam->Visualize( Game->flycam->VizClass, pt, 10.f, vizColor );
 }
 
 void AGameObject::OnSelected()

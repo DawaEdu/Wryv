@@ -52,7 +52,7 @@ class WRYV_API AGameObject : public AActor
   //vector<FUnitsDataRow> ResearchBonusStats;
 
   // The amount that this object multiplies incoming repulsion forces by.
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  float RepelMultiplier;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float RepelMultiplier;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USceneComponent* DummyRoot;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  UCapsuleComponent* hitBounds;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USphereComponent* repulsionBounds;
@@ -61,7 +61,7 @@ class WRYV_API AGameObject : public AActor
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
   UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Stats)  bool Dead;// Whether unit is dead or not.
-  float DeadTime, MaxDeadTime; // how long the object has been dead for
+  float LifeTime, MaxLifeTime, DeadTime, MaxDeadTime; // how long the object has been around/dead for
   FLinearColor vizColor;
   float vizSize;
   bool Recovering;
@@ -139,7 +139,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isFollowTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float HpFraction();
-  UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedPercent();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedFraction();
   // Pass thru to stats structure property
   UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiply; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasAttackTarget() { return AttackTarget != 0; }
@@ -171,7 +171,7 @@ class WRYV_API AGameObject : public AActor
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
   void OnRepulsionContactEnd( AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex );
   
-  void AddRepulsionForcesFromOverlappedUnits();
+  FVector GetRepulsionForcesFromOverlappedUnits();
   // Walks towards Dest.
   void Walk( float t );
   // Points Actor to face particular 3-space point
@@ -206,8 +206,10 @@ class WRYV_API AGameObject : public AActor
   void Follow( AGameObject* go );
   void Attack( AGameObject* go );
   
+protected:
   // Moves towards d using pathfinder, WITHOUT losing Follow/Attack targets.
-  void SetDestination( FVector d );
+  void SetDestination( FVector d, bool attack );
+public:
   // Stops motion, WITHOUT losing Follow/Attack targets.
   void StopMoving();
   // Stop command, which aborts current command, and cancels all queued commands.
@@ -236,7 +238,6 @@ class WRYV_API AGameObject : public AActor
   // 
   // Utility
   void Flags( vector<FVector> points, FLinearColor color );
-  void Viz( FVector pt );
   void OnSelected();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );

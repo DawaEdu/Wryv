@@ -529,6 +529,8 @@ inline FVector Rand( FVector min, FVector max )
   return min + FMath::FRand()*( max - min );
 }
 
+extern FVector UnitX, UnitY, UnitZ;
+
 inline FString GetEnumName( TCHAR* enumType, int enumValue )
 {
   const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, enumType, true);

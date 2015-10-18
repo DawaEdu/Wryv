@@ -20,6 +20,7 @@ void HotSpot::HotSpotDefaults()
   Parent = 0;
   dirty = 1;
   //bubbleUp = 1; // events by default bubble up thru to the next widget
+  AbsorbsMouseUp = 0;
 
   OnHover = [this](FVector2D mouse) -> EventCode {
     if( !TooltipText.IsEmpty() )

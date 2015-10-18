@@ -92,6 +92,7 @@ bool AUnit::UseAbility( int index )
   }
 
   UUnitAction* unitAction = CountersAbility[ index ];
+  Game->hud->Status( FS( "%s %s", *Stats.Name, *unitAction->Text ) );
   info( FS( "Using Action %s [%s] on %s", *unitAction->Text,
     *GetEnumName( TEXT("Abilities"), unitAction->Ability ), *Stats.Name ) );
   Game->hud->SetNextAbility( unitAction->Ability.GetValue() );

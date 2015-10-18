@@ -83,7 +83,8 @@ public:
   // are associated with the spot (used for item slots)
   //vector<AGameObject*> Objects;
   bool dirty;  // Set if the widget's bounds need to be remeasured
-  
+  bool AbsorbsMouseUp; // If this widget does absorb mouseup
+
 protected:
   HotSpot* Parent;
   vector<HotSpot*> children;  // Children of this hotspot.
@@ -361,7 +362,7 @@ public:
     {
       // check if a child is hit by the click.
       HotSpot *h = children[i]->Act( v, offset + Pos(), f );  // offset accumulates absolute position offset of widget
-      if( h )  return children[i]; // If the hit was intercepted, return object hit.
+      if( h )  return h; // If the hit was intercepted, return object hit.
     }
 
     // Actually perform hit checking, if this provides the function f.

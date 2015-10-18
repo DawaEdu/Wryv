@@ -24,6 +24,8 @@ ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVec
     info( "Mouse downleft in itembelt" );
     return Consumed;
   };
+
+  AbsorbsMouseUp = 1; // Down clicks on this elt won't fire mouse up events
 }
 
 void ItemBelt::ClearTextures()

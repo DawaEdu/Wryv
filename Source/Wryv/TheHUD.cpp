@@ -28,6 +28,7 @@ ATheHUD::ATheHUD(const FObjectInitializer& PCIP) : Super(PCIP)
   NextAbility = Abilities::NotSet;
   Init = 0; // Have the slots & widgets been initialized yet? can only happen
   // in first call to draw.
+  SkipNextMouseUp = 0;
 }
 
 void ATheHUD::PostInitializeComponents()
@@ -110,10 +111,10 @@ void ATheHUD::SetCursorStyle( CursorType style, FLinearColor color )
     case CursorType::CrossHairs:
       ui->gameChrome->gameCanvas->cursor->SetTexture( MouseCursorCrossHairs );
       break;
+
     case CursorType::Hand:
-      ui->gameChrome->gameCanvas->cursor->SetTexture( MouseCursorHand );
-      break;
     default:
+      ui->gameChrome->gameCanvas->cursor->SetTexture( MouseCursorHand );
       break;
   }
   ui->gameChrome->gameCanvas->cursor->Color = color;
@@ -126,7 +127,7 @@ void ATheHUD::SetHitCursor()
 
 void ATheHUD::SetPointer()
 {
-  SetCursorStyle( CursorType::Hand, FLinearColor::White );
+  SetCursorStyle( CursorType::Hand, FLinearColor(1,1,1,1) );
 }
 
 void ATheHUD::SetNextAbility( Abilities nextAbility )
@@ -144,7 +145,11 @@ void ATheHUD::SetNextAbility( Abilities nextAbility )
       break;
     case Abilities::Stop:
     case Abilities::HoldGround:
-      SetCursorStyle( Hand, FLinearColor::Blue );
+    case Abilities::NotSet:
+      SetPointer();
+      break;
+    default:
+      error( FS( "Unrecognized ability %d", (int)NextAbility ) );
       break;
   }
 }
@@ -171,13 +176,30 @@ TArray<FAssetData> ATheHUD::ScanFolder( FName folder )
 
 HotSpot* ATheHUD::MouseUpLeft( FVector2D mouse )
 {
-  ui->drag = 0;
+  // Drop event
+  if( ui->drag )
+  {
+    if( ui->drag->AbsorbsMouseUp ){
+      //info( FS( "Dropped element %s", *ui->drag->Name ) );
+      ui->drag = 0;  // Unset the drag element
+      return 0; // The dragged element sucks up the UP event.
+    }
+  }
+
+  // Intercept mouseups when ability or spell was used, so selection doesn't go
+  if( SkipNextMouseUp ) {
+    SkipNextMouseUp = 0;
+    return 0;
+  }
+
   return ui->MouseUpLeft( mouse );
 }
 
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
 {
   ui->drag = ui->MouseDownLeft( mouse );
+  //if( ui->drag )
+  //  info( FS( "The drag elt is %s", *ui->drag->Name ) );
   return ui->drag;
 }
 
@@ -187,6 +209,8 @@ HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
   //if( ui && ui->drag )
   //  info( FS( "Drag element is %s", *ui->drag->Name ) );
   
+  if( SkipNextMouseUp )  return 0;
+
   // Drag events are when the left mouse button is down.
   if( Game->pc->IsKeyDown( EKeys::LeftMouseButton ) )
   {
