@@ -44,15 +44,16 @@ void ActionsPanel::ShowBuildingsPanel()
   abilitiesPanel->Hide();
 }
 
-void ActionsPanel::Set( AGameObject* go )
+void ActionsPanel::Set( vector<AGameObject*> objects )
 {
-  abilitiesPanel->Set( go );
-  buildPanel->Set( go );
+  abilitiesPanel->Set( objects );
+  buildPanel->Set( objects );
 }
 
 
 
-AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
+AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, 
+  FVector2D entrySize, FVector2D pad ) : 
   SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
   Align = TopCenter;
@@ -69,21 +70,55 @@ AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows,
   }
 }
 
-void AbilitiesPanel::Set( AGameObject *go )
+void AbilitiesPanel::Set( vector<AGameObject*> objects )
 {
   // start by hiding all abilities
-  HideChildren();
+  Blank();
+  if( !objects.size() )  return;
   
-  if( AUnit* unit = Cast< AUnit >( go ) )
+  // the abilities we use have to be properties of ALL objects selected for them to be used.
+  set<UUnitAction*> abilities = {};
+  set<UUnitAction*> missingAbilities = {};
+  for( int i = 0 ; i < objects.size(); i++ )
   {
-    Populate<UUnitAction>( unit->CountersAbility, 0 );
+    // if there's a unit in the group, 
+    if( AUnit* unit = Cast< AUnit >( objects[i] ) )
+    {
+      set<UUnitAction*> thisUnitsAbilities = MakeSet( unit->CountersAbility );
+      if( abilities.empty() )
+        abilities = thisUnitsAbilities;
+      else
+      {
+        // If any in `abilities` are missing from this unit, add them to stricken set
+        missingAbilities += abilities - thisUnitsAbilities;
+      }
+    }
   }
-  else if( ABuilding* building = Cast< ABuilding >( go ) )
+
+  abilities -= missingAbilities;
+
+  // Pull any abilities that a particular unit type doesn't have
+  if( abilities.size() )
   {
-    Populate<UTrainingAction>( building->TrainingAvailable, 0 );
-    // Put the researches in also
-    Populate<UResearch>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
+    TArray<UUnitAction*> ab = MakeTArray( abilities );
+    Populate<UUnitAction>( ab, 0 );
   }
+  else
+  {
+    // There aren't any units in the selection. This means selection may be
+    // a building.
+    for( int i = 0 ; i < objects.size(); i++ )
+    {
+      if( ABuilding* building = Cast< ABuilding >( objects[i] ) )
+      {
+        if( building->TrainingAvailable.Num() )
+          Populate<UTrainingAction>( building->TrainingAvailable, 0 );
+        if( building->ResearchesAvailable.Num() )
+          Populate<UResearch>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
+      }
+    }
+  }
+
 }
 
 
@@ -95,10 +130,13 @@ BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int col
   Actions = iActions;
 }
 
-void BuildPanel::Set( AGameObject *go )
+void BuildPanel::Set( vector<AGameObject*> objects )
 {
   HideChildren(); // Hide all buttons
-  
+  if( !objects.size() )  return;
+
+  AGameObject* go = objects.front();
+
   // TODO: Populate with peasant's buildables.
   // Enable the build button etc.
   if( APeasant* peasant = Cast<APeasant>( go ) )

@@ -233,9 +233,10 @@ void Team::runAI( float t )
   vector<APeasant*> peasants = GetPeasants();
   for( APeasant* peasant : peasants )
   {
-    if( peasant->Idling() )
+    if( peasant->Idling()   &&   !peasant->IsCarrying() )
     {
       vector< TSubclassOf<AResource> > resType = GetNeededResourceTypes();
+      info( FS( "Peasant @ %f %f %f", peasant->Pos.X, peasant->Pos.Y, peasant->Pos.Z ) );
       AResource *res = peasant->FindAndTargetNewResource( peasant->Pos, resType, peasant->Stats.SightRange );
       if( res )
       {
@@ -243,7 +244,7 @@ void Team::runAI( float t )
       }
       else
       {
-        info( FS( "Peasant %s couldn't find resources of any type to gather", *peasant->Stats.Name ) );
+        info( FS( "Peasant %s couldn't find resources of any type to gather", *peasant->GetName() ) );
       }
     }
   }

@@ -27,16 +27,6 @@ ITextWidget::ITextWidget( FString name, UTexture* pic, FVector2D size, FString f
   FixedSize = 1;  // size supplied in ctor maintained
 }
 
-void ITextWidget::ClearExtras()
-{
-  for( int i = 0; i < children.size(); i++ )
-    if( children[i] != Text )
-    {
-      children[i]->Orphan();
-      delete children[i];
-    }
-}
-
 void ITextWidget::SetText( FString text, int alignment )
 {
   Text->Set( text );

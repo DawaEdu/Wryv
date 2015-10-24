@@ -9,7 +9,7 @@ class WRYV_API AGoldmine : public AExplodableResource
 	GENERATED_UCLASS_BODY()
 public:
   //AGoldmine(const FObjectInitializer& PCIP);
-  virtual UClass* GetCPPClass() { return StaticClass(); }
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USceneComponent* EntryPoint;
 
 };
 

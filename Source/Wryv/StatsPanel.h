@@ -15,11 +15,12 @@ class StatsPanel : public StackPanel
   TextWidget* damage;
   TextWidget* armor;
   TextWidget* description;
+  ResourcesWidget* resourcesCarrying;
   float BarSize;
 public:
   StatsPanel();
   void Blank();
   void Restack();
-  void Set( AGameObject* go );
+  void Set( vector<AGameObject*> objects );
   virtual void render( FVector2D offset );
 };

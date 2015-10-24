@@ -153,8 +153,8 @@ void AUnit::Move( float t )
     }
     else if( AttackTarget )
     {
-      MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
       Face( AttackTarget->Pos );
+      MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
     }
   }
 

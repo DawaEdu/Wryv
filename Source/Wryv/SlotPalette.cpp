@@ -17,6 +17,14 @@ SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVect
   Resize( rows, cols );
 }
 
+void SlotPalette::Blank()
+{
+  for( int i = 0; i < children.size(); i++ )
+  {
+    GetClock(i)->Reset();
+  }
+}
+
 FVector2D SlotPalette::GetSlotPosition( int i )
 {
   if( !Cols ) {

@@ -34,6 +34,7 @@ public:
   vector<AGameObject*> Selected;
 
   GameChrome( FString name, FVector2D size );
+  void Update( float t );
   void Select( vector<AGameObject*> objects );
 };
 

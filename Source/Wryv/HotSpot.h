@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 using namespace std;
-
 #include "Box2DU.h"
 #include "CooldownCounter.h"
 #include "GameObject.h"
@@ -18,7 +17,6 @@ class TextWidget;
 class AGameObject;
 class AHUD;
 class ATheHUD;
-
 
 // None (null) alignment means positioned absolutely
 enum HAlign { Left=1<<0, HCenter=1<<1, Right=1<<2, 
@@ -84,6 +82,7 @@ public:
   //vector<AGameObject*> Objects;
   bool dirty;  // Set if the widget's bounds need to be remeasured
   bool AbsorbsMouseUp; // If this widget does absorb mouseup
+  bool XLimits, YLimits; // RecomputeSize doesn't affect X,Y
 
 protected:
   HotSpot* Parent;
@@ -99,14 +98,34 @@ public:
   function< EventCode (FVector2D mouse) > OnMouseUpRight;
   function< EventCode (FVector2D mouse) > OnHover;
   function< EventCode (FVector2D mouse) > OnMouseDragLeft;
-  function< void (float t) > OnTick; // a function to run at each tick.
+  
+  // Resets functions etc.
+  virtual void Reset();
+  virtual void HotSpotDefaults() {
+    Reset();
+    SetName( "HotSpot" );
+    //TooltipText = "Tip";
 
-  virtual void HotSpotDefaults();
+    Align = Alignment::TopLeft;
+    Layout = Pixels; // pixel positioning (can also use percentages of parent widths)
+    hidden = 0;
+    eternal = 1;
+    displayTime = FLT_MAX; // Amount of time remaining before removal
+    // assumes extremely large number (1e37 seconds which is practically infinite)
+    Margin = Pad = FVector2D(0,0);
+    Size = FVector2D(32,32);
+    Dead = 0;
+    Color = FLinearColor::White;
+    Parent = 0;
+    dirty = 1;
+    //bubbleUp = 1; // events by default bubble up thru to the next widget
+    AbsorbsMouseUp = 0;
+  }
   HotSpot( FString name ) {
     HotSpotDefaults();
     SetName( name );
   }
-  HotSpot( FString name, FVector2D size ) {//: HotSpot( name ){
+  HotSpot( FString name, FVector2D size ) {
     HotSpotDefaults();
     Size = size;
     SetName( name );
@@ -116,7 +135,6 @@ public:
     Name = name;
     CName = TCHAR_TO_UTF8( *Name );
   }
-
 protected:
   virtual void render( FVector2D offset )
   {
@@ -161,11 +179,28 @@ public:
     }
   }
 
+  // Base reflow doesn't change anything, but passes on reflow call to all children
+  virtual void Reflow()
+  {
+    if( Parent )
+    {
+      FVector2D PSize = Parent->Size;
+      if( Align & HFull )  Size.X = PSize.X - 2.f*Parent->Pad.X;
+      if( Align & VFull )  Size.Y = PSize.Y - 2.f*Parent->Pad.Y;
+    }
+
+    for( int i = 0; i < children.size(); i++ )
+      children[i]->Reflow();
+  }
+
   // Runs after Add, overrideable. Since Add is templated,
   // it is not an overrideable function.
-  virtual void PostAdd() { }
+  virtual void PostAdd()
+  {
+    Reflow();
+  }
 
-  template <typename T> T* Add( T* w ) {
+  virtual HotSpot* Add( HotSpot* w ) {
     if( w->Parent )  w->Orphan();
     w->Parent = this;
     children.push_back( w );
@@ -197,6 +232,9 @@ public:
       Parent = 0;
     }
   }
+
+
+
   // all calls to render a widget externally route through here
   // they all kick-off to subclass::render( FVector2D(0,0) )
   virtual void render(){ if( hidden ) return; render( FVector2D(0,0) ); }
@@ -220,7 +258,6 @@ public:
     FVector2D PSize = Parent->Size;
     FVector2D PM = Margin + Parent->Pad;
 
-
     // Null alignment (0) means absolutely positioned (does not reflow in parent, Pos is
     // just set from Margins)
     if( Align & Left )  P.X = PM.X;
@@ -228,7 +265,7 @@ public:
     else if( Align & HCenter )  P.X = (PSize.X - Size.X)/2; // centering
     else if( Align & ToLeftOfParent )  P.X = -Size.X - Parent->Margin.X - Margin.X;
     else if( Align & ToRightOfParent )  P.X = PSize.X + 2*PM.X + Parent->Margin.X;
-    else if( Align & HFull )  P.X = PM.X, Size.X = PSize.X - 2.f*Parent->Pad.X;
+    else if( Align & HFull )  P.X = PM.X;  // The size changes in Reflow()
     else P.X = PM.X; // When absolutely positioned (None) values, the X position 
     // is just Left aligned
 
@@ -240,7 +277,7 @@ public:
     else if( Align & VCenter )  P.Y = (PSize.Y - Size.Y)/2;
     else if( Align & BelowBottomOfParent )  P.Y = PSize.Y + 2*PM.Y + Parent->Margin.Y;
     else if( Align & OnTopOfParent )  P.Y = -Size.Y - Parent->Margin.Y - Margin.Y;
-    else if( Align & VFull )  P.Y = PM.Y, Size.Y = PSize.Y - 2.f*Parent->Pad.Y;
+    else if( Align & VFull )  P.Y = PM.Y; // The size changes in Reflow()
     else P.Y = PM.Y; // default Top aligned
 
     return P;
@@ -318,7 +355,12 @@ public:
   // Recomputes the widget's bounds size based on the size of the children
   void recomputeSizeToContainChildren()
   {
-    Size = GetChildAbsBounds().Size() + Pad*2.f;
+    // pads around the children.
+    FVector2D newSize = GetChildAbsBounds().Size() + Pad*2.f;
+    if( !XLimits )
+      Size.X = newSize.X;
+    if( !YLimits )
+      Size.Y = newSize.Y;
   }
 
   void Show() { hidden = 0; }

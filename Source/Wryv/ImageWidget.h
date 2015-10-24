@@ -24,8 +24,8 @@ public:
   ImageWidget( UTexture* pic, FVector2D size );
   ImageWidget( FString name, UTexture* pic, FVector2D size );
   ImageWidget( FString name, UTexture* pic, FVector2D size, FLinearColor color );
-  void SetTexture( UTexture* texture );
-  void SetTexture( FCursorTexture cursorTexture );
+  virtual void SetTexture( UTexture* texture );
+  virtual void SetTexture( FCursorTexture cursorTexture );
 
   virtual ~ImageWidget(){}
   virtual void render( FVector2D offset ) override ;

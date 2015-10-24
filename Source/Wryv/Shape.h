@@ -14,4 +14,5 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UStaticMeshComponent* Mesh;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  FString text;
 
+  virtual void PostInitializeComponents() override;
 };

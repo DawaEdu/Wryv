@@ -7,7 +7,9 @@ UTexture* SidePanel::RightPanelTexture = 0;
 SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   StackPanel( "SidePanel", RightPanelTexture, FLinearColor::White )
 {
-  Align = TopRight;
+  Align = HAlign::Right | VAlign::VFull;
+  XLimits = 0;
+  YLimits = 0;
   Pad = spacing;
 
   Portraits = new PortraitsPanel( FVector2D( size.X, size.X ) );
@@ -18,8 +20,8 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   // Add the leftBorder in as last child, because it takes up full height,
   // and stackpanel will stack it in below the border
   leftBorder = new SolidWidget( "panel leftborder",
-    FVector2D( 4, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
-  leftBorder->Margin = - Pad + FVector2D( -4, 0 );
+    FVector2D( 4.f, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
+  leftBorder->Margin = - Pad + FVector2D( -4.f, 0 );
   controls = new Controls();
 
   OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
@@ -41,9 +43,8 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
 void SidePanel::Set( vector<AGameObject*> objects )
 {
   Portraits->Set( objects );
-  AGameObject* go = first( objects );
-  Stats->Set( go );
-  Actions->Set( go );
+  Stats->Set( objects );
+  Actions->Set( objects );
 }
 
 void SidePanel::Restack()
@@ -56,6 +57,7 @@ void SidePanel::Restack()
   StackBottom( minimap, HCenter );
   Add( leftBorder );
   Add( controls );
+  Reflow();
 }
 
 void SidePanel::render( FVector2D offset )

@@ -39,14 +39,20 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
   Add( gameCanvas );
 }
 
+void GameChrome::Update( float t )
+{
+  // Update # resources available
+  resources->SetValues( Game->gm->playersTeam->Gold, 
+    Game->gm->playersTeam->Lumber, Game->gm->playersTeam->Stone );
+}
+
 void GameChrome::Select( vector<AGameObject*> objects )
 {
   Selected = objects;
-  rightPanel->Set( Selected ); // portraits of all
+  rightPanel->Set( objects ); // portraits of all
 
-  AGameObject* go = first( Selected );
-  itemBelt->Set( go );
-  buildQueue->Set( go );
+  itemBelt->Set( objects );
+  buildQueue->Set( objects );
 }
 
 

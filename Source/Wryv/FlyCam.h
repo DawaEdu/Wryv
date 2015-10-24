@@ -107,8 +107,9 @@ public:
   // Series of points to visualize
   void Visualize( FVector& v, float s, FLinearColor color, float time );
   void Visualize( vector<FVector>& v, float s, FLinearColor startColor, FLinearColor endColor, float time );
+  void DrawDebug( Ray ray, float size, FLinearColor color, float time );
   void DrawDebug( FVector pt, float size, FLinearColor color, float time );
-  void DrawDebug( FVector start, FVector end, FLinearColor color, float time );
+  void DrawDebug( FVector start, FVector end, float thickness, FLinearColor color, float time );
   void ClearViz();
   
   AGameObject* MakeLine( FVector Start, FVector End, FLinearColor color );

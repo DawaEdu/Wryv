@@ -40,6 +40,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* GoldIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* LumberIconTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* StoneIconTexture;
+  map<UClass*, UTexture*> ResourceIcons; // Maps UClasses to UTexture*
 
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleScreenTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleLogoTexture;
@@ -132,6 +133,6 @@ public:
   // where the texture has width=texW and the camera
   // has FOV=fovyDegrees
   float GetPxWidth( float radiusWorldUnits, float distanceToObject, float texW, float fovyDegrees );
-  void RenderScreen( USceneCaptureComponent2D* renderer, UTextureRenderTarget2D* tt, FVector objectPos, float radiusWorldUnits, FVector cameraDir );
+  void RenderScreen( USceneCaptureComponent2D* renderer, FVector lookPos, float radiusWorldUnits, FVector cameraDir );
   virtual void BeginDestroy() override;
 };

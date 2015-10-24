@@ -1,10 +1,12 @@
 #include "Wryv.h"
+
 #include "FlyCam.h"
 #include "Goldmine.h"
 #include "NotifyTreeFinishedFall.h"
 #include "Peasant.h"
 #include "Resource.h"
 #include "Stone.h"
+#include "TheHUD.h"
 #include "Tree.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
@@ -41,11 +43,21 @@ void AResource::Harvest( APeasant* peasant )
     return;
   }
 
-  float dmg = peasant->DamageRoll();
+  UClass* resourceClass = GetClass();
+  if( resourceClass->IsChildOf<AGoldmine>() )
+    resourceClass = AGoldmine::StaticClass();
+  else if( resourceClass->IsChildOf<ATree>() )
+    resourceClass = ATree::StaticClass();
+  else if( resourceClass->IsChildOf<AStone>() ) 
+    resourceClass = AStone::StaticClass();
+  info( FS( "%s is a %s", *GetName(), *resourceClass->GetName() ) );
+  peasant->Mining = resourceClass;
+  
   // Use "damage" to determine mined qty
-  peasant->Mining = GetCPPClass();
-  peasant->AddMined( peasant->Mining, dmg );
-  AmountRemaining -= dmg;
+  int mined = FMath::RoundToInt( peasant->DamageRoll() );
+  peasant->AddMined( peasant->Mining, mined );
+  AmountRemaining -= mined;
+  Game->hud->ui->dirty = 1;
 
   if( AmountRemaining <= 0 )
   {

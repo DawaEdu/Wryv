@@ -27,11 +27,9 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 StoneCarryCapacity;
   // The rate at which a resource is gathered
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  float GatheringRate;
-  
-  // The unit is carrying something
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  bool Carrying;
   // Plays the shrug animation
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  bool Shrugging;
+  bool ShrugsNextIdle;
 
   // Buildings we can build using this unit
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
@@ -63,9 +61,12 @@ public:
   virtual void DropTargets() override;
   void Repair( float t );
   AResource* FindAndTargetNewResource( FVector fromPos, vector< TSubclassOf<AResource> > types, float searchRadius );
-  UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
+  UFUNCTION( BlueprintCallable, Category = Fighting )  virtual void AttackCycle();
   // Is the unit repairing something, so play the repair animation
   UFUNCTION( BlueprintCallable, Category = Stats )  bool IsRepairing();
+  // The unit is carrying something
+  UFUNCTION( BlueprintCallable, Category = Stats )  bool IsCarrying();
+  
   AGameObject* GetBuildingMostInNeedOfRepair( float threshold );
   void ReturnResources();
   void AddMined( TSubclassOf<AResource> resourceType, float resAmount );

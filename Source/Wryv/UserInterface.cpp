@@ -54,7 +54,7 @@ void UserInterface::SetScreen( int mode )
 void UserInterface::SetSize( FVector2D size )
 {
   Size = size;
-  gameChrome->Size = size;
+  Reflow();
 }
 
 void UserInterface::Update( float t )
@@ -66,6 +66,7 @@ void UserInterface::Update( float t )
     dirty = 0;
   }
 
+  Screen::Update( t );
   // Clock test, for testing clock material in ue 4.9
   //static float tr = 0.f;
   //tr+=t;

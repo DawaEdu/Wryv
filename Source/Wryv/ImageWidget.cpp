@@ -27,6 +27,7 @@ ImageWidget::ImageWidget( FString name, UTexture* pic ) : HotSpot( name )
   if( Tex ) {
     Size.X = Tex->GetSurfaceWidth();
     Size.Y = Tex->GetSurfaceHeight();
+    Size -= Pad;
   }
 }
 
@@ -38,6 +39,7 @@ ImageWidget::ImageWidget( FString name, UTexture* pic, FLinearColor color ) : Ho
   if( Tex ){ // assign size from tex
     Size.X = Tex->GetSurfaceWidth();
     Size.Y = Tex->GetSurfaceHeight();
+    Size -= Pad;
   }
 }
 

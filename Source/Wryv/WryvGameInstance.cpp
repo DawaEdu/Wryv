@@ -160,7 +160,8 @@ FUnitsData UWryvGameInstance::GetData( UClass* ClassType )
     AGameObject* object = Make<AGameObject>( ClassType );
     if( object ) {
       BaseUnitsData[ ClassType ] = object->BaseStats;
-      object->Destroy();
+      object->Die();
+      object->Cleanup();
     }
     else  error( FS( "Couldn't make object ClassType `%s`", *ClassType->GetName() ) );
   }

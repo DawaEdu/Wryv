@@ -8,12 +8,11 @@
 class BuildQueue : public StackPanel
 {
 public:
-  AGameObject* Selected;
   FVector2D EntrySize;
   
   // A BuildQueue contains a list of things that are being built
   BuildQueue( FString name, FVector2D entrySize );
-  void Set( AGameObject* go );
+  void Set( vector<AGameObject*> objects );
   virtual void render( FVector2D offset ) {
     StackPanel::render( offset ) ;
   }

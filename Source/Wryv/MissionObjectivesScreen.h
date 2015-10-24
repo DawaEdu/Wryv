@@ -16,12 +16,12 @@ public:
   }
 
   // Add a series of mission objectives here
-  ITextWidget* AddText( FString text, int align )
+  void AddText( FString text, int align )
   {
     ITextWidget *tw = new ITextWidget( FS("MBText `%s`",*text), SlotBkg, FVector2D( 100, 40 ), text, CenterCenter );
     tw->Margin = FVector2D( 10, 0 );
     tw->Align = CenterLeft;
-    return Add( tw );
+    Add( tw );
   }
 };
 

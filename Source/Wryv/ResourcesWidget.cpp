@@ -1,6 +1,7 @@
 #include "Wryv.h"
 
 #include "ResourcesWidget.h"
+#include "TextWidget.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
@@ -11,6 +12,7 @@ UTexture* ResourcesWidget::StoneTexture = 0;
 ResourcesWidget::ResourcesWidget( FString name, int pxSize, int spacing ) :
   StackPanel( name, 0 ), Px( pxSize ), Spacing( spacing )
 {
+  gold = lumber = stone =
   displayedGold = displayedLumber = displayedStone = 0.f;
 
   // +-----------------+
@@ -18,41 +20,44 @@ ResourcesWidget::ResourcesWidget( FString name, int pxSize, int spacing ) :
   // +-----------------+
   // The 3 resource types
   StackRight( new ImageWidget( "Gold icon", GoldTexture ), VCenter ); // icon
-  StackRight( Gold = new TextWidget( "1000" ), VCenter );
+  StackRight( Gold = new TextWidget( FS("%d",displayedGold) ), VCenter );
   StackRight( new ImageWidget( "Lumber icon", LumberTexture ), VCenter );
-  StackRight( Lumber = new TextWidget( "1000" ), VCenter );
+  StackRight( Lumber = new TextWidget( FS("%d",displayedLumber) ), VCenter );
   StackRight( new ImageWidget( "Stone icon", StoneTexture ), VCenter );
-  StackRight( Stone = new TextWidget( "1000" ), VCenter );
+  StackRight( Stone = new TextWidget( FS("%d",displayedStone) ), VCenter );
 
   recomputeSizeToContainChildren();
 }
 
 void ResourcesWidget::SetValues( int goldCost, int lumberCost, int stoneCost )
 {
-  Gold->Set( goldCost );
-  Lumber->Set( lumberCost );
-  Stone->Set( stoneCost );
+  gold = goldCost, lumber = lumberCost, stone = stoneCost;
+  Gold->Set( gold );
+  Lumber->Set( lumber );
+  Stone->Set( stone );
 }
 
 void ResourcesWidget::Update( float t )
 {
   // spent=200, diff=-200
   //    diff = 200 - 400;
-  float diff = Game->gm->playersTeam->Gold - displayedGold;
+  float diff = gold - displayedGold;
   diff *= 0.1; // jump by 10%
   displayedGold += diff;
 
-  diff = Game->gm->playersTeam->Lumber - displayedLumber;
+  diff = lumber - displayedLumber;
   diff *= 0.1; // jump by 10%
   displayedLumber += diff;
 
-  diff = Game->gm->playersTeam->Stone - displayedStone;
+  diff = stone - displayedStone;
   diff *= 0.1; // jump by 10%
   displayedStone += diff;
 
   SetValues( FMath::RoundToInt( displayedGold ),
     FMath::RoundToInt( displayedLumber ),
     FMath::RoundToInt( displayedStone ) );
+
+  Reflow();
 }
 
 

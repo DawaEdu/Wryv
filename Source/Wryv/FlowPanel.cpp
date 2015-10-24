@@ -1,6 +1,6 @@
 #include "Wryv.h"
-#include "FlowPanel.h"
 
+#include "FlowPanel.h"
 #include "ImageWidget.h"
 
 FlowPanel::FlowPanel( FString name, UTexture* bgTex, int rows, int cols, FVector2D size ) :
@@ -8,16 +8,17 @@ FlowPanel::FlowPanel( FString name, UTexture* bgTex, int rows, int cols, FVector
 {
 }
 
-void FlowPanel::reflow()
+void FlowPanel::Reflow()
 {
-  reflow( Size );
-}
+  if( !Rows || !Cols )
+  {
+    return;
+  }
 
-void FlowPanel::reflow( FVector2D size )
-{
-  Size = size;
   FVector2D ColsRows( Cols, Rows );
-  FVector2D tileDims = ( size - (Pad*ColsRows) ) / ColsRows;
+  FVector2D tileDims = ( Size - (Pad*ColsRows) ) / ColsRows;
+  //info( FS( "%s tileDims = %f %f", *Name, tileDims.X, tileDims.Y ) );
+  
   // +---+---+---+
   // |   |   |   |
   // +---+---+---+
@@ -29,17 +30,19 @@ void FlowPanel::reflow( FVector2D size )
   {
     int row = i / Cols;
     int col = i % Cols;
-    FVector2D pos = Pad/2 + ( Pad + tileDims ) * FVector2D( col, row );
+    FVector2D pos = Pad/2.f + ( Pad + tileDims ) * FVector2D( col, row );
     children[i]->Margin = pos;
     children[i]->Size = tileDims;
   }
+
+  ImageWidget::Reflow();
 }
 
 // re-flow after each add
 void FlowPanel::PostAdd()
 {
   HotSpot::PostAdd();
-  reflow();
+  Reflow();
 }
   
 void FlowPanel::render( FVector2D offset )

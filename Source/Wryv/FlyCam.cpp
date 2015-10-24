@@ -129,7 +129,7 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
 
 void AFlyCam::MarkAsSelected( AGameObject* object )
 {
-  if( HasChildWithTag( object, SelectedTargetName ) ) {
+  if( object->HasChildWithTag( SelectedTargetName ) ) {
     LOG( "%s already has a %s", *object->Stats.Name, *SelectedTargetName.ToString() );
     return;
   }
@@ -148,7 +148,7 @@ void AFlyCam::MarkAsFollow( AGameObject* object )
 {
   // only select as follow target if its not already an attack target of something
   // ( attack priorities over follow )
-  if( HasChildWithTag( object, FollowTargetName ) ) {
+  if( object->HasChildWithTag( FollowTargetName ) ) {
     //LOG( "%s already marked as follow", *object->Name );
     return; // already marked as an attack target
   }
@@ -166,7 +166,7 @@ void AFlyCam::MarkAsFollow( AGameObject* object )
 void AFlyCam::MarkAsAttack( AGameObject* object )
 {
   // Check that it doesn't already have a Selector-typed child
-  if( HasChildWithTag( object, AttackTargetName ) ) {
+  if( object->HasChildWithTag( AttackTargetName ) ) {
     //LOG( "%s already marked as attack", *object->Name );
     return; // already marked as an attack target
   }
@@ -493,14 +493,19 @@ void AFlyCam::Visualize( vector<FVector>& v, float s, FLinearColor startColor, F
   }
 }
 
+void AFlyCam::DrawDebug( Ray ray, float size, FLinearColor color, float time )
+{
+  DrawDebugLine( GetWorld(), ray.start, ray.end, color.ToFColor(0), 0, time, 0, size );
+}
+
 void AFlyCam::DrawDebug( FVector pt, float size, FLinearColor color, float time )
 {
   DrawDebugPoint( GetWorld(), pt, size, color.ToFColor(0), 0, time, 0 );
 }
 
-void AFlyCam::DrawDebug( FVector start, FVector end, FLinearColor color, float time )
+void AFlyCam::DrawDebug( FVector start, FVector end, float thickness, FLinearColor color, float time )
 {
-  DrawDebugLine( GetWorld(), start, end, color.ToFColor(0), 0, time, 0, 5.f );
+  DrawDebugLine( GetWorld(), start, end, color.ToFColor(0), 0, time, 0, thickness );
 }
 
 void AFlyCam::ClearViz()
@@ -688,17 +693,18 @@ void AFlyCam::Target()
 
     // The side vector is going to be a result of crossing with the up vector
     FVector right = FVector::CrossProduct( UnitZ, travelDir );
-    DrawDebug( P, P + travelDir*50.f, FLinearColor::Green, 10.f );
-    DrawDebug( P, P + right*50.f, FLinearColor::Red, 10.f );
+    DrawDebug( P, 25.f, FLinearColor::Green, 10.f );
+
+    DrawDebug( P, P + travelDir*50.f, 5.f, FLinearColor::Green, 10.f );
+    DrawDebug( P, P + right*50.f, 5.f, FLinearColor::Red, 10.f );
 
     float largestRadius = Game->hud->Selected.front()->Radius();
     for( int i = 0; i < Game->hud->Selected.size(); i++ )
       if( Game->hud->Selected[i]->Radius() > largestRadius )
         largestRadius = Game->hud->Selected[i]->Radius();
-    largestRadius *= 2.f; // Double-spacing
+    largestRadius *= 4.f; // Double-spacing
 
     int numGridPos = FMath::CeilToInt( sqrtf( Game->hud->Selected.size() ) );
-    vector<FVector> dests( numGridPos*numGridPos );
 
     // form the grid centered around the center point
     for( int i = 0; i < Game->hud->Selected.size(); i++ )
@@ -707,9 +713,9 @@ void AFlyCam::Target()
       int y = i / numGridPos;
       float xP = largestRadius * (x - numGridPos/2.f);
       float yP = largestRadius * (y - numGridPos/2.f);
-      FVector pos = P   +   right*xP + travelDir*yP;
+
+      FVector pos = P   +   right*xP - travelDir*yP; // use - travel dir so 1st point in front row
       DrawDebug( pos, 10.f, FLinearColor::Red, 10.f );
-      
       AGameObject* go = Game->hud->Selected[i];
       //go->GoToGroundPosition( go->Pos + offset ); // C++ Code Command
       if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )

@@ -30,6 +30,7 @@ void Border::Set( FBox2DU box )
   // BL                  BR
   // Set the widths
   // trbl
+  // The border sits inside the padding of the containing element
   top->SetByCorners( box.TL(), box.TR() + FVector2D(0,Thickness) );
   right->SetByCorners( box.TR() + FVector2D( -Thickness, 0 ), box.BR() );
   bottom->SetByCorners( box.BL() + FVector2D( 0, Thickness ), box.BR() );

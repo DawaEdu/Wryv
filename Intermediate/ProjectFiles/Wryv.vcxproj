@@ -258,13 +258,17 @@
     <None Include="..\..\Config\DefaultGame.ini" />
     <None Include="..\..\Config\DefaultInput.ini" />
     <ClCompile Include="..\..\Source\Wryv\Action.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\ImageBorder.cpp" />
     <ClCompile Include="..\..\Source\Wryv\InProgressBuilding.cpp" />
     <ClCompile Include="..\..\Source\Wryv\InProgressResearch.cpp" />
     <ClCompile Include="..\..\Source\Wryv\InProgressUnit.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\Portrait.cpp" />
     <ClCompile Include="..\..\Source\Wryv\Spell.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UnitAction.cpp" />
     <ClCompile Include="..\..\Source\Wryv\ActionsPanel.cpp" />
     <ClInclude Include="..\..\Source\Wryv\Action.h" />
+    <ClInclude Include="..\..\Source\Wryv\ImageBorder.h" />
+    <ClInclude Include="..\..\Source\Wryv\Portrait.h" />
     <ClInclude Include="..\..\Source\Wryv\UnitsData.h" />
     <ClInclude Include="..\..\Source\Wryv\InProgressBuilding.h" />
     <ClInclude Include="..\..\Source\Wryv\InProgressResearch.h" />

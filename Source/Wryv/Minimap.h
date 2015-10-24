@@ -1,12 +1,15 @@
 #pragma once
 
-#include "ImageWidget.h"
+#include "ImageBorder.h"
 
-class Minimap : public ImageWidget
+class Minimap : public ImageBorder
 {
-  Border* borders;
 public:
   static UTexture* MinimapTexture;
-  Minimap( float borderSize, FLinearColor borderColor );
+  vector<FVector2D> pts;
+  Minimap( float borderThickness, FLinearColor borderColor );
   virtual ~Minimap(){}
+  virtual void render( FVector2D offset );
 };
+
+

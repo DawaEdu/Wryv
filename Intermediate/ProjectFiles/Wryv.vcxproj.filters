@@ -348,6 +348,12 @@
     <ClInclude Include="..\..\Source\Wryv\GameChrome.h">
       <Filter>Source\Wryv\UI\Screens</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\Portrait.h">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ImageBorder.h">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\Border.cpp">
@@ -583,6 +589,12 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\GameChrome.cpp">
       <Filter>Source\Wryv\UI\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\Portrait.cpp">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\ImageBorder.cpp">
+      <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

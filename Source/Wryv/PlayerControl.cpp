@@ -170,6 +170,25 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray )
   return objects;
 }
 
+vector<Ray> APlayerControl::GetFrustumRays( const FBox2DU& box )
+{
+  vector<FVector2D> pts = { box.TL(), box.BL(), box.BR(), box.TR() };
+  vector<Ray> rays;
+  // get the 4 rays of the frustum
+  for( int i = 0; i < pts.size(); i++ )
+  {
+    Ray ray;
+	  if( !UGameplayStatics::DeprojectScreenToWorld( this, pts[i], ray.start, ray.dir ) )
+	  {
+      error( FS( "Could not DeprojectScreenToWorld to world for %f %f", pts[i].X, pts[i].Y ) );
+    }
+
+    ray.SetLen( 1e4f );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e6f causes imprecision
+    rays.push_back( ray );
+  }
+  return rays;
+}
+
 vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box )
 {
   return FrustumPick( box, {}, {} );
@@ -187,25 +206,12 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box,
     return RayPickMulti( box.TL() );
   }
 
-  vector<FVector2D> pts = { box.TL(), box.BL(), box.BR(), box.TR() };
-  vector<Ray> rays;
-
+  vector<Ray> rays = GetFrustumRays( box );
   FVector centerP(0,0,0);
-  // get the 4 rays of the frustum
-  for( int i = 0; i < pts.size(); i++ )
-  {
-    Ray ray;
-	  if( !UGameplayStatics::DeprojectScreenToWorld( this, pts[i], ray.start, ray.dir ) )
-	  {
-      error( FS( "Could not DeprojectScreenToWorld to world for %f %f", pts[i].X, pts[i].Y ) );
-    }
-
-    ray.SetLen( 1e4f );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e6f causes imprecision
-    rays.push_back( ray );
-    centerP += ray.start;
-  }
+  for( int i = 0; i < rays.size(); i++ )
+    centerP += rays[i].start;
   centerP /= rays.size();
-  
+
   // Make a frustum with the 6 planes formed by the 8 points
   TArray<FPlane, TInlineAllocator<6>> planes;
   planes.Push( FPlane( rays[0].end,   rays[0].start, rays[1].start ) ); // Left

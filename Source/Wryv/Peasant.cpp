@@ -43,10 +43,15 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   MinedPieces[ ATree::StaticClass() ] = LumberPiece;
   MinedPieces[ AStone::StaticClass() ] = StonePiece;
 
+  GoldCarryCapacity = LumberCarryCapacity = StoneCarryCapacity = 10;
+  Capacities[ AGoldmine::StaticClass() ] = GoldCarryCapacity;
+  Capacities[ ATree::StaticClass() ] = LumberCarryCapacity;
+  Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
+
   RepairTarget = 0;
-  Carrying = 0;
   Shrugging = 0;
   Mining = 0;
+  GatheringRate = 1;
 
   LastResourcePosition = FVector(0,0,0);
 }
@@ -58,6 +63,11 @@ void APeasant::PostInitializeComponents()
   Capacities[ AGoldmine::StaticClass() ] = GoldCarryCapacity;
   Capacities[ ATree::StaticClass() ] = LumberCarryCapacity;
   Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
+
+  // Hide the stock pieces.
+  MinedPieces[ AGoldmine::StaticClass() ] -> SetVisibility( false );
+  MinedPieces[ ATree::StaticClass() ] -> SetVisibility( false );
+  MinedPieces[ AStone::StaticClass() ] -> SetVisibility( false );
 }
 
 void APeasant::InitIcons()
@@ -294,6 +304,16 @@ bool APeasant::IsRepairing()
   return RepairTarget != NULL   &&   !Speed;
 }
 
+bool APeasant::IsCarrying()
+{
+  for( map< TSubclassOf<AResource>, int32 >::iterator iter = MinedResources.begin();
+       iter != MinedResources.end(); ++iter )
+    if( iter->second )
+      return 1;
+
+  return 0;
+}
+
 AGameObject* APeasant::GetBuildingMostInNeedOfRepair( float threshold )
 {
   // Is the building worth starting repairs on?
@@ -344,10 +364,18 @@ void APeasant::ai( float t )
 
 void APeasant::OnResourcesReturned()
 {
-  vector< TSubclassOf<AResource> > resType = {Mining}; // We're still mining MiningType unless otherwise specified.
+  if( !Mining )
+  {
+    warning( FS( "No resource type to return" ) );
+    return;
+  }
+
+  // What he wants to do is target the same resource type.
+  vector< TSubclassOf<AResource> > resType = { Mining }; // We're still mining MiningType unless otherwise specified.
+
+  // Check for reassignment to a new resource type.
   if( team->ai.aiLevel )
   {
-    // Check for reassignment
     resType = team->GetNeededResourceTypes();
   }
 
@@ -355,13 +383,14 @@ void APeasant::OnResourcesReturned()
   // If the mining target ran out of resources, find a new one.
   AResource* res = FindAndTargetNewResource( LastResourcePosition, resType, Stats.SightRange );
   if( res )
-  { 
+  {
     Target( res ) ;
   }
   else
   {
-    // Otherwise, he just walks back to the location of the stump.
+    // Otherwise, he just walks back to the location of the stump, then shrugs.
     GoToGroundPosition( LastResourcePosition );
+    ShrugsNextIdle = 1;
   }
 }
 
@@ -371,29 +400,40 @@ void APeasant::Hit( AGameObject* other )
   // if the other building is a townhall, can drop off resources
   if( ATownhall* townhall = Cast<ATownhall>(other) )
   {
-    team->Gold += MinedResources[ AGoldmine::StaticClass() ];
-    team->Lumber += MinedResources[ ATree::StaticClass() ];
-    team->Stone += MinedResources[ AStone::StaticClass() ];
-    MinedResources.clear(); // clear mined resources back to 0s
-    Target( 0 ); // unfollow the townhall
-
-    // The resources have been returned
-    OnResourcesReturned();
+    if( townhall->isAllyTo( this ) )
+    {
+      team->Gold += MinedResources[ AGoldmine::StaticClass() ];
+      MinedResources[ AGoldmine::StaticClass() ] = 0;
+      MinedPieces[ AGoldmine::StaticClass() ] -> SetVisibility( false );
+      
+      team->Lumber += MinedResources[ ATree::StaticClass() ];
+      MinedResources[ ATree::StaticClass() ] = 0;
+      MinedPieces[ ATree::StaticClass() ] -> SetVisibility( false );
+      
+      team->Stone += MinedResources[ AStone::StaticClass() ];
+      MinedResources[ AStone::StaticClass() ] = 0;
+      MinedPieces[ AStone::StaticClass() ] -> SetVisibility( false );
+      
+      Target( 0 ); // unfollow the townhall
+      
+      // After The resources have been returned
+      OnResourcesReturned();
+      
+      Game->hud->ui->dirty = 1;
+    }
   }
 }
 
 void APeasant::ReturnResources()
 {
-  Carrying = 0; // Assume not carrying resources
   // Attempt to return resources if full-up on any type.
   if( !FollowTarget )
   {
     for( pair< TSubclassOf<AResource>, int32 > p : MinedResources )
     {
-      if( p.second > 0 )
+      // Check if maxed out on any type
+      if( p.second )
       {
-        Carrying = 1; // Apply carrying animation.
-        MinedPieces[ p.first ] -> SetVisibility( true );
         if( p.second >= Capacities[ p.first ] )
         {
           // Return to nearest townhall for dropoff
@@ -412,17 +452,20 @@ void APeasant::ReturnResources()
           }
         }
       }
-      else
-      {
-        MinedPieces[ p.first ] -> SetVisibility( false );
-      }
     }
   }
 }
 
 void APeasant::AddMined( TSubclassOf<AResource> resourceType, float resAmount )
 {
-  MinedResources[ resourceType ] += resAmount; 
+  MinedResources[ resourceType ] += resAmount;
+  MinedPieces[ resourceType ] -> SetVisibility( true ); // Now carrying this type
+  
+  // Check to see if selected and update statspanel if so
+  if( Game->hud->Selected.size() && Game->hud->Selected.front() == this )
+  {
+    Game->hud->ui->dirty = 1;
+  }
 }
 
 void APeasant::MoveCounters( float t )
@@ -443,11 +486,10 @@ void APeasant::Move( float t )
 
   if( Idling() )
   {
-    if( Mining ) // Trying to mine something but couldn't find it.
+    if( ShrugsNextIdle )
     {
-      // go back to where the resource was and shrug
-      Shrugging = 1;
-      Mining = 0;
+      Shrugging = 1; // Pass signal to animation blueprint
+      ShrugsNextIdle = 0;
     }
   }
 }

@@ -25,9 +25,10 @@ Clock::~Clock()
   Game->hud->MaterialInstances.Remove( clockMaterial );
 }
 
-void Clock::ClearExtras()
+void Clock::Reset()
 {
-  ITextWidget::ClearExtras();
+  ITextWidget::Reset();
+  SetTexture( NoTextureTexture );
 }
 
 UMaterialInstanceDynamic* Clock::CreateClockMaterial( FLinearColor pieColor )

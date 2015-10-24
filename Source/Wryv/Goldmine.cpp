@@ -3,6 +3,7 @@
 
 AGoldmine::AGoldmine( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
+  EntryPoint = PCIP.CreateDefaultSubobject<USceneComponent>( this, "entrypt" );
 }
 
 

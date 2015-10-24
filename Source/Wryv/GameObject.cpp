@@ -3,8 +3,9 @@
 #include "Building.h"
 #include "Explosion.h"
 #include "FlyCam.h"
-#include "GlobalFunctions.h"
 #include "GameObject.h"
+#include "GlobalFunctions.h"
+#include "Goldmine.h"
 #include "Item.h"
 #include "TheHUD.h"
 #include "Pathfinder.h"
@@ -68,7 +69,7 @@ void AGameObject::PostInitializeComponents()
   if( RootComponent )
   {
     // Initialize position, but put object on the ground
-    SetPosition( RootComponent->GetComponentLocation() );
+    SetPosition( GetActorLocation() );
 
     // Attach contact function to all bounding components.
     hitBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnHitContactBegin );
@@ -76,6 +77,12 @@ void AGameObject::PostInitializeComponents()
 
     repulsionBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactBegin );
     repulsionBounds->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactEnd );
+    Init = 1;
+  }
+  else
+  {
+    error( FS( "RootComponent wasn't set in PostInitializeComponents()" ) );
+    Init = 0;
   }
 
   UpdateStats( 0.f );
@@ -356,7 +363,7 @@ FVector AGameObject::Repel( AGameObject* go )
     if( repelMag > 0   &&   repelMag < 1.f + r )
     {
       // draw a repulsion vector from the OTHER object.
-      Game->flycam->DrawDebug( Pos, Pos + repelDir*repelMag, FLinearColor::Red, 0.f );
+      Game->flycam->DrawDebug( Pos, Pos + repelDir*repelMag, 5.f, FLinearColor::Red, 0.f );
       return RepelMultiplier * SpeedFraction() * 
         log( 1.f + r - repelMag )/log( 1.f + r ) * repelDir;
     }
@@ -418,7 +425,7 @@ void AGameObject::OnRepulsionContactBegin_Implementation( AActor* OtherActor,
   // Make sure other component with defined overlap is AGameObject derivative.
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    info( FS( "%s has begun overlapping %s", *GetName(), *OtherActor->GetName() ) );
+    //info( FS( "%s has begun overlapping %s", *GetName(), *OtherActor->GetName() ) );
     RepulsionOverlaps += go;
   }
 }
@@ -510,7 +517,12 @@ void AGameObject::Face( FVector point )
 // Stand outside target within `distance` units
 void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDistance )
 {
-  FVector targetToMe = Pos - target->Pos;
+  // Depending on the target type, the point to move to may be the 'roid ro some other special point on the model
+  FVector targetPos = target->Pos;
+  if( AGoldmine* goldmine = Cast<AGoldmine>( target ) )
+    targetPos = goldmine->EntryPoint->GetComponentLocation();
+
+  FVector targetToMe = Pos - targetPos;
   float len = targetToMe.Size();
   //info( FS( "%s attacking %s is %f units from it", *Name, *AttackTarget->Name, len ) );
   // If we're outside the attack range.. move in.
@@ -524,7 +536,7 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   {
     targetToMe /= len;
     // set the fallback distance to being size of bounding radius of other unit
-    GoToGroundPosition( target->Pos + targetToMe*(fallbackDistance*.997f) );
+    SetDestination( target->Pos + targetToMe*(fallbackDistance*.997f), 0 );
   }
 }
 
@@ -625,11 +637,16 @@ void AGameObject::exec( const Command& cmd )
 
 void AGameObject::MoveCounters( float t )
 {
-  
+  // MoveCounters in derived Building/Unit/CombatUnit
 }
 
 void AGameObject::Move( float t )
 {
+  if( !Init )
+  {
+    Pos = GetActorLocation();
+    Init = 1;
+  }
   if( Dead ) {
     //error( FS( "Dead Unit %s had Move called for it", *Name ) );
     DeadTime += t;
@@ -934,7 +951,7 @@ void AGameObject::LoseFollower( AGameObject* formerFollower )
   // if I lost all followers, update the hud
   if( !Followers.size() ) {
     //LOG( "%s doesn't need follow ring", *Name );
-    RemoveTagged( this, Game->flycam->FollowTargetName );
+    RemoveTagged( Game->flycam->FollowTargetName );
   }
 }
 
@@ -949,7 +966,7 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
   if( !Attackers.size() )
   {
     //LOG( "%s doesn't need attack ring", *Name );
-    RemoveTagged( this, Game->flycam->AttackTargetName );
+    RemoveTagged( Game->flycam->AttackTargetName );
   }
 }
 
@@ -1115,7 +1132,7 @@ void AGameObject::BeginDestroy()
   // For odd-time created objects (esp in PIE) they get put into the team without ever actually
   // being played with, so they don't die properly.
   if( team ) {
-    //warning( FS( "Unit %s was removed from team in BeginDestroy()", *Name ) );
+    warning( FS( "Unit %s was removed from team in BeginDestroy()", *GetName() ) );
     team->RemoveUnit( this );
   }
 

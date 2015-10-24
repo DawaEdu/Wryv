@@ -23,7 +23,6 @@ public:
   //AResource(const FObjectInitializer& PCIP);
   void BeginPlay() override;
   void PostInitializeComponents() override;
-  virtual UClass* GetCPPClass() { return StaticClass(); }
   void Harvest( APeasant* peasant );
   float ResourcesFraction() { return AmountRemaining / Quantity; }
 };

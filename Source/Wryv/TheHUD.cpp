@@ -5,12 +5,15 @@
 #include "DrawDebugHelpers.h"
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
+#include "Goldmine.h"
 #include "GroundPlane.h"
 #include "ItemShop.h"
 #include "PlayerControl.h"
 #include "Projectile.h"
 #include "Resource.h"
+#include "Stone.h"
 #include "TheHUD.h"
+#include "Tree.h"
 #include "Unit.h"
 #include "Widget.h"
 #include "Widget3D.h"
@@ -36,7 +39,14 @@ void ATheHUD::PostInitializeComponents()
   Super::PostInitializeComponents();
   LOG( "ATheHUD::PostInitializeComponents()");
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" );
+  rendererIcon->TextureTarget = PortraitTexture;
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" );
+  rendererMinimap->TextureTarget = MinimapTexture;
+  
+  ResourceIcons[ AGoldmine::StaticClass() ] = GoldIconTexture;
+  ResourceIcons[ ATree::StaticClass() ] = LumberIconTexture;
+  ResourceIcons[ AStone::StaticClass() ] = StoneIconTexture;
+
 }
 
 void ATheHUD::BeginPlay()
@@ -179,9 +189,10 @@ HotSpot* ATheHUD::MouseUpLeft( FVector2D mouse )
   // Drop event
   if( ui->drag )
   {
-    if( ui->drag->AbsorbsMouseUp ){
-      //info( FS( "Dropped element %s", *ui->drag->Name ) );
-      ui->drag = 0;  // Unset the drag element
+    bool absorbsMouseUp = ui->drag->AbsorbsMouseUp;
+    ui->drag = 0;  // Unset the drag element
+    if( absorbsMouseUp ){
+      info( FS( "mouseup absorbed" ) );
       return 0; // The dragged element sucks up the UP event.
     }
   }
@@ -198,8 +209,8 @@ HotSpot* ATheHUD::MouseUpLeft( FVector2D mouse )
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
 {
   ui->drag = ui->MouseDownLeft( mouse );
-  //if( ui->drag )
-  //  info( FS( "The drag elt is %s", *ui->drag->Name ) );
+  if( ui->drag )
+    info( FS( "The drag elt is %s", *ui->drag->Name ) );
   return ui->drag;
 }
 
@@ -230,11 +241,13 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   // Remove all selection markers (previous selection)
   for( AGameObject* sel : Selected )
   {
-    RemoveTagged( sel, Game->flycam->SelectedTargetName );
-    RemoveTagged( sel, Game->flycam->FollowTargetName );
-    if( sel->FollowTarget )  RemoveTagged( sel->FollowTarget, Game->flycam->FollowTargetName );
-    RemoveTagged( sel, Game->flycam->AttackTargetName );
-    if( sel->AttackTarget )  RemoveTagged( sel->AttackTarget, Game->flycam->AttackTargetName );
+    sel->RemoveTagged( Game->flycam->SelectedTargetName );
+    sel->RemoveTagged( Game->flycam->FollowTargetName );
+    if( sel->FollowTarget )
+      sel->FollowTarget->RemoveTagged( Game->flycam->FollowTargetName );
+    sel->RemoveTagged( Game->flycam->AttackTargetName );
+    if( sel->AttackTarget )
+      sel->AttackTarget->RemoveTagged( Game->flycam->AttackTargetName );
   }
 
   //if( Game->flycam->ghost )
@@ -262,8 +275,10 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   {
     // make an attack target if there is an attack target for the gameobject
     Game->flycam->MarkAsSelected( go );
-    if( go->AttackTarget )  Game->flycam->MarkAsAttack( go->AttackTarget );
-    if( go->FollowTarget )  Game->flycam->MarkAsFollow( go->FollowTarget );
+    if( go->AttackTarget )
+      Game->flycam->MarkAsAttack( go->AttackTarget );
+    if( go->FollowTarget )
+      Game->flycam->MarkAsFollow( go->FollowTarget );
   }
 
   // Modify the UI to reflect selected gameobjects
@@ -284,21 +299,28 @@ void ATheHUD::Select( vector<AGameObject*> objects )
 
 void ATheHUD::Unselect( vector<AGameObject*> objects )
 {
-  // Filter THIS from collection if exists
+  // If none of the objects are in the selection, there's no change.
+  if( !in( Selected, objects ) )
+  {
+    error( FS( "None of objects [%s] were in Selected [%s], nothing to unselect",
+               *GetNames( objects ), *GetNames( Selected ) ) );
+    return;
+  }
+
   for( AGameObject* go : objects )
   {
     // Remove any selectors on there
-    RemoveTagged( go, Game->flycam->SelectedTargetName );
+    go->RemoveTagged( Game->flycam->SelectedTargetName );
 
     // If I'm the only selected unit with on follow target then remove follow target selection
     // If go is the only follower / attacker in Selected, then remove the marker.
     if( go->FollowTarget )
       if( Intersection( Selected, go->FollowTarget->Followers ).size() <= 1 )
-        RemoveTagged( go, Game->flycam->FollowTargetName );
+        go->RemoveTagged( Game->flycam->FollowTargetName );
 
     if( go->AttackTarget )
       if( Intersection( Selected, go->AttackTarget->Attackers ).size() <= 1 )
-        RemoveTagged( go, Game->flycam->AttackTargetName );
+        go->RemoveTagged( Game->flycam->AttackTargetName );
   }
 
   Selected -= objects;
@@ -363,8 +385,7 @@ void ATheHUD::RenderPortrait()
     AGameObject* selected = *Selected.begin();
     // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, PortraitTexture, 
-      selected->Pos, selected->Radius(), camDir );
+    RenderScreen( rendererIcon, selected->Pos, selected->Radius(), camDir );
   }
 }
 
@@ -377,12 +398,23 @@ void ATheHUD::DrawHUD()
   
   // Render the minimap, only if the floor is present
   FBox box = Game->flycam->floor->GetBox();
-  FVector p = box.GetCenter();
-  RenderScreen( rendererMinimap, MinimapTexture, p, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
-  
+  FVector lookPt = box.GetCenter();
+  RenderScreen( rendererMinimap, lookPt, box.GetExtent().GetMax(), FVector( 0, 0, -1 ) );
+
   ui->SetSize( FVector2D( Canvas->SizeX, Canvas->SizeY ) );
   ui->Update( Game->gm->T ); // Ticked here, in case reflow is needed
   ui->render();
+
+  // Overlay the lines for the minimap's view.
+  vector< FVector2D > pts = ui->gameChrome->rightPanel->minimap->pts;
+  for( int i = 0; i < pts.size()-1; i++ )
+  {
+    Canvas->K2_DrawLine( pts[i], pts[i+1], 2.f, FLinearColor::Green );
+  }
+  if( pts.size() > 1 )
+  {
+    Canvas->K2_DrawLine( pts[ pts.size()-1 ], pts[ 0 ], 2.f, FLinearColor::Green );
+  }
 }
 
 void ATheHUD::Tick( float t )
@@ -411,26 +443,64 @@ float ATheHUD::GetPxWidth( float radiusWorldUnits, float distanceToObject, float
 
 // Render onto tt (using renderer) sitting @ cameraPos,
 // facing cameraDir, an object with radiusWorldUnits.
-void ATheHUD::RenderScreen( USceneCaptureComponent2D* renderer,
-  UTextureRenderTarget2D* tt, FVector objectPos, float radiusWorldUnits,
-  FVector cameraDir )
+void ATheHUD::RenderScreen( USceneCaptureComponent2D* renderer, FVector lookPos, float radiusWorldUnits, FVector cameraDir )
 {
-  renderer->TextureTarget = tt;
+  UTextureRenderTarget2D* tt = renderer->TextureTarget;
   // http://stackoverflow.com/questions/3717226/
   // radiusOnScreenPX = radiusWorldUnits*SW/(tan(fov / 2) * Z);
   // ZBack = radiusWorldUnits*SW/(tan( fovy / 2 )*radiusOnScreenPX)
   // Calculate Z distance back for a given pixel radius
   // Set particular render properties & render the screen
   // to texture in w.
-  float D = GetZDistance( radiusWorldUnits, tt->GetSurfaceWidth(),
-    tt->GetSurfaceWidth(), renderer->FOVAngle );
-  FVector renderPos = objectPos - cameraDir * D;
-  renderer->SetRelativeLocationAndRotation( renderPos, cameraDir.Rotation().Quaternion() );
+  float D = GetZDistance( radiusWorldUnits, tt->GetSurfaceWidth(), tt->GetSurfaceHeight(), renderer->FOVAngle );
+  FVector eyePos = lookPos - cameraDir * D;
+  FQuat quat = cameraDir.Rotation().Quaternion();
+  renderer->SetRelativeLocationAndRotation( eyePos, quat );
+  
+  FVector2D screenSize = ui->gameChrome->gameCanvas->Size;
+  screenSize.X -= ui->gameChrome->rightPanel->Size.X;
 
-  for( int i = 0; i < renderer->AttachChildren.Num(); i++ )
+  FVector up = renderer->GetUpVector();
+  FLookAtMatrix lookAt( eyePos, lookPos, up );
+  FPerspectiveMatrix persp( rendererMinimap->FOVAngle/2.f, 1.f, 1.f, 0.5f );
+  FMatrix mvp1 = lookAt * persp;
+
+  vector<Ray> rays = Game->pc->GetFrustumRays( FBox2DU( 0.f, 0.f, screenSize.X, screenSize.Y ) );
+  float zValue = lookPos.Z;
+  FPlane plane( FVector(0.f, 0.f, 1.f), zValue );
+  vector<FVector> pts;
+  for( int i = 0; i < rays.size(); i++ )
   {
-    USceneComponent* c = renderer->AttachChildren[i];
-    LOG( "Component [%d] = %s", i, *renderer->AttachChildren[i]->GetName() );
+    FVector pt = FMath::LinePlaneIntersection( rays[i].start, rays[i].end, plane );
+    //Game->flycam->DrawDebug( pt, 25.f, FLinearColor::White, .25f );
+    pts.push_back( pt );
+  }
+
+  //FLinearColor Cyan(0,1,1,1);
+  //for( int i = 0; i < pts.size() - 1; i++ )
+  //{
+  //  Game->flycam->DrawDebug( pts[i], pts[i+1], 25.f, Cyan, .25f );
+  //}
+  //if( pts.size() > 1 )
+  //{
+  //  Game->flycam->DrawDebug( pts[pts.size()-1], pts[0], 25.f, Cyan, .25f );
+  //}
+
+  ui->gameChrome->rightPanel->minimap->pts.clear();
+  FVector2D minimapSize = ui->gameChrome->rightPanel->minimap->Size;
+  for( int i = 0; i < pts.size(); i++ )
+  {
+    FVector4 transformedPt = mvp1.TransformPosition( pts[i] );
+    float div = transformedPt.W;
+    transformedPt /= FVector4( div, div, div, div );
+    FVector2D p( transformedPt.X, transformedPt.Y ); // between [-1,1]
+    p *= 4.f/3.f; //!! Multiplying P by 4./3 req'd.. double-check
+    p *= minimapSize/2.f;
+    p.Y *= -1.f;
+    p += minimapSize/2.f;
+
+    p += ui->gameChrome->rightPanel->minimap->GetAbsPos();
+    ui->gameChrome->rightPanel->minimap->pts.push_back( p );
   }
 }
 

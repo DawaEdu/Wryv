@@ -4,10 +4,9 @@
 #include <set>
 using namespace std;
 
+#include "Box2DU.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/EngineTypes.h"
-
-#include "Box2DU.h"
 
 #include "PlayerControl.generated.h"
 
@@ -38,6 +37,8 @@ public:
   // Gets all objects that are traced thru by vector
   vector<AGameObject*> RayPickMulti( const FVector2D& ScreenPosition );
   vector<AGameObject*> RayPickMulti( const Ray& ray );
+
+  vector<Ray> GetFrustumRays( const FBox2DU& box );
   vector<AGameObject*> FrustumPick( const FBox2DU& box );
   vector<AGameObject*> FrustumPick( const FBox2DU& box, 
     set< TSubclassOf<AGameObject> > AcceptedTypes, set< TSubclassOf<AGameObject> > NotTypes );

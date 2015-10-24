@@ -14,7 +14,6 @@ protected:
 public:
   ITextWidget( FString name, UTexture* pic, FString ftext, Alignment textAlignment, UFont* font=0, float scale=1.f );
   ITextWidget( FString name, UTexture* pic, FVector2D size, FString ftext, Alignment textAlignment, UFont* font=0, float scale=1.f );
-  virtual void ClearExtras();
   void SetText( FString text, int alignment );
   void SetText( FString text );
   void SetText( int v );

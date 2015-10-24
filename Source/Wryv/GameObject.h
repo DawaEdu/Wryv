@@ -92,6 +92,7 @@ class WRYV_API AGameObject : public AActor
   // responding to a GotoGroundPosition() command)
   bool HoldingGround; // Do not move to engage nearby enemy units.
   // When this flag is false, AttackTarget is set to the nearest unit in SightRange.
+  bool Init; // The object has been initialized
 
   Command& GetCurrentCommand(){ return commands.front(); }
 
@@ -103,9 +104,58 @@ class WRYV_API AGameObject : public AActor
   
   // 
   // UE4 & Utility
-  template <typename T> vector<T*> GetComponentsByType() {
-    return ::GetComponentsByType<T>( this );
+  template <typename T> vector<T*> GetComponentsByType()
+  {
+    TInlineComponentArray<T*> components;
+	  GetComponents( components );
+    vector<T*> coll;
+    for( int i = 0; i < components.Num(); i++ )
+      coll.push_back( components[i] );
+    return coll;
   }
+
+  // Doesn't detect Actor's with tags
+  inline bool HasChildWithTag( FName tag )
+  {
+    if( ActorHasTag( tag ) )
+      return 1;
+
+    for( int i = 0; i < Children.Num(); i++ )
+    {
+      AGameObject* child = Cast<AGameObject>( Children[i] );
+      if( child && !child->Dead && child->HasChildWithTag( tag ) )
+        return 1;
+    }
+
+    return 0;
+  }
+
+  inline void GetChildrenTagged( FName fname, set<AGameObject*>& tagged )
+  {
+    for( int i = 0; i < Children.Num(); i++ )
+    {
+      if( Children[i]->ActorHasTag( fname ) )
+      {
+        if( AGameObject* go = Cast<AGameObject>( Children[i] ) )
+        {
+          if( go->Dead )  skip;
+
+          tagged.insert( go );
+          go->GetChildrenTagged( fname, tagged );
+        }
+      }
+    }
+  }
+
+  inline void RemoveTagged( FName fname )
+  {
+    set<AGameObject*> tagged;
+    GetChildrenTagged( fname, tagged );
+    for( AGameObject* go : tagged ) {
+      go->Die();
+    }
+  }
+
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
@@ -187,7 +237,8 @@ class WRYV_API AGameObject : public AActor
   // This function is provided INSTEAD of ::Tick(), which has variable timestep value 
   // and unpredicatable call order.
   virtual void Move( float t );
-  virtual bool Idling();
+  // Tells you if the object is idling or not
+  UFUNCTION(BlueprintCallable, Category = Fighting) virtual bool Idling();
   virtual void ai( float t );
   // The hit volumes overlapped
   virtual void Hit( AGameObject* other );

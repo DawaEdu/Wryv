@@ -178,6 +178,15 @@ template <typename T> inline bool in( const vector<T*>& s, const T* elt )
   return 0;
 }
 
+template <typename T> inline bool in( const vector<T*>& u, const vector<T*>& v )
+{
+  for( int i = 0; i < u.size(); i++ )
+    for( int j = 0; j < v.size(); j++ )
+      if( u[i] == v[j] )
+        return 1;
+  return 0;
+}
+
 template <typename T> inline bool in( const deque<T>& d, const T& elt )
 {
   return find( d.begin(), d.end(), elt ) != d.end();
@@ -256,7 +265,7 @@ template <typename T> int IndexOfIsA( TArray<T*>& tarray, UClass* uclass )
   return -1;
 }
 
-template <typename T> FString GetNames( const TArray<T*> tarray )
+template <typename T> FString GetNames( const TArray<T*>& tarray )
 {
   static_assert( is_base_of< UObject, T >::value, "GetNames<T>: T must derive from UObject" );
   FString fs;
@@ -264,6 +273,35 @@ template <typename T> FString GetNames( const TArray<T*> tarray )
     fs += tarray[i]->GetName() + FString( ", " );
   if( tarray.Num() )
     fs += tarray[ tarray.Num() - 1 ]->GetName();
+
+  return fs;
+}
+
+template <typename T> FString GetNames( const vector<T*>& v )
+{
+  static_assert( is_base_of< UObject, T >::value, "GetNames<T>: T must derive from UObject" );
+  FString fs;
+  for( int i = 0; i < (int)v.size() - 1; i++ )
+    fs += v[i]->GetName() + FString( ", " );
+  if( v.size() )
+    fs += v[ v.size() - 1 ]->GetName();
+
+  return fs;
+}
+
+template <typename T> FString GetNames( set<T*>& s )
+{
+  static_assert( is_base_of< UObject, T >::value, "GetNames<T>: T must derive from UObject" );
+  FString fs;
+  
+  // With more than 2 elts, push in first N-1 elts
+  if( s.size() >= 2 )
+    for( set<T*>::iterator iter = s.begin(); iter != --s.end(); ++iter )
+      fs += iter->GetName() + FString( ", " );
+  
+  // Push in last elt
+  if( s.size() )
+    fs += --s.end()->GetName(); // last one
 
   return fs;
 }
@@ -470,10 +508,42 @@ template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
   return A;
 }
 
+// Difference of two sets
+template <typename T> set<T> operator-( const set<T>& A, const set<T>& B )
+{
+  set<T> diff;
+  // Difference of two sets. If there's something in A that is not in B,
+  // return what's in A that's not in B.
+  //    A:  r,s,t      A:  r,s,t
+  //    B:  d,e,f      B:  r,s,b
+  // diff:  r,s,t   diff:  t
+
+  for( const T& a : A )
+    if( !in( B, a ) )
+      diff.insert( a );
+  return diff;
+}
+
+// Union
+template <typename T> set<T> operator+( const set<T>& A, const set<T>& B )
+{
+  set<T> un = A;
+  for( const T& b : B )
+    un.insert( b );
+  return un;
+}
+
 template <typename T> set<T> MakeSet( const vector<T>& A )
 {
   set<T> B;
   for( const T& t : A )
+    B.insert( t );
+  return B;
+}
+template <typename T> set<T> MakeSet( const TArray<T>& A )
+{
+  set<T> B;
+  for( const T t : A )
     B.insert( t );
   return B;
 }
@@ -488,8 +558,16 @@ template <typename T> vector<T*> MakeVector( const set<T*>& A )
 template <typename T> vector<T> MakeVector( const set<T>& A )
 {
   vector<T> B;
-  for( const T& t : A )
-    B.push_back( t );
+  for( const T& a : A )
+    B.push_back( a );
+  return B;
+}
+
+template <typename T> TArray<T> MakeTArray( const set<T>& A )
+{
+  TArray<T> B;
+  for( const T& a : A )
+    B.Push( a );
   return B;
 }
 
@@ -708,69 +786,21 @@ struct Ray
   }
 };
 
-template <typename T> static T* GetComponentByType( AActor* a )
+template <typename T> T* GetComponentByName( AActor* actor, FString name )
 {
   TInlineComponentArray<T*> components;
-	a->GetComponents(components);
-  if( components.Num() ) return components[0];
-  return 0;
-}
-
-template <typename T> static vector<T*> GetComponentsByType( AActor* a )
-{
-  TInlineComponentArray<T*> components;
-	a->GetComponents(components);
-  vector<T*> coll;
-  for( int i = 0; i < components.Num(); i++ )
-    coll.push_back( components[i] );
-  return coll;
-}
-
-template <typename T> static T* GetComponentByName( AActor* a, FString name )
-{
-  TInlineComponentArray<T*> components;
-	a->GetComponents(components);
+	actor->GetComponents(components);
   for( int i = 0; i < components.Num(); i++ )
     if( components[i]->GetName() == name )
       return components[i];
   return 0;
 }
 
-inline bool HasChildWithTag( AActor* actor, FName tag )
-{
-  if( actor && actor->ActorHasTag( tag ) )
-    return 1;
-
-  for( int i = 0; i < actor->Children.Num(); i++ )
-  {
-    AActor* child = actor->Children[i];
-    if( child && HasChildWithTag( child, tag ) )
-      return 1;
-  }
-  return 0;
-}
-
-inline void GetChildrenTagged( AActor* actor, set<AActor*>& tagged, FName fname )
-{
-  if( actor && actor->ActorHasTag( fname ) )
-    tagged.insert( actor );
-  for( int i = 0; i < actor->Children.Num(); i++ )
-    GetChildrenTagged( actor->Children[i], tagged, fname );
-}
-
-inline void RemoveTagged( AActor* actor, FName fname )
-{
-  set<AActor*> tagged;
-  GetChildrenTagged( actor, tagged, fname );
-  for( AActor* a : tagged )
-    a->Destroy();
-}
-
 inline bool Intersects( FBox& box, FVector& pt )
 {
-  return box.Min.X < pt.X && pt.X < box.Max.X   &&
-         box.Min.Y < pt.Y && pt.Y < box.Max.Y   &&
-         box.Min.Z < pt.Z && pt.Z < box.Max.Z ;
+  return box.Min.X < pt.X   &&   pt.X < box.Max.X   &&
+         box.Min.Y < pt.Y   &&   pt.Y < box.Max.Y   &&
+         box.Min.Z < pt.Z   &&   pt.Z < box.Max.Z ;
 }
 
 inline void print( FBox& box )

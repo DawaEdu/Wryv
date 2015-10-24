@@ -18,6 +18,8 @@ public:
   // The item we are dragging (subhotspot)
   SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
   virtual ~SlotPalette(){}
+  // Turn off all textures and functionality so clocks appear blank.
+  void Blank();
   int GetNumActiveSlots() { return Rows*Cols; }
   FVector2D GetSlotPosition( int i );
   Clock* GetClock( int i );
@@ -30,6 +32,8 @@ public:
   // T will derive from UAction
   template <typename T> void Populate( TArray< T* /*:UAction*/ > elts, int startIndex )
   {
+    Blank(); //Blank previous entries
+
     // Compile-time assert that ensures T derives from UAction
     // We would use vector< UAction >, only we can't Populate with a vector< UItemAction >
     // even though UItemAction : UAction.

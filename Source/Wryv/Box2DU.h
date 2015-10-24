@@ -16,6 +16,11 @@ struct FBox2DU : public FBox2D
     Min = min;
     Max = max;
   }
+  FBox2DU( float minx, float miny, float maxx, float maxy )
+  {
+    Min.X = minx, Min.Y = miny;
+    Max.X = maxx, Max.Y = maxy;
+  }
   FBox2DU()
   {
     Min.X = Min.Y = 1e6f;

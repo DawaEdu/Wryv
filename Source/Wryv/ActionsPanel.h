@@ -16,7 +16,7 @@ public:
   ActionsPanel( FString name, FVector2D entrySize );
   void ShowAbilitiesPanel();
   void ShowBuildingsPanel();
-  void Set( AGameObject* go );
+  void Set( vector<AGameObject*> objects );
 };
 
 class BuildPanel : public SlotPalette
@@ -24,7 +24,7 @@ class BuildPanel : public SlotPalette
   ActionsPanel *Actions;
 public:
   BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
-  void Set( AGameObject *go );
+  void Set( vector<AGameObject*> objects );
 };
 
 // An abilities panel is a slotpalette but with the ability to populate
@@ -39,7 +39,7 @@ public:
 
   // parent container is the Actions panel
   AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );
-  void Set( AGameObject *go );
+  void Set( vector<AGameObject*> objects );
 };
 
 
