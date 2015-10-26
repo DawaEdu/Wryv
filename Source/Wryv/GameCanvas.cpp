@@ -7,6 +7,7 @@
 #include "Peasant.h"
 #include "PlayerControl.h"
 #include "TheHUD.h"
+#include "Widget3D.h"
 #include "WryvGameInstance.h"
 
 #include "Action.h"
@@ -35,7 +36,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   // Attach functionality
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
-    FHitResult hitResult = Game->pc->RayPickSingle( Game->flycam->getMousePos() );
+    FHitResult hitResult = Game->pc->RayPickSingle( Game->flycam->getMousePos(),
+      {}, { AShape::StaticClass() } );
     AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
     if( !hit ) {
       warning( FS( "No object was clicked by the mouse" ) );
@@ -142,7 +144,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   OnMouseUpLeft = [this]( FVector2D mouse ) {
     // Box shaped selection of units.
     // Filtration is done after selection,
-    Game->hud->Select( Game->pc->FrustumPick( selectBox->Box ) );
+    Game->hud->Select( Game->pc->FrustumPick( 
+      selectBox->Box, {}, { AWidget3D::StaticClass() } ) );
     SelectEnd();
     return Consumed;
   };
@@ -155,7 +158,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     if( Game->hud->NextAbility == Abilities::Attack  ||  Game->hud->NextSpell ) 
     {
       // Highlight what's under the mouse.
-      FHitResult hitResult = Game->pc->RayPickSingle( mouse );
+      FHitResult hitResult = Game->pc->RayPickSingle( mouse, {}, { AShape::StaticClass() } );
       AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
       if( hit != Game->flycam->floor )
         Game->hud->SetCursorStyle( ATheHUD::CursorType::CrossHairs, Game->hud->HitCrosshairColor );

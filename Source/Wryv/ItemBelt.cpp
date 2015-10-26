@@ -31,7 +31,8 @@ ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVec
 void ItemBelt::Set( vector<AGameObject*> objects )
 {
   Blank(); // Clear textures from previously selected object
-  HideChildren();  // hide all clocks
+  HideChildren();  // Hide all clocks
+  Hide();  // Hide the belt itself
   if( !objects.size() ) return;
 
   for( int i = 0; i < objects.size(); i++ )
@@ -68,18 +69,18 @@ void ItemBelt::Set( vector<AGameObject*> objects )
     else if( ABuilding* building = Cast<ABuilding>( go ) )
     { 
       // building doesn't have any objects that go into itembelt yet.
-      Hide();
     }
     else
     {
       // otherwise leave itembelt empty with hidden children
-      Hide();
     }
   }
 }
 
 void ItemBelt::render( FVector2D offset )
 {
+  if( hidden ) return;
+
   SlotPalette::render( offset );
 }
 

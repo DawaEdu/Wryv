@@ -27,6 +27,7 @@ void UInProgressUnit::Set( UTrainingAction* training )
 {
   UnitType = training->UnitType; // Class of the unit that is being created
   HostBuilding = training->Building; // Cancellation req goes thru to building owning icon
+  cooldown = training->cooldown;
 }
 
 bool UInProgressUnit::Click()
@@ -38,14 +39,19 @@ bool UInProgressUnit::Click()
     return 0;
   }
 
-  HostBuilding->team->Refund( UnitType );
+  HostBuilding->CancelTraining( UActionIndex );
   return 1;
+}
+
+void UInProgressUnit::PopulateClock( Clock* inClock, int index )
+{
+  UAction::PopulateClock( inClock, index );
 }
 
 void UInProgressUnit::OnCooldown()
 {
   UAction::OnCooldown();
-  HostBuilding->ReleaseUnit( UnitType );
+  HostBuilding->ReleaseUnit( this );
 }
 
 

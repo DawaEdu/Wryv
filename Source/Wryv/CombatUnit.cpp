@@ -17,7 +17,7 @@ void ACombatUnit::InitIcons()
   {
     UCastSpellAction* action = Construct< UCastSpellAction >( Spells[i] );
     action->Caster = this;
-    CountersSpells.push_back( action );
+    CountersSpells.Push( action );
   }
 }
 
@@ -25,9 +25,15 @@ void ACombatUnit::MoveCounters( float t )
 {
   AUnit::MoveCounters( t );
 
-  for( UCastSpellAction* castSpell : CountersSpells )
-  {
-    castSpell->Step( t );
+  for( int i = (int)CountersSpells.Num()-1; i >= 0; i-- )
+    CountersSpells[i]->Step( t );
+}
+
+void ACombatUnit::OnUnselected()
+{
+  AUnit::OnUnselected();
+  for( int i = 0; i < CountersSpells.Num(); i++ ) {
+    CountersSpells[i]->clock = 0;
   }
 }
 

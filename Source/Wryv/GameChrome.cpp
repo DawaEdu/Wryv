@@ -15,7 +15,7 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
   itemBelt = new ItemBelt( SlotPalette::SlotPaletteTexture, 1, 8, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
   Add( itemBelt );
 
-  buildQueue = new BuildQueue( "Building Queue", FVector2D( 128, 128 ) );
+  buildQueue = new BuildQueue( "Building Queue", FVector2D( 128, 128 ), 10 );
   Add( buildQueue );
   
   costWidget = new CostWidget();
@@ -48,6 +48,12 @@ void GameChrome::Update( float t )
 
 void GameChrome::Select( vector<AGameObject*> objects )
 {
+  // Unset previous selection
+  for( AGameObject* go : objects )
+  {
+    go->OnUnselected(); // Run object unselection routines
+  }
+
   Selected = objects;
   rightPanel->Set( objects ); // portraits of all
 

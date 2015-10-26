@@ -17,9 +17,9 @@ public:
   APeasant* Peasant;
 
   virtual UTexture* GetIcon() override;
-
+  // Buildings have a cooldown time of 0s also
+  virtual float GetCooldownTotalTime() override { return 0.f; }
   // The building type was selected for placement by the peasant indicated.
   virtual bool Click();
-  
   virtual bool Hover();
 };

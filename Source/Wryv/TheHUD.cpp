@@ -256,12 +256,11 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   //}
 
   // Cannot select objects of these types
-  set< TSubclassOf<AGameObject> > forbiddenTypes = { AGroundPlane::StaticClass(), AShape::StaticClass() };
-  function< bool (AGameObject*) > filter = [ forbiddenTypes ]( AGameObject *go ) -> bool {
-    // remove objects of forbidden types.
-    return go->Dead || go->IsAny( forbiddenTypes ); // True means remove from sel.
-  };
-  objects |= filter;
+  SetAGameObject forbiddenTypes = { AGroundPlane::StaticClass(), AShape::StaticClass() };
+  // Pull out any objects that are of forbidden types
+  for( int i = (int)objects.size() - 1; i >= 0; i-- )
+    if( objects[i]->IsAny( forbiddenTypes ) )
+      objects.erase( objects.begin() + i );
 
   if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
     Selected += objects; //Add
@@ -321,6 +320,8 @@ void ATheHUD::Unselect( vector<AGameObject*> objects )
     if( go->AttackTarget )
       if( Intersection( Selected, go->AttackTarget->Attackers ).size() <= 1 )
         go->RemoveTagged( Game->flycam->AttackTargetName );
+
+
   }
 
   Selected -= objects;

@@ -25,5 +25,6 @@ public:
   void Set( UTrainingAction* training );
   // Cancels the Unit being created (returns money).
   virtual bool Click();
+  virtual void PopulateClock( Clock* inClock, int index );
   virtual void OnCooldown();
 };

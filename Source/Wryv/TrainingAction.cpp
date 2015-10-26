@@ -19,7 +19,7 @@ UTexture* UTrainingAction::GetIcon()
 
 float UTrainingAction::GetCooldownTotalTime()
 {
-  return Game->GetData( UnitType ).Cooldown;
+  return 0.f; // There is no cooldown for TrainingAction buttons.
 }
 
 bool UTrainingAction::Click()

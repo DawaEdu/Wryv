@@ -134,6 +134,8 @@ public:
   void MoveCameraZDown( float amount );
   void MoveCameraPitchUp( float amount );
   void MoveCameraPitchDown( float amount );
+  void MoveCameraRotateCW( float amount );
+  void MoveCameraRotateCCW( float amount );
   void MoveForward( float amount );
   void MoveBack( float amount );
   void MoveLeft( float amount );

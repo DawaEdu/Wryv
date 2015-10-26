@@ -110,6 +110,8 @@ void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
   InputComponent->BindAxis( "CameraDown", this, &AFlyCam::MoveCameraZDown );
   InputComponent->BindAxis( "CameraPitchUp", this, &AFlyCam::MoveCameraPitchUp );
   InputComponent->BindAxis( "CameraPitchDown", this, &AFlyCam::MoveCameraPitchDown );
+  InputComponent->BindAxis( "CameraRotateCW", this, &AFlyCam::MoveCameraRotateCW );
+  InputComponent->BindAxis( "CameraRotateCCW", this, &AFlyCam::MoveCameraRotateCCW );
   
   InputComponent->BindAction( "MouseClickedLMB", IE_Pressed, this, &AFlyCam::MouseDownLeft );
   InputComponent->BindAction( "MouseClickedLMB", IE_Released, this, &AFlyCam::MouseUpLeft );
@@ -660,7 +662,7 @@ void AFlyCam::MouseUpRight()
 // (queued NextAction/left click or right click behavior).
 void AFlyCam::Target()
 {
-  FHitResult hit = Game->pc->RayPickSingle( getMousePos() );
+  FHitResult hit = Game->pc->RayPickSingle( getMousePos(), {}, { AShape::StaticClass() } );
   AGameObject* target = Cast<AGameObject>( hit.GetActor() );
   if( !target )
   {
@@ -860,6 +862,22 @@ void AFlyCam::MoveCameraPitchDown( float amount )
     //LOG( "Camera rotation %f %f %f", MainCamera->RelativeRotation.Pitch, MainCamera->RelativeRotation.Yaw,
     //  MainCamera->RelativeRotation.Roll );
     //MainCamera->AddRelativeRotation( FQuat( FVector(0,1,0), 0.5f ) );
+  }
+}
+
+void AFlyCam::MoveCameraRotateCW( float amount )
+{
+  if( Controller && amount )
+  {
+    AddControllerYawInput( amount );
+  }
+}
+
+void AFlyCam::MoveCameraRotateCCW( float amount )
+{
+  if( Controller && amount )
+  {
+    AddControllerYawInput( -amount );
   }
 }
 

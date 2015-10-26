@@ -17,7 +17,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UTexture* BuffIcon;
   // How many of this item player has
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  int32 Quantity;
-  UPROPERTY() AUnit* AssociatedUnit;
+  UPROPERTY() AUnit* AssociatedUnit; // Revise that this is set correctly everywhere in the code.
   UPROPERTY() FString AssociatedUnitName;
 
   virtual UTexture* GetIcon() override;

@@ -24,4 +24,5 @@ public:
   virtual bool Click();
   virtual void OnCooldown();
   virtual void Step( float t );
+
 };

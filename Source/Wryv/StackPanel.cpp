@@ -16,6 +16,12 @@ StackPanel::StackPanel( FString name, UTexture* bkg, FLinearColor color ) : Imag
   restacking = 0;
 }
 
+void StackPanel::Clear()
+{
+  stackOrder.clear();
+  ImageWidget::Clear();
+}
+
 // Override base class function, to prevent warning when
 // texture not provided
 void StackPanel::render( FVector2D offset )

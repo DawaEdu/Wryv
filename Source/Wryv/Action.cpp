@@ -33,7 +33,12 @@ void UAction::Step( float t )
     cooldown.Step( t );
     
     // Cooldown update.
-    clock->SetFillFraction( cooldown.Fraction() );
+    if( clock ) {
+      clock->SetFillFraction( cooldown.Fraction() );
+    }
+    else {
+      info( FS( "Clock for %s not set", *GetName() ) );
+    }
 
     // Completion only once
     if( cooldown.Done() )

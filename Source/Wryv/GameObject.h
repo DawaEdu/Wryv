@@ -290,6 +290,7 @@ public:
   // Utility
   void Flags( vector<FVector> points, FLinearColor color );
   void OnSelected();
+  virtual void OnUnselected();
   void SetMaterialColors( FName parameterName, FLinearColor color );
   void SetTeam( Team* newTeam );
   void PlaySound( USoundBase* sound ){ UGameplayStatics::SpawnSoundAttached( sound, GetRootComponent() ); }

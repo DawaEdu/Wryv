@@ -68,6 +68,7 @@ struct Team
   bool CanBuild( UClass* ClassType );
   bool Spend( UClass* ClassType );
   bool Refund( UClass* ClassType );
+  void ResourceChange( int gold, int lumber, int stone );
   // Usage of food by units in the game.
   int computeFoodUsage();
   int computeFoodSupply();

@@ -43,6 +43,32 @@ void APlayerControl::SetupInactiveStateInputComponent( UInputComponent* InCompon
   LOG( "APlayerControl::SetupPlayerInputComponent() has %d components", CurrentInputStack.Num() );
 }
 
+AGameObject* APlayerControl::Filter( AActor* actor, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
+{
+  AGameObject* go = Cast<AGameObject>( actor );
+  if( !go )  return 0 ;  // Actor was not a gameobject, so cannot be of types requested.
+
+  // You cannot select dead objects
+  if( go->IsPendingKill()   ||   go->Dead )  return 0;
+
+  // If the accepted types collection was specified, and the type is not in accepted types, skip
+  if( AcceptedTypes.size() && ( !go->IsAny( AcceptedTypes ) ) )  return 0;
+
+  // If you are in the not types group, no object is returned
+  if( go->IsAny( NotTypes ) ) return 0;
+
+  return go; // You get the object back 
+}
+
+vector<AGameObject*> APlayerControl::Filter( const TArray<FHitResult>& hits, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
+{
+  vector<AGameObject*> v;
+  for( int i = 0; i < hits.Num(); i++ )
+    if( AGameObject* go = Filter( hits[i].GetActor(), AcceptedTypes, NotTypes ) )
+      v += go;
+  return v;
+}
+
 FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const FVector2D& ScreenPosition )
 {
   Ray ray;
@@ -105,7 +131,7 @@ FHitResult APlayerControl::TraceAgainst( AActor* actor, const Ray& ray )
   return hit;
 }
 
-FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition )
+FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   TArray<FHitResult> hits;
   Ray ray;
@@ -114,10 +140,10 @@ FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition )
     error( FS( "Could not DeprojectScreenToWorld(%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
   }
   ray.SetLen( 1e6f );
-  return RayPickSingle( ray );
+  return RayPickSingle( ray, AcceptedTypes, NotTypes );
 }
 
-FHitResult APlayerControl::RayPickSingle( const Ray& ray )
+FHitResult APlayerControl::RayPickSingle( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   TArray<FHitResult> hits;
   FCollisionQueryParams fcqp( true );
@@ -135,7 +161,7 @@ FHitResult APlayerControl::RayPickSingle( const Ray& ray )
   return result;
 }
 
-vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPosition )
+vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   TArray<FHitResult> hits;
   Ray ray;
@@ -144,10 +170,10 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPositi
     error( FS( "Could not DeprojectScreenToWorld (%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
 	}
   ray.SetLen( 1e6f );
-  return RayPickMulti( ray );
+  return RayPickMulti( ray, AcceptedTypes, NotTypes );
 }
 
-vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray )
+vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   // Casts a ray into the scene
   FCollisionQueryParams fcqp( true );
@@ -158,16 +184,7 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray )
       ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
   }
 
-  vector<AGameObject*> objects;
-  for( int i = 0; i < hits.Num(); i++ )
-  {
-    FVector v = hits[i].ImpactPoint;
-    info( FS( "  - Hit result [%s/%s] @ %f %f %f", 
-      *hits[i].GetActor()->GetName(), *hits[i].GetComponent()->GetName(), v.X, v.Y, v.Z ) );
-    if( AGameObject *go = Cast< AGameObject >( hits[i].GetActor() ) )
-      objects += go;
-  }
-  return objects;
+  return Filter( hits, AcceptedTypes, NotTypes );
 }
 
 vector<Ray> APlayerControl::GetFrustumRays( const FBox2DU& box )
@@ -189,21 +206,15 @@ vector<Ray> APlayerControl::GetFrustumRays( const FBox2DU& box )
   return rays;
 }
 
-vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box )
-{
-  return FrustumPick( box, {}, {} );
-}
-
 // If InTypes is EMPTY, then it picks any type
 vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, 
-  set< TSubclassOf<AGameObject> > AcceptedTypes,
-  set< TSubclassOf<AGameObject> > NotTypes )
+  SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   // A 0 area box picks with a ray from TL corner of the click.
   if( !box.GetArea() ) {
     // use a ray pick
     //info( FS( "Point %f %f using a ray", box.TL().X, box.TL().Y ) );
-    return RayPickMulti( box.TL() );
+    return RayPickMulti( box.TL(), AcceptedTypes, NotTypes );
   }
 
   vector<Ray> rays = GetFrustumRays( box );
@@ -258,13 +269,8 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box,
   return os;
 }
 
-vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape shape )
-{
-  return ShapePickExcept( pos, shape, {}, {} );
-} 
-
-vector<AGameObject*> APlayerControl::ShapePickExcept( FVector pos, FCollisionShape shape,
-  set< TSubclassOf<AGameObject> > AcceptedTypes, set< TSubclassOf<AGameObject> > NotTypes )
+vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape shape,
+  SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   // We use the base shapepick, then filter
   FCollisionQueryParams fcqp;

@@ -69,6 +69,7 @@ void AUnit::AddItem( UClass* ItemClass )
   UItemAction* action = Construct<UItemAction>( ItemClass );
   action->AssociatedUnit = this;
   action->AssociatedUnitName = GetName();
+
   CountersItems.Push( action );
   
 }
@@ -119,6 +120,12 @@ bool AUnit::UseItem( int index )
   itemAction->Quantity--;
   if( itemAction->Quantity <= 0 )
     CountersItems.RemoveAt( index );
+  else
+  {
+    // Reset the item counter
+    itemAction->cooldown.Reset();
+    CooldownItems[ itemAction->ItemClass ] = 0.f;
+  }
 
   Game->hud->ui->dirty = 1;
   return 1;
@@ -127,12 +134,22 @@ bool AUnit::UseItem( int index )
 void AUnit::MoveCounters( float t )
 {
   AGameObject::MoveCounters( t );
-
-  for( int i = 0; i < CountersAbility.Num(); i++ )
+  for( int i = (int)CountersAbility.Num() - 1; i >= 0; i-- )
     CountersAbility[i]->Step( t );
+  for( map< TSubclassOf< AItem >, float >::iterator iter = CooldownItems.begin(); iter != CooldownItems.end(); ++iter )
+    iter->second += t;
+  for( int i = (int)CountersItems.Num() - 1; i >= 0; i-- ) {
+    CountersItems[i]->cooldown.Set( CooldownItems[ CountersItems[i]->ItemClass ] );
+  }
+}
 
+void AUnit::OnUnselected()
+{
+  AGameObject::OnUnselected();
+  for( int i = 0; i < CountersAbility.Num(); i++ )
+    CountersAbility[i]->clock = 0;
   for( int i = 0; i < CountersItems.Num(); i++ )
-    CountersItems[i]->Step( t );
+    CountersItems[i]->clock = 0;
 }
 
 void AUnit::Move( float t )
@@ -149,7 +166,7 @@ void AUnit::Move( float t )
 
     if( FollowTarget )
     {
-      MoveWithinDistanceOf( FollowTarget,  FollowTarget->Radius() );
+      MoveWithinDistanceOf( FollowTarget, FollowTarget->Radius() );
     }
     else if( AttackTarget )
     {

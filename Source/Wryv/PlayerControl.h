@@ -12,6 +12,8 @@ using namespace std;
 
 class AGameObject;
 
+typedef set< TSubclassOf<AGameObject> > /* as simply */ SetAGameObject;
+
 UCLASS()
 class WRYV_API APlayerControl : public APlayerController
 {
@@ -24,6 +26,12 @@ public:
   virtual void SetupInputComponent() override;
 	virtual void SetupInactiveStateInputComponent(UInputComponent* InComponent) override;
   
+  // Filters single Actor to exclude if NOT in acceptable types, and also
+  // exclude if IS of unacceptable types.
+  AGameObject* Filter( AActor* actor, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
+  // Filters a group of actors to see if they meet selection criteria
+  vector<AGameObject*> Filter( const TArray<FHitResult>& hits, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
+
   // Traces against particular actor component from a screen pos
   FHitResult TraceAgainst( UPrimitiveComponent* component, const FVector2D& ScreenPosition );
   // Gets the ray-hit location on a particular actor (used for ground plane/landscape)
@@ -32,22 +40,19 @@ public:
   FHitResult TraceAgainst( AActor* actor, const Ray& ray );
 
   // 2Space, usually used for impact point
-  FHitResult RayPickSingle( const FVector2D& ScreenPosition );
-  FHitResult RayPickSingle( const Ray& ray );
+  FHitResult RayPickSingle( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
+  FHitResult RayPickSingle( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
   // Gets all objects that are traced thru by vector
-  vector<AGameObject*> RayPickMulti( const FVector2D& ScreenPosition );
-  vector<AGameObject*> RayPickMulti( const Ray& ray );
+  vector<AGameObject*> RayPickMulti( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
+  vector<AGameObject*> RayPickMulti( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
 
   vector<Ray> GetFrustumRays( const FBox2DU& box );
-  vector<AGameObject*> FrustumPick( const FBox2DU& box );
-  vector<AGameObject*> FrustumPick( const FBox2DU& box, 
-    set< TSubclassOf<AGameObject> > AcceptedTypes, set< TSubclassOf<AGameObject> > NotTypes );
+  vector<AGameObject*> FrustumPick( const FBox2DU& box, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
 
   // 3Space
-  vector<AGameObject*> ShapePick( FVector pos, FCollisionShape shape );
   // The results are ordered by RADIAL DISTANCE to the src cylinder
-  vector<AGameObject*> ShapePickExcept( FVector pos, FCollisionShape shape,
-    set< TSubclassOf<AGameObject> > AcceptedTypes, set< TSubclassOf<AGameObject> > NotTypes );
+  vector<AGameObject*> ShapePick( FVector pos, FCollisionShape shape,
+    SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
 
   // Checks if the gameobject collides with any type listed. Used for pathfinder construction.
   // This uses the native Collision Profile of the PRIMITIVE used to query.

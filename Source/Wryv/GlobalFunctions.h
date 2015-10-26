@@ -432,6 +432,7 @@ template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
   }
   return src;
 }
+
 template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& forbidden )
 {
   // Filter objects from the set
@@ -440,64 +441,6 @@ template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& fo
     if( in( forbidden, src[i] ) ) // then must remove
       src.erase( src.begin() + i );
   }
-  return src;
-}
-
-template <typename T> set<T*> operator|( 
-  set<T*> src, function< bool (T*) > doFilterFunction )
-{
-  // Filter objects from the set
-  for( set<T*>::iterator it = src.begin(); it != src.end(); )
-  {
-    if( doFilterFunction( *it ) ) // then must remove
-    {
-      set<T*>::iterator it2 = it;
-      ++it2;
-      src.erase( it );
-      it = it2;
-    }
-    else ++it;
-  }
-  return src;
-}
-
-template <typename T> vector<T*> operator|( 
-  vector<T*> src, function< bool (T*) > doFilterFunction )
-{
-  // Filter objects from the set
-  for( int i = src.size() - 1; i >= 0; i-- )
-  {
-    if( doFilterFunction( *it ) ) // then must remove
-      src.erase( src.begin() + i );
-  }
-  return src;
-}
-
-template <typename T> set<T*>& operator|=( 
-  set<T*>& src, function< bool (T*) > doFilterFunction )
-{
-  for( set<T*>::iterator it = src.begin(); it != src.end(); )
-  {
-    if( doFilterFunction( *it ) ) // then must remove
-    {
-      it = src.erase( it );       // erase prev & advance the iterator
-    }
-    else ++it;
-  }
-  return src;
-}
-
-template <typename T> vector<T*>& operator|=( 
-  vector<T*>& src, function< bool (T*) > doFilterFunction )
-{
-  for( int i = src.size() - 1; i >= 0; i-- )
-  {
-    if( doFilterFunction( src[i] ) ) // then must remove
-    {
-      src.erase( src.begin() + i );
-    }
-  }
-
   return src;
 }
 
@@ -607,7 +550,7 @@ inline FVector Rand( FVector min, FVector max )
   return min + FMath::FRand()*( max - min );
 }
 
-extern FVector UnitX, UnitY, UnitZ;
+extern FVector Zero, UnitX, UnitY, UnitZ;
 
 inline FString GetEnumName( TCHAR* enumType, int enumValue )
 {

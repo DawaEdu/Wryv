@@ -212,6 +212,16 @@ bool AGameObject::isAttackTargetWithinRange()
 {
   if( AttackTarget )
   {
+    // To be within range for a goldmine means something different than
+    // other object types.
+    if( AGoldmine* goldmine = Cast<AGoldmine>( AttackTarget ) )
+    {
+      // For the goldmine, must be within AttackRange of the entrypoint (gold is @ end of hall).
+      FVector p = goldmine->GetEntryPoint();
+      p.Z = Pos.Z; // Ground Z with the harvester
+      return FVector::Dist( Pos, p ) <= Stats.AttackRange;
+    }
+
     return outerDistance( AttackTarget ) <= Stats.AttackRange;
   }
 
@@ -342,16 +352,20 @@ void AGameObject::FlushPosition()
 
 // Other gameobject is too close, so a repulsion force is added
 // proportional with formula around ln( a - x ) like formula
+// Repel force vector is from GO to THIS (pushing force)
+// THIS <---- GO. We query other objects for their repellation forces on me.
 FVector AGameObject::Repel( AGameObject* go )
 {
   float r = 1.f;
+
+  // The attack target has no repellation forces for the attacker.
+  // This is so that melee attackers get close enough to target to hit.
   if( AttackTarget == go )  // For attack target, use both object's hitBounds for the radius
-    r = hitBounds->GetScaledCapsuleHalfHeight()   +   go->hitBounds->GetScaledCapsuleHalfHeight();
+    //r = hitBounds->GetScaledCapsuleHalfHeight()   +   go->hitBounds->GetScaledCapsuleHalfHeight();
+    return Zero; // No repulsion forces from the attack target.
   else // use the repulsionBounds
     r = repulsionBounds->GetScaledSphereRadius()   +   go->repulsionBounds->GetScaledSphereRadius();
 
-  //
-  // ME <---- GO
   FVector repel = Pos - go->Pos;
   float repelMag = repel.Size();
   if( repelMag )
@@ -363,9 +377,9 @@ FVector AGameObject::Repel( AGameObject* go )
     if( repelMag > 0   &&   repelMag < 1.f + r )
     {
       // draw a repulsion vector from the OTHER object.
-      Game->flycam->DrawDebug( Pos, Pos + repelDir*repelMag, 5.f, FLinearColor::Red, 0.f );
-      return RepelMultiplier * SpeedFraction() * 
-        log( 1.f + r - repelMag )/log( 1.f + r ) * repelDir;
+      //Game->flycam->DrawDebug( Pos, Pos + repelDir*repelMag, 5.f, FLinearColor::Red, 0.f );
+      FVector repelVector = SpeedFraction() * log( 1.f + r - repelMag )/log( 1.f + r ) * repelDir;
+      return repelVector;
     }
     else
     {
@@ -446,9 +460,7 @@ FVector AGameObject::GetRepulsionForcesFromOverlappedUnits()
 
   // If there is no attack target, don't use repel forces.
   for( AGameObject * go : RepulsionOverlaps )
-  {
     forces += Repel( go ); // gather repelling force from other object
-  }
   
   // Add in repulsion forces to the position.
   return forces;
@@ -467,8 +479,15 @@ void AGameObject::Walk( float t )
     Dir = ToDest / Len; // normalize
     if( !Stats.SpeedMax )  error( FS("%s had 0 speed", *GetName()) );
     
+    // I am maxing out the speed here.
     Speed = Stats.SpeedMax;
-    Vel = Dir*Speed;
+
+    // The direction of travel is modified by repulsion forces
+    FVector repulsionForces = GetRepulsionForcesFromOverlappedUnits();
+    FVector modDir = Dir + RepelMultiplier*repulsionForces;
+    modDir.Normalize();
+    Vel = modDir*Speed;
+    Game->flycam->DrawDebug( Pos, Pos + Vel, 5.f, FLinearColor::Red, 0.f );
     FVector travel = Vel*t;
 
     // If travel exceeds destination, then jump to dest,
@@ -498,9 +517,6 @@ void AGameObject::Walk( float t )
     {
       LOG( "object %s has left the ground plane", *Stats.Name );
     }
-
-    FVector repulsionForces = GetRepulsionForcesFromOverlappedUnits();
-    Pos += repulsionForces;
   }
 }
 
@@ -520,7 +536,11 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   // Depending on the target type, the point to move to may be the 'roid ro some other special point on the model
   FVector targetPos = target->Pos;
   if( AGoldmine* goldmine = Cast<AGoldmine>( target ) )
-    targetPos = goldmine->EntryPoint->GetComponentLocation();
+  {
+    targetPos = goldmine->GetEntryPoint();
+    targetPos.Z = Pos.Z; // Ground the Z value so that difference in Z
+    // doesn't mean the unit isn't at the right spot
+  }
 
   FVector targetToMe = Pos - targetPos;
   float len = targetToMe.Size();
@@ -530,13 +550,13 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   {
     // Within distance, so face
     // You are within attack range, so face the attack target
-    Face( target->Pos );
+    Face( targetPos );
   }
   else
   {
     targetToMe /= len;
     // set the fallback distance to being size of bounding radius of other unit
-    SetDestination( target->Pos + targetToMe*(fallbackDistance*.997f), 0 );
+    SetDestination( targetPos + targetToMe*(fallbackDistance*.997f), 0 );
   }
 }
 
@@ -1055,6 +1075,11 @@ void AGameObject::OnSelected()
   if( Greets.Num() )  PlaySound( Greets[ randInt( Greets.Num() ) ].Sound );
 }
 
+void AGameObject::OnUnselected()
+{
+  
+}
+
 void AGameObject::SetMaterialColors( FName parameterName, FLinearColor color )
 {
   // Grab all meshes with material parameters & set color of each
@@ -1107,7 +1132,8 @@ void AGameObject::Die()
   // state machine (usually).
 
   // Remove from selection.
-  if( Game->hud ) Game->hud->Unselect( { this } );
+  if( Game->hud   &&   in( Game->hud->Selected, this ) )
+    Game->hud->Unselect( { this } );
 }
 
 void AGameObject::Cleanup()
@@ -1132,7 +1158,7 @@ void AGameObject::BeginDestroy()
   // For odd-time created objects (esp in PIE) they get put into the team without ever actually
   // being played with, so they don't die properly.
   if( team ) {
-    warning( FS( "Unit %s was removed from team in BeginDestroy()", *GetName() ) );
+    //warning( FS( "Unit %s was removed from team in BeginDestroy()", *GetName() ) );
     team->RemoveUnit( this );
   }
 

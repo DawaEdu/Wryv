@@ -10,6 +10,7 @@
 #include "Peasant.h"
 #include "Resource.h"
 #include "Team.h"
+#include "TheHUD.h"
 #include "Townhall.h"
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
@@ -135,9 +136,7 @@ bool Team::Spend( UClass* ClassType )
   }
 
   FUnitsData data = Game->GetData( ClassType );
-  Gold   -= data.GoldCost;
-  Lumber -= data.LumberCost;
-  Stone  -= data.StoneCost;
+  ResourceChange( -data.GoldCost, -data.LumberCost, -data.StoneCost );
   return 1;
 }
 
@@ -145,10 +144,16 @@ bool Team::Refund( UClass* ClassType )
 {
   // Refund cost of ClassType back to team.
   FUnitsData data = Game->GetData( ClassType );
-  Gold   += data.GoldCost;
-  Lumber += data.LumberCost;
-  Stone  += data.StoneCost;
+  ResourceChange( data.GoldCost, data.LumberCost, data.StoneCost );
   return 1;
+}
+
+void Team::ResourceChange( int gold, int lumber, int stone )
+{
+  Gold += gold;
+  Lumber += lumber;
+  Stone += stone;
+  Game->hud->ui->dirty = 1;
 }
 
 // Usage of food by units in the game.

@@ -43,6 +43,9 @@ void AResource::Harvest( APeasant* peasant )
     return;
   }
 
+  // Start jiggling.
+  Jiggle = 1;
+
   UClass* resourceClass = GetClass();
   if( resourceClass->IsChildOf<AGoldmine>() )
     resourceClass = AGoldmine::StaticClass();
@@ -50,7 +53,7 @@ void AResource::Harvest( APeasant* peasant )
     resourceClass = ATree::StaticClass();
   else if( resourceClass->IsChildOf<AStone>() ) 
     resourceClass = AStone::StaticClass();
-  info( FS( "%s is a %s", *GetName(), *resourceClass->GetName() ) );
+  //info( FS( "%s is a %s", *GetName(), *resourceClass->GetName() ) );
   peasant->Mining = resourceClass;
   
   // Use "damage" to determine mined qty

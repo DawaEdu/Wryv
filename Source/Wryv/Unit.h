@@ -31,6 +31,9 @@ public:
   TArray< TSubclassOf< UItemAction > > StartingItems;
   UPROPERTY() TArray< UItemAction* > CountersItems;
   // Items unit is holding in-play.
+  // The cooldown time remaining for item by class type
+  // is stored here, by unit.
+  map< TSubclassOf< AItem >, float > CooldownItems;
 
   // Weapon properties: If attacks send a projectile, set object here.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
@@ -45,8 +48,8 @@ public:
   virtual void BeginPlay() override;
   bool UseAbility( int index );
   bool UseItem( int index );
-
   virtual void MoveCounters( float t ) override;
+  virtual void OnUnselected();
 
   // Function that runs whenever the unit is first clicked on or selected.
   virtual void Move( float t ) override;

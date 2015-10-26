@@ -106,13 +106,14 @@ void ABuilding::LosePeasant( APeasant* peasant )
 void ABuilding::MoveCounters( float t )
 {
   AGameObject::MoveCounters( t );
-  for( int i = 0; i < TrainingAvailable.Num(); i++ )
+  // When moving counters, when a counter expires it gets removed, 
+  for( int i = (int)TrainingAvailable.Num() - 1; i >= 0; i-- )
     TrainingAvailable[i]->Step( t );
-  for( int i = 0; i < CountersUnitsInProgress.Num(); i++ )
+  for( int i = (int)CountersUnitsInProgress.Num() - 1; i >= 0; i-- )
     CountersUnitsInProgress[i]->Step( t );
-  for( int i = 0; i < ResearchesAvailable.Num(); i++ )
+  for( int i = (int)ResearchesAvailable.Num() - 1; i >= 0; i-- )
     ResearchesAvailable[i]->Step( t );
-  for( int i = 0; i < CountersResearchInProgress.Num(); i++ )
+  for( int i = (int)CountersResearchInProgress.Num() - 1; i >= 0; i-- )
     CountersResearchInProgress[i]->Step( t );
 }
 
@@ -190,10 +191,28 @@ bool ABuilding::UseTrain( int index )
   UInProgressUnit* unitInProgress = Construct<UInProgressUnit>( UInProgressUnit::StaticClass() );
   unitInProgress->Set( TrainingAvailable[ index ] );
   CountersUnitsInProgress.Push( unitInProgress );
-
+   
   // Change to UI:
   Game->hud->ui->dirty = 1; // Refresh with selected units
   
+  return 1;
+}
+
+bool ABuilding::CancelTraining( int index )
+{
+  if( index < 0 || index >= CountersUnitsInProgress.Num() )
+  {
+    error( FS( "CancelTraining index %d OOB", index ) );
+    return 0;
+  }
+
+  UInProgressUnit* ipUnit = CountersUnitsInProgress[ index ];
+
+  // refund
+  team->Refund( ipUnit->UnitType );
+  // remove elt
+  CountersUnitsInProgress.RemoveAt( index );
+
   return 1;
 }
 
@@ -222,6 +241,30 @@ bool ABuilding::UseResearch( int index )
   Game->hud->ui->dirty = 1; // Refresh with selected units
   
   return 1;
+}
+
+bool ABuilding::CancelResearch( int index )
+{
+  // Cancels ith research
+  if( index < 0 || index >= CountersResearchInProgress.Num() )
+  {
+    error( FS( "CancelResearch index %d OOB", index ) );
+    return 0;
+  }
+
+  // Removing the elt cancels the research.
+  CountersResearchInProgress.RemoveAt( index );
+
+  return 1;
+}
+
+void ABuilding::OnUnselected()
+{
+  AGameObject::OnUnselected();
+  for( int i = 0; i < CountersUnitsInProgress.Num(); i++ )
+    CountersUnitsInProgress[i]->clock = 0;
+  for( int i = 0; i < CountersResearchInProgress.Num(); i++ )
+    CountersResearchInProgress[i]->clock = 0;
 }
 
 void ABuilding::montageStarted_Implementation( UAnimMontage* Montage )
@@ -266,9 +309,10 @@ void ABuilding::PlaceBuilding( APeasant *p )
     Game->EnqueueCommand( Command( Command::Target, PrimaryPeasant->ID, ID ) );
 }
 
-void ABuilding::ReleaseUnit( TSubclassOf< AUnit > UnitClass )
+void ABuilding::ReleaseUnit( UInProgressUnit* unit )
 {
-  Game->Make< AUnit >( UnitClass, team, GetExitPosition() );
+  Game->Make< AUnit >( unit->UnitType, team, GetExitPosition() );
+  CountersUnitsInProgress.Remove( unit );
 }
 
 void ABuilding::DropBuilders( bool buildingSuccess )

@@ -14,7 +14,7 @@ Clock::Clock( FString name, FVector2D size, UTexture* tex, FLinearColor pieColor
   // Spawn the clock material instance to apply to this widget
   clockMaterial = CreateClockMaterial( ClockColor );
   PieFillFraction = 0.f;
-  DisplayPercentageText = 0;
+  DisplayPercentageText = 1;
   // Keep reference collected copy of material.
   Game->hud->MaterialInstances.Add( clockMaterial );
 }

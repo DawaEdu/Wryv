@@ -25,7 +25,8 @@ public:
   StackPanel( FString name, UTexture* bkg, FLinearColor color );
   virtual ~StackPanel(){}
   
-  // Override base class function, to prevent warning when
+  virtual void Clear();
+    // Override base class function, to prevent warning when
   // texture not provided
   virtual void render( FVector2D offset ) override;
 

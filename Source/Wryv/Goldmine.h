@@ -11,6 +11,9 @@ public:
   //AGoldmine(const FObjectInitializer& PCIP);
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USceneComponent* EntryPoint;
 
+  virtual void PostInitializeComponents() override;
+  FVector GetEntryPoint();
+
 };
 
 

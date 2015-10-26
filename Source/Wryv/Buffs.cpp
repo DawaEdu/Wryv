@@ -16,7 +16,6 @@ void Buffs::Set( AGameObject* go )
   Clear();
   if( !go ) return;
   
-  info( FS( "Buffs::Set( %s ) has %d traits", *go->GetName(), go->BonusTraits.size() ) );
   for( int i = 0; i < go->BonusTraits.size(); i++ )
   {
     UTexture* tex = go->BonusTraits[i].BonusStats.Portrait;

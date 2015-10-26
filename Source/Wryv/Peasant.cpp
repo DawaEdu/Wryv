@@ -242,11 +242,13 @@ AResource* APeasant::FindAndTargetNewResource( FVector fromPos,
   set< TSubclassOf<AGameObject> > acceptable;
   for( TSubclassOf<AResource> r : types )
     acceptable.insert( r );
-  vector<AGameObject*> objects = Game->pc->ShapePickExcept( fromPos,
-    FCollisionShape::MakeCapsule( searchRadius, Height()/2.f ), acceptable, {} );
+    
+  FCollisionShape selShape = FCollisionShape::MakeCapsule( searchRadius, Height()/2.f );
+  vector<AGameObject*> objects = Game->pc->ShapePick( fromPos,
+    selShape, acceptable, {} );
 
   // From return results (which are in order of distance), refilter based on priority ordering in types
-  for( int i = 0; i < types.size(); i++ )
+  for( int i = 0; i < types.size(); i++ ) // Priority order by type. eg [Tree,Stone,Gold].
   {
     for( int j = 0; j < objects.size(); j++ )
     {
@@ -275,7 +277,13 @@ AResource* APeasant::FindAndTargetNewResource( FVector fromPos,
 
 void APeasant::AttackCycle()
 {
-  if( AResource *MiningTarget = Cast<AResource>( AttackTarget ) )
+  // Goldmines require the peasant to be inside, while other resources have
+  // the peasant outside
+  if( AGoldmine *goldmine = Cast<AGoldmine>( AttackTarget ) )
+  {
+    goldmine->Harvest( this );
+  }
+  else if( AResource *MiningTarget = Cast<AResource>( AttackTarget ) )
   {
     //LOG( "%s mines from %s", *Name, *AttackTarget->Name );
     // can only progress mining if sufficiently close.
@@ -283,8 +291,8 @@ void APeasant::AttackCycle()
     // The attackRange of a peasant is used to get the resource gathering range
     if( outerDistance( MiningTarget )   <=   Stats.AttackRange )
     {
+      // Close enough to harvest tree/stone
       StopMoving();      // Can stop moving, as we mine the resource
-      MiningTarget->Jiggle = 1; // This jiggles the animation when the attack cycle
       MiningTarget->Harvest( this );
     }
   }
@@ -470,10 +478,10 @@ void APeasant::AddMined( TSubclassOf<AResource> resourceType, float resAmount )
 
 void APeasant::MoveCounters( float t )
 {
-  for( UInProgressBuilding* ipb : CountersBuildingsQueue )
-    ipb->Step( t );
-  for( UBuildAction* build : Buildables )
-    build->Step( t );
+  for( int i = (int)CountersBuildingsQueue.Num() - 1; i >= 0; i-- )
+    CountersBuildingsQueue[i]->Step( t );
+  for( int i = (int)Buildables.Num() - 1; i >= 0; i-- )
+    Buildables[i]->Step( t );
 }
 
 void APeasant::Move( float t )

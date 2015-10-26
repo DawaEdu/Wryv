@@ -29,7 +29,7 @@ class WRYV_API ABuilding : public AGameObject
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float ExplosiveForce;
 
   // Food this structure supplies (Farms + townhall)
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) int32 FoodProvided;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  int32 FoodProvided;
   
   // List of types this building can train.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
@@ -62,13 +62,14 @@ class WRYV_API ABuilding : public AGameObject
   bool CancelTraining( int index );
   bool UseResearch( int index );
   bool CancelResearch( int index );
-  
+  virtual void OnUnselected();
+
   // Tell you if building can be placed @ Pos
   UFUNCTION(BlueprintNativeEvent, Category = Collision)
   void montageStarted( UAnimMontage* Montage );
   bool CanBePlaced();
   void PlaceBuilding( APeasant *p );
-  void ReleaseUnit( TSubclassOf< AUnit > UnitClass );
+  void ReleaseUnit( UInProgressUnit* unit );
   void DropBuilders( bool buildingSuccess );
   void OnBuildingComplete();
   FVector GetExitPosition() { return ExitPosition->GetComponentLocation(); }

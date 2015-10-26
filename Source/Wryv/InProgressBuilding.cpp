@@ -52,3 +52,4 @@ void UInProgressBuilding::Step( float t )
   // if the peasant leaves it.
   cooldown.Time = Building->TimeBuilding;
 }
+

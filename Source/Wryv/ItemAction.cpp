@@ -51,7 +51,6 @@ void UItemAction::Step( float t )
 
 void UItemAction::PopulateClock( Clock* inClock, int i )
 {
-  //info( FS( "Before populating clock
   UAction::PopulateClock( inClock, i );
 
   clock->OnHover = [this](FVector2D mouse) -> EventCode
