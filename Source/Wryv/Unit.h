@@ -5,12 +5,14 @@
 using namespace std;
 
 #include "GameObject.h"
+#include "ItemActionClassAndQuantity.h"
 #include "Unit.generated.h"
 
 class AItem;
 
 class UItemAction;
 class UUnitAction;
+
 
 UCLASS()
 class WRYV_API AUnit : public AGameObject
@@ -28,13 +30,12 @@ public:
 
   // The items the unit starts carrying
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
-  TArray< TSubclassOf< UItemAction > > StartingItems;
+  TArray< FItemActionClassAndQuantity > StartingItems;
   UPROPERTY() TArray< UItemAction* > CountersItems;
   // Items unit is holding in-play.
   // The cooldown time remaining for item by class type
   // is stored here, by unit.
-  map< TSubclassOf< AItem >, float > CooldownItems;
-
+  
   // Weapon properties: If attacks send a projectile, set object here.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
   TSubclassOf< AProjectile > ReleasedProjectileWeapon;
@@ -43,7 +44,7 @@ public:
   
   //AUnit(const FObjectInitializer& PCIP);
   virtual void InitIcons();
-  void AddItem( UClass* ItemClass );
+  void AddItem( FItemActionClassAndQuantity itemQuantity );
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
   bool UseAbility( int index );
@@ -51,8 +52,6 @@ public:
   virtual void MoveCounters( float t ) override;
   virtual void OnUnselected();
 
-  // Function that runs whenever the unit is first clicked on or selected.
-  virtual void Move( float t ) override;
   void Shoot();
 
 };

@@ -1,4 +1,5 @@
 #include "Wryv.h"
+
 #include "ITextWidget.h"
 
 ITextWidget::ITextWidget( FString name, UTexture* pic, FString ftext, Alignment textAlignment, 
@@ -6,7 +7,7 @@ ITextWidget::ITextWidget( FString name, UTexture* pic, FString ftext, Alignment 
 {
   if( pic ) Name += pic->GetName();
   SetName( Name );
-  Text = new TextWidget( ftext, font, scale );
+  Text = new TextWidget( ftext, Alignment::TopLeft, font, scale );
   Text->Align = textAlignment;
   Add( Text );
   Pad = FVector2D( 8,8 );
@@ -20,7 +21,7 @@ ITextWidget::ITextWidget( FString name, UTexture* pic, FVector2D size, FString f
   Name = name;
   if( pic ) Name += pic->GetName();
   SetName( Name );
-  Text = new TextWidget( ftext, font, scale );
+  Text = new TextWidget( ftext, Alignment::TopLeft, font, scale );
   Text->Align = textAlignment;
   Add( Text );
   Pad = FVector2D( 8,8 );

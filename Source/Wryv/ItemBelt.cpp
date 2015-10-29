@@ -9,6 +9,8 @@
 #include "Unit.h"
 #include "WryvGameInstance.h"
 
+#include "ItemAction.h"
+
 ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) :
   SlotPalette( "itembelt", bkg, rows, cols, entrySize, pad )
 {
@@ -26,6 +28,14 @@ ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVec
   };
 
   AbsorbsMouseUp = 1; // Down clicks on this elt won't fire mouse up events
+
+  // Add additional text for qty to each clock
+  for( int i = 0; i < GetNumChildren(); i++ )
+  {
+    TextWidget* qty = new TextWidget( "1" );
+    qty->Align = Alignment::BottomRight;
+    GetChild(i)->Add( qty );
+  }
 }
 
 void ItemBelt::Set( vector<AGameObject*> objects )
@@ -42,29 +52,17 @@ void ItemBelt::Set( vector<AGameObject*> objects )
     {
       // repopulate the # grid slots according to # items unit has
       // Populate the toolbelt, etc
-      if( unit->CountersItems.Num() > children.size() )
+      if( unit->CountersItems.Num() > GetNumChildren() )
       {
         error( FS( "Unit %s has %d items, but the itembelt maxes out @ %d items",
           *unit->GetName(), unit->CountersItems.Num(), GetNumActiveSlots() ) );
         Resize( 1, unit->CountersItems.Num() );
       }
     
-      // Correct associated unit with the Counters.
-      for( int i = 0; i < unit->CountersItems.Num(); i++ )
-      {
-        //info( FS( "initial: %s/%s",
-        //  *unit->CountersItems[i]->AssociatedUnit->GetName(), 
-        //  *unit->CountersItems[i]->AssociatedUnitName ) );
-        unit->CountersItems[i]->AssociatedUnit = unit;
-        unit->CountersItems[i]->AssociatedUnitName = unit->GetName();
-        //info( FS( "After correcting AssociatedUnit: %s/%s",
-        //  *unit->CountersItems[i]->AssociatedUnit->GetName(), 
-        //  *unit->CountersItems[i]->AssociatedUnitName ) );
-      }
-    
       Show();
       SetNumSlots( 1, unit->CountersItems.Num() );
       Populate<UItemAction>( unit->CountersItems, 0 );
+      
     }
     else if( ABuilding* building = Cast<ABuilding>( go ) )
     { 

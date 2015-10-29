@@ -46,12 +46,20 @@ void Clock::SetFillFraction( float fraction )
 {
   PieFillFraction = fraction;
   dirty = 1;
+  DisplayPercentageText = 1; // Turns on text display %
 }
 
 void Clock::SetFillFraction( float fraction, Alignment textAlign )
 {
   Text->Align = textAlign;
   SetFillFraction( fraction );
+}
+
+void Clock::SetText( FString text, Alignment textAlignment )
+{
+  Text->Set( text );
+  Text->Align = textAlignment;
+  DisplayPercentageText = 0; // Turns off text %
 }
 
 void Clock::render( FVector2D offset )
@@ -74,7 +82,7 @@ void Clock::render( FVector2D offset )
     {
       clockMaterial->SetScalarParameterValue( FName( "Fraction" ), PieFillFraction );
       if( DisplayPercentageText )
-        SetText( FS( "%.0f%%", PieFillFraction*100.f ) );
+        ITextWidget::SetText( FS( "%.0f%%", PieFillFraction*100.f ) );
     }
     else
       error( "The MID clock material became invalid, couldn't set parameter" );

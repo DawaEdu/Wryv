@@ -49,7 +49,7 @@ void SidePanel::Set( vector<AGameObject*> objects )
 
 void SidePanel::Restack()
 {
-  children.clear();
+  ClearChildren();
 
   StackBottom( Portraits, HFull );
   StackBottom( Stats, HFull );

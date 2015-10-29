@@ -50,7 +50,7 @@ void BuildQueue::Set( vector<AGameObject*> objects )
       for( int i = 0; i < building->CountersUnitsInProgress.Num(); i++ )
       {
         UInProgressUnit* inProgress = building->CountersUnitsInProgress[i];
-        Clock* clock = (Clock*)children[i];
+        Clock* clock = (Clock*)GetChild(i);
         inProgress->PopulateClock( clock, i );
       }
 
@@ -59,7 +59,7 @@ void BuildQueue::Set( vector<AGameObject*> objects )
       for( int i = 0; i < building->CountersResearchInProgress.Num(); i++ )
       {
         UInProgressResearch* research = building->CountersResearchInProgress[i];
-        Clock* clock = (Clock*)children[i + j];
+        Clock* clock = (Clock*)GetChild(i + j);
         research->PopulateClock( clock, i + j );
       }
     }
@@ -68,7 +68,7 @@ void BuildQueue::Set( vector<AGameObject*> objects )
       for( int i = 0; i < peasant->CountersBuildingsQueue.Num(); i++ )
       {
         UInProgressBuilding* buildingInProgress = peasant->CountersBuildingsQueue[i];
-        Clock* clock = (Clock*)children[i];
+        Clock* clock = (Clock*)GetChild(i);
         buildingInProgress->PopulateClock( clock, i );
       }
     }

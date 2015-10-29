@@ -60,7 +60,7 @@ AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows,
   Actions = iActions;
   if( GetNumActiveSlots() )
   {
-    buildButton = GetClock( GetNumActiveSlots() - 1 );
+    buildButton = (Clock*)GetChild( GetNumActiveSlots() - 1 );
     buildButton->Tex = BuildButtonTexture;
     buildButton->OnMouseDownLeft = [this]( FVector2D mouse ) -> EventCode
     {
@@ -118,7 +118,6 @@ void AbilitiesPanel::Set( vector<AGameObject*> objects )
       }
     }
   }
-
 }
 
 
@@ -145,9 +144,9 @@ void BuildPanel::Set( vector<AGameObject*> objects )
     for( int i = 0; i < GetNumActiveSlots(); i++ )
     {
       // Turn off the function object, jsut in case
-      GetClock(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
+      GetChild(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
       // hide slot 
-      GetClock(i)->Hide();
+      GetChild(i)->Hide();
     }
   }
   else if( ABuilding* building = Cast<ABuilding>( go ) )

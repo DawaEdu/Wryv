@@ -27,8 +27,16 @@ void AItem::Hit( AGameObject* other )
   // Apply the powerup to the otheractor
   if( AUnit *unit = Cast<AUnit>( other ) )
   {
-    LOG( "%s picked up %dx%s", *unit->Stats.Name, Quantity, *Stats.Name );
-    unit->AddItem( ButtonClass );
+    if( !ItemActionClassAndQuantity.ItemActionClass )
+    {
+      error( FS( "ItemActionClassAndQuantity not set" ) );
+      return;
+    }
+
+    LOG( "%s picked up %dx%s, action=%s", *unit->Stats.Name,
+      ItemActionClassAndQuantity.Quantity, *Stats.Name,
+      *ItemActionClassAndQuantity.ItemActionClass->GetName() );
+    unit->AddItem( ItemActionClassAndQuantity );
     Die();
     Cleanup();
   }

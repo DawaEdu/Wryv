@@ -255,9 +255,10 @@ template <typename T> bool pop_back( vector<T>& v, int eltNumber )
   return 0;
 }
 
-template <typename T> int IndexOfIsA( TArray<T*>& tarray, UClass* uclass )
+// Returns -1 if can't find an index which is a
+template <typename T> int GetIndexWhichIsA( TArray<T*>& tarray, UClass* uclass )
 {
-  static_assert( is_base_of< UObject, T >::value, "IndexOfIsA<T>: T must derive from UObject" );
+  static_assert( is_base_of< UObject, T >::value, "GetIndexWhichIsA<T>: T must derive from UObject" );
   for( int i = 0; i < tarray.Num(); i++ )
     if( tarray[i]->IsA( uclass ) )
       return i;
@@ -615,7 +616,7 @@ template <typename T> T* Construct( const FStringClassReference& scr )
 
 template <typename T> T* Construct( UClass* uclass )
 {
-  T* object = NewObject<T>( GetTransientPackage(), uclass, FName( *uclass->GetName() ) );
+  T* object = NewObject<T>( GetTransientPackage(), uclass );
   return object;
 }
 

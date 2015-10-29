@@ -29,6 +29,7 @@ struct WRYV_API FCooldownCounter
     if( Time > TotalTime )
       Time = TotalTime; }
   void Reset() { Time = 0.f; }
+  void Finish() { Time = TotalTime; }
   void Step( float t ) {
     Time += t;
 

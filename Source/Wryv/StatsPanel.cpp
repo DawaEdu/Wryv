@@ -44,7 +44,7 @@ void StatsPanel::Blank()
 
 void StatsPanel::Restack()
 {
-  children.clear();
+  ClearChildren();
   Add( unitName );
   StackBottom( hpBar, HFull );
   StackBottom( hpText, HCenter );

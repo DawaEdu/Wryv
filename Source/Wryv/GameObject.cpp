@@ -58,6 +58,7 @@ AGameObject::AGameObject( const FObjectInitializer& PCIP )
   hitBounds->AttachTo( DummyRoot );
   repulsionBounds = PCIP.CreateDefaultSubobject<USphereComponent>( this, "RepulsionVolumex22" );
   repulsionBounds->AttachTo( DummyRoot );
+  Grounds = 1;
 
 }
 
@@ -77,12 +78,10 @@ void AGameObject::PostInitializeComponents()
 
     repulsionBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactBegin );
     repulsionBounds->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactEnd );
-    Init = 1;
   }
   else
   {
     error( FS( "RootComponent wasn't set in PostInitializeComponents()" ) );
-    Init = 0;
   }
 
   UpdateStats( 0.f );
@@ -101,7 +100,6 @@ void AGameObject::BeginPlay()
   //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *Name );
   Team* newTeam = Game->gm->teams[ Stats.TeamId ];
   SetTeam( newTeam );
-
   ID = Game->NextId();
   InitIcons();
 }
@@ -401,12 +399,11 @@ void AGameObject::OnHitContactBegin_Implementation( AActor* OtherActor,
     return;
   }
 
-  AGameObject* THIS = Cast<AGameObject>( this );
   AGameObject* THAT = Cast<AGameObject>( OtherActor );
-  if( THIS && THAT )
+  if( THAT )
   {
     // Both were gameobjects
-    THIS->Hit( THAT );
+    Hit( THAT );
     HitOverlaps += THAT; // Retain collection of objects i'm overlapping with
   }
   else
@@ -487,7 +484,7 @@ void AGameObject::Walk( float t )
     FVector modDir = Dir + RepelMultiplier*repulsionForces;
     modDir.Normalize();
     Vel = modDir*Speed;
-    Game->flycam->DrawDebug( Pos, Pos + Vel, 5.f, FLinearColor::Red, 0.f );
+    //Game->flycam->DrawDebug( Pos, Pos + Vel, 5.f, FLinearColor::Red, 0.f );
     FVector travel = Vel*t;
 
     // If travel exceeds destination, then jump to dest,
@@ -498,24 +495,20 @@ void AGameObject::Walk( float t )
       Pos = Dest; // we are @ destination.
       travel = ToDest; // This is the displacement we actually moved.
       Speed = 0;
-      Vel = FVector( 0, 0, 0 );
+      Vel = Zero;
     }
     else
     {
       Pos += travel;
+      if( Grounds )
+      {
+        FVector newPos = Pos + UnitZ * 10.f;
+        // Travel in direction plus some amount straight up.
+        // The straight up amount ensures that the unit doesn't sink underground
+        if( Game->flycam->SetOnGround( newPos ) )  Pos = newPos;
+        else  error( FS( "%s Object was trying to leave the ground plane.", *GetName() ) );
+      }
       SetRot( Dir.Rotation() );
-    }
-
-    // Push UP from the ground plane, using the bounds on the actor.
-    FVector AboveGround = Pos;
-    AboveGround.Z += 20.f;
-    if( Game->flycam->SetOnGround( AboveGround ) )
-    {
-      Pos = AboveGround;
-    }
-    else
-    {
-      LOG( "object %s has left the ground plane", *Stats.Name );
     }
   }
 }
@@ -531,8 +524,14 @@ void AGameObject::Face( FVector point )
 }
 
 // Stand outside target within `distance` units
-void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDistance )
+void AGameObject::RecomputePathTo( AGameObject* target, float fallbackDistance )
 {
+  if( !target )
+  {
+    warning( FS( "%s has a NULL AttackTarget", *GetName() ) );
+    return;
+  }
+
   // Depending on the target type, the point to move to may be the 'roid ro some other special point on the model
   FVector targetPos = target->Pos;
   if( AGoldmine* goldmine = Cast<AGoldmine>( target ) )
@@ -556,7 +555,7 @@ void AGameObject::MoveWithinDistanceOf( AGameObject* target, float fallbackDista
   {
     targetToMe /= len;
     // set the fallback distance to being size of bounding radius of other unit
-    SetDestination( targetPos + targetToMe*(fallbackDistance*.997f), 0 );
+    SetDestination( targetPos + targetToMe*(fallbackDistance*.997f) );
   }
 }
 
@@ -660,26 +659,33 @@ void AGameObject::MoveCounters( float t )
   // MoveCounters in derived Building/Unit/CombatUnit
 }
 
-void AGameObject::Move( float t )
+// Recomputes the path from Pos to Dest.
+void AGameObject::RecomputePath()
 {
-  if( !Init )
+  // recompute path
+  if( Stats.SpeedMax )
   {
-    Pos = GetActorLocation();
-    Init = 1;
-  }
-  if( Dead ) {
-    //error( FS( "Dead Unit %s had Move called for it", *Name ) );
-    DeadTime += t;
-    if( DeadTime >= MaxDeadTime )
+    // Prioritize the FollowTarget.
+    if( FollowTarget && AttackTarget )
     {
-      warning( FS( "Dead unit %s was cleaned up", *Stats.Name ) );
-      Cleanup();
+      warning( FS( "%s had both FollowTarget=%s AttackTarget=%s",
+        *Stats.Name, *FollowTarget->Stats.Name, *AttackTarget->Stats.Name ) );
     }
-    return; // Cannot move if dead
+
+    if( FollowTarget )
+    {
+      RecomputePathTo( FollowTarget, Radius() + FollowTarget->Radius() );
+    }
+    else if( AttackTarget )
+    {
+      Face( AttackTarget->Pos ); // May obliterate AttackTarget if rotation causes Hit/Detonate call.
+      RecomputePathTo( AttackTarget, Stats.AttackRange * 0.9f );
+    }
   }
+}
 
-  MoveCounters( t );
-
+void AGameObject::CheckNextCommand()
+{
   // If explicitly asked to DoNextCommand.
   if( IsReadyToRunNextCommand )
   {
@@ -703,19 +709,39 @@ void AGameObject::Move( float t )
     IsReadyToRunNextCommand = 1;
   }
 
-  
+}
+
+void AGameObject::CheckDead( float t )
+{
   if( Hp <= 0   ||   LifeTime >= MaxLifeTime )
   {
     Die();
   }
-  else
+  
+  if( Dead )
   {
-    UpdateStats( t );
-    // Update & Cache Unit's stats this frame, including HP recovery
-    // Call the ai for this object type
-    //ai( t );
-    FlushPosition();
+    //error( FS( "Dead Unit %s had Move called for it", *Name ) );
+    DeadTime += t;
+    if( DeadTime >= MaxDeadTime )
+    {
+      warning( FS( "Dead unit %s was cleaned up", *Stats.Name ) );
+      Cleanup();
+    }
+    return; // Cannot move if dead
   }
+}
+
+void AGameObject::Move( float t )
+{
+  MoveCounters( t );
+  
+  CheckDead( t );
+  CheckNextCommand();
+  
+  UpdateStats( t );
+  RecomputePath(); // Recomputes path towards destination, if applicable
+  Walk( t );   // Walk towards destination
+  FlushPosition();
 }
 
 bool AGameObject::Idling()
@@ -757,13 +783,15 @@ float AGameObject::Radius()
 void AGameObject::GoToGroundPosition( FVector groundPos )
 {
   Stop(); // DropTargets() & clear old Destination waypoints
-  SetDestination( groundPos, 0 );
+  SetDestination( groundPos );
+  AttackReady = 0;  // Do or Do NOT stop to engage enemy units
 }
 
 void AGameObject::AttackGroundPosition( FVector groundPos )
 {
   Stop(); // DropTargets() & clear old Destination waypoints
-  SetDestination( groundPos, 1 );
+  SetDestination( groundPos );
+  AttackReady = 1;  // Do or Do NOT stop to engage enemy units
 }
 
 void AGameObject::Target( AGameObject* target )
@@ -831,45 +859,17 @@ void AGameObject::Attack( AGameObject* go )
   AttackReady = 0; // Do not stop to engage other units
 }
 
-void AGameObject::SetDestination( FVector d, bool attack )
+void AGameObject::CorrectWaypoints()
 {
-  HoldingGround = 0;
-  AttackReady = attack;  // Do or Do NOT stop to engage enemy units
-  ////for( AShape* flag : NavFlags )
-  ////  flag->Destroy();
-  ////NavFlags.clear();
-  
-  //LOG( "%s moving from %f %f %f to %f %f %f", *Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
-  if( !Stats.SpeedMax ) {
-    error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
-    return;
-  }
-
-  // Make sure the destination is grounded
-  Game->flycam->SetOnGround( d );
-  
-  // Find the path, then submit list of Waypoints
-  Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
-  if( !Waypoints.size() )
-  {
-    error( FS( "No waypoints in path from %f %f %f to %f %f %f", Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z ) );
-    Dest = d;
-    return;
-  }
-
   // Fix Waypoints z value so they sit on ground plane
   for( int i = 0; i < Waypoints.size(); i++ )
   {
     if( !Game->flycam->SetOnGround( Waypoints[i] ) ) // Then set on ground.
     {
-      error( FS( "Waypoint %f %f %f couldn't reach ground",
-        Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z ) );
+      error( FS( "Waypoint %f %f %f couldn't reach ground", Waypoints[i].X, Waypoints[i].Y, Waypoints[i].Z ) );
     }
-
   }
 
-  //Game->flycam->ClearViz();
-  
   // Check that the 2nd point isn't more than 90
   // degrees away from the 1st point.
   if( Waypoints.size() >= 3 )
@@ -917,10 +917,43 @@ void AGameObject::SetDestination( FVector d, bool attack )
   pop_front( Waypoints );
 }
 
+bool AGameObject::SetDestination( FVector d )
+{
+  //LOG( "%s moving from %f %f %f to %f %f %f", *Name, Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z );
+  if( !Stats.SpeedMax ) {
+    error( FS( "%s warning: Set unit's destination on unit with SpeedMax=0", *Stats.Name ) );
+    return 0;
+  }
+
+  // Make sure the destination is reachable & grounded
+  if( !Game->flycam->SetOnGround( d ) )
+  {
+    error( FS( "AGameObject::SetDestination(): Point [%f %f %f] was OOB the ground plane", d.X, d.Y, d.Z ) );
+    return 0;
+  }
+  
+  // Find the path, then submit list of Waypoints
+  Waypoints = Game->flycam->pathfinder->findPath( Pos, d );
+
+  // Corrects Waypoint group after setting destination
+  if( !Waypoints.size() )
+  {
+    warning( FS( "No waypoints in path from %f %f %f to %f %f %f", Pos.X, Pos.Y, Pos.Z, d.X, d.Y, d.Z ) );
+    Dest = d;
+    return 1;
+  }
+
+  CorrectWaypoints();
+  return 1;
+}
+
 void AGameObject::StopMoving()
 {
   Waypoints.clear(); // clear the Waypoints
   Dest = Pos; // You are at your destination
+  Speed = 0;
+  Vel = FVector(0.f,0.f,0.f);
+  HoldingGround = 0;
 }
 
 void AGameObject::Stop()

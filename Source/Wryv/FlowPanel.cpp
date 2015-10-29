@@ -26,13 +26,13 @@ void FlowPanel::Reflow()
   // +---+---+---+
   //   0   1   2
   // Set new bounds for container
-  for( int i = 0; i < children.size(); i++ )
+  for( int i = 0; i < GetNumChildren(); i++ )
   {
     int row = i / Cols;
     int col = i % Cols;
     FVector2D pos = Pad/2.f + ( Pad + tileDims ) * FVector2D( col, row );
-    children[i]->Margin = pos;
-    children[i]->Size = tileDims;
+    GetChild(i)->Margin = pos;
+    GetChild(i)->Size = tileDims;
   }
 
   ImageWidget::Reflow();

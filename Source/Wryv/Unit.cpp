@@ -4,7 +4,9 @@
 using namespace std;
 
 #include "Item.h"
+#include "ItemActionClassAndQuantity.h"
 #include "PlayerControl.h"
+#include "Projectile.h"
 #include "TheHUD.h"
 #include "Unit.h"
 #include "Widget.h"
@@ -43,35 +45,36 @@ void AUnit::InitIcons()
 
 }
 
-void AUnit::AddItem( UClass* ItemClass )
+void AUnit::AddItem( FItemActionClassAndQuantity itemAndQuantity )
 {
-  if( !ItemClass )
+  TSubclassOf< UItemAction > itemActionClass = itemAndQuantity.ItemActionClass;
+  if( !itemActionClass )
   {
-    error( FS( "%s::AddItem() ItemClass was null", *GetName() ) );
+    error( FS( "%s found item with ItemQuantity with null Action class", *GetName() ) );
     return;
   }
 
-  int i = IndexOfIsA( CountersItems, ItemClass );
+  int i = GetIndexWhichIsA( CountersItems, itemActionClass );
+  info( FS( "%s's index %d is an %s", *GetName(), i, *itemActionClass->GetName() ) );
   if( i >= 0 )
   {
     // Same class of item, increase qty
-    if( CountersItems[i]->IsA( ItemClass ) )
-    {
-      CountersItems[i]->Quantity++;
-      info( FS( "%s already had a %s, increased qty now have %d",
-        *GetName(), *CountersItems[i]->GetName(), CountersItems[i]->Quantity ) );
-      return;
-    }
+    CountersItems[i]->Quantity++;
+  }
+  else
+  {
+    UItemAction* itemAction = Construct<UItemAction>( itemActionClass );
+    itemAction->AssociatedUnit = this;
+    itemAction->AssociatedUnitName = GetName();
+    // max the cooldown
+    itemAction->cooldown.TotalTime = itemAction->GetCooldownTotalTime();
+    itemAction->cooldown.Finish();
+    CountersItems.Push( itemAction );
   }
 
-  // 
-  info( FS( "Constructing action %s", *ItemClass->GetName() ) );
-  UItemAction* action = Construct<UItemAction>( ItemClass );
-  action->AssociatedUnit = this;
-  action->AssociatedUnitName = GetName();
-
-  CountersItems.Push( action );
-  
+  // Since this gets called in beginplay(), we need to check the HUD is ready
+  if( Game->hud )
+    Game->hud->ui->dirty = 1;
 }
 
 void AUnit::PostInitializeComponents()
@@ -113,7 +116,8 @@ bool AUnit::UseItem( int index )
 
   info( FS( "%s is using item %s", *GetName(), *CountersItems[index]->GetName() ) );
   UItemAction* itemAction = CountersItems[index];
-  BonusTraits.push_back( PowerUpTimeOut( Game->GetData( itemAction->ItemClass ) ) );
+  BonusTraits.push_back( PowerUpTimeOut( 
+    Game->GetData( itemAction->ItemClass ) ) );
 
   // Use the item. qty goes down by 1
   // we don't affect the UI here, only
@@ -124,7 +128,6 @@ bool AUnit::UseItem( int index )
   {
     // Reset the item counter
     itemAction->cooldown.Reset();
-    CooldownItems[ itemAction->ItemClass ] = 0.f;
   }
 
   Game->hud->ui->dirty = 1;
@@ -136,11 +139,8 @@ void AUnit::MoveCounters( float t )
   AGameObject::MoveCounters( t );
   for( int i = (int)CountersAbility.Num() - 1; i >= 0; i-- )
     CountersAbility[i]->Step( t );
-  for( map< TSubclassOf< AItem >, float >::iterator iter = CooldownItems.begin(); iter != CooldownItems.end(); ++iter )
-    iter->second += t;
-  for( int i = (int)CountersItems.Num() - 1; i >= 0; i-- ) {
-    CountersItems[i]->cooldown.Set( CooldownItems[ CountersItems[i]->ItemClass ] );
-  }
+  for( int i = (int)CountersItems.Num() - 1; i >= 0; i-- )
+    CountersItems[i]->Step( t );
 }
 
 void AUnit::OnUnselected()
@@ -150,33 +150,6 @@ void AUnit::OnUnselected()
     CountersAbility[i]->clock = 0;
   for( int i = 0; i < CountersItems.Num(); i++ )
     CountersItems[i]->clock = 0;
-}
-
-void AUnit::Move( float t )
-{
-  // recompute path
-  if( Stats.SpeedMax )
-  {
-    // Prioritize the FollowTarget.
-    if( FollowTarget && AttackTarget )
-    {
-      warning( FS( "%s had both FollowTarget=%s AttackTarget=%s",
-        *Stats.Name, *FollowTarget->Stats.Name, *AttackTarget->Stats.Name ) );
-    }
-
-    if( FollowTarget )
-    {
-      MoveWithinDistanceOf( FollowTarget, FollowTarget->Radius() );
-    }
-    else if( AttackTarget )
-    {
-      Face( AttackTarget->Pos );
-      MoveWithinDistanceOf( AttackTarget, Stats.AttackRange * 0.9f );
-    }
-  }
-
-  Walk( t );   // Walk towards destination
-  AGameObject::Move( t );
 }
 
 void AUnit::AttackCycle()

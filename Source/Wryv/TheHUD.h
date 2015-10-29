@@ -81,9 +81,9 @@ public:
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
 
   // The font used to render the text in the HUD.
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *smallFont;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *mediumFont;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont *largeFont;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* smallFont;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* mediumFont;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* largeFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor EmptyCrosshairColor;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor HitCrosshairColor;
 

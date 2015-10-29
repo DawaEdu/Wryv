@@ -6,7 +6,7 @@
 class UAction;
 class Clock;
 
-// SlotPalette is always populated with Clock* objects.
+// SlotPalette is always populated with generic HotSpot* objects.
 
 class SlotPalette : public ImageWidget
 {
@@ -22,7 +22,6 @@ public:
   void Blank();
   int GetNumActiveSlots() { return Rows*Cols; }
   FVector2D GetSlotPosition( int i );
-  Clock* GetClock( int i );
   FVector2D GetAdjustedSize( FVector2D size );
   void AdjustPosition( int i );
   void Resize( int rows, int cols );
@@ -42,7 +41,8 @@ public:
     for( int i = 0;   i < elts.Num()   &&   clockIndex < GetNumActiveSlots();   i++ )
     {
       clockIndex = startIndex + i; // offsetted element
-      elts[i]->PopulateClock( GetClock( clockIndex ), i );
+      Clock* clock = (Clock*)GetChild(clockIndex);
+      elts[i]->PopulateClock( clock, i );
     }
 
     recomputeSizeToContainChildren();

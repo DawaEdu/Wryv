@@ -490,6 +490,7 @@ void APeasant::Move( float t )
 
   // We repair the building that is currently selected
   Repair( t );
+
   AUnit::Move( t ); // Calls flush, so we put it last
 
   if( Idling() )

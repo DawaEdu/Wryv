@@ -19,19 +19,13 @@ PortraitsPanel::PortraitsPanel( FVector2D size ) : FlowPanel( "PortraitsPanel", 
 
 Portrait* PortraitsPanel::GetPortrait( int i )
 {
-  if( i < 0 || i >= children.size() )
-  {
-    error( FS( "PortraitsPanel::GetPortrait( %d ) OOB", i ) );
-    return 0;
-  }
-
-  return (Portrait*)children[i];
+  return (Portrait*)GetChild(i);
 }
 
 void PortraitsPanel::Set( vector<AGameObject*> objects )
 {
   // Null all object refs.
-  for( int i = 0; i < children.size(); i++ )
+  for( int i = 0; i < GetNumChildren(); i++ )
     GetPortrait(i)->Set( 0 );
   
   HideChildren();
@@ -45,7 +39,7 @@ void PortraitsPanel::Set( vector<AGameObject*> objects )
     Portrait *p = GetPortrait( i );
     if( !p )
     {
-      error( FS( "Cannot select more than %d units due to PP settings", children.size() ) );
+      error( FS( "Cannot select more than %d units due to PP settings", GetNumChildren() ) );
       return;
     }
     

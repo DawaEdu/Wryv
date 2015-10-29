@@ -84,12 +84,24 @@ public:
   bool AbsorbsMouseUp; // If this widget does absorb mouseup
   bool XLimits, YLimits; // RecomputeSize doesn't affect X,Y
 
-protected:
+private:
   HotSpot* Parent;
   vector<HotSpot*> children;  // Children of this hotspot.
   //bool bubbleUp; // When set, the event can bubbles up through the widget
 public:
-  
+  inline int GetNumChildren() { return children.size(); }
+  // Inlined accessor for retrieving ith child (bounds checking)
+  inline HotSpot* GetChild( int i )
+  {
+    if( i < 0 || i >= children.size() )
+    {
+      error( FS( "HotSpot %s: Index %d / %d OOB children", *Name, i, children.size() ) );
+      return 0;
+    }
+    return children[i];
+  }
+  // Rarely used function to clear the array of child references, for re-stacking.
+  inline void ClearChildren(){ children.clear(); }
   // Returns true (1) if event should be consumed.
   function< EventCode (FVector2D mouse) > OnMouseDownLeft;
   // A function that runs when the widget is dropped @ certain location used for "drops"

@@ -18,7 +18,6 @@ public:
   virtual void InitIcons();
   virtual void MoveCounters( float t ) override;
   virtual void OnUnselected() override;
-  virtual void Move( float t ) override;
   virtual void ai( float t ) override;
 
   void CastSpell( TSubclassOf< ASpell > SpellClassType );

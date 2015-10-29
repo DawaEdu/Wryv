@@ -11,9 +11,9 @@ public:
 
   // During construction, we assign Text directly, then call Measure.
   // Construction is assumed to happen when the HUD is available.
-  TextWidget( FString fs, UFont *font=0, float scale=1.f ) : 
+  TextWidget( FString fs, int alignment=Alignment::TopLeft, UFont *font=0, float scale=1.f ) : 
     HotSpot( FString( "TextWidget " ) + fs ),
-    Text( fs ), Font(font), Scale( 1.f )
+    Text( fs ), Font( font ), Scale( 1.f )
   {
     SetAndMeasure( fs );
   }

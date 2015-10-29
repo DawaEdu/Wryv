@@ -32,7 +32,8 @@ bool UItemAction::Click()
   // is by index as well.
   if( cooldown.Done() )
   {
-    info( FS( "%s ItemAction %s clicked", *AssociatedUnit->GetName(), *ItemClass->GetName() ) );
+    info( FS( "%s ItemAction %s clicked",
+      *AssociatedUnit->GetName(), *ItemClass->GetName() ) );
     AssociatedUnit->UseItem( UActionIndex );
     return 1;
   }
@@ -46,7 +47,9 @@ bool UItemAction::Click()
 
 void UItemAction::Step( float t )
 {
-  UAction::Step( t );
+  UAction::Step( t ); // we override the base functionality.
+  // The cooldown is SET from the UNIT using the cooldown, and doesn't
+  // step 
 }
 
 void UItemAction::PopulateClock( Clock* inClock, int i )
@@ -62,7 +65,16 @@ void UItemAction::PopulateClock( Clock* inClock, int i )
     return NotConsumed;
   };
 
-  // add in the count
-  clock->SetText( FS( "%d", Quantity ), Alignment::BottomRight );
-
+  // add in the count, which will be the 2nd child of the clock
+  // Update qty text
+  if( clock->GetNumChildren() > 1 )
+  {
+    TextWidget* tw = (TextWidget*)clock->GetChild(1);
+    tw->Set( Quantity );
+  }
+  else
+  {
+    error( FS( "The hotspot %s didn't have the qty elt", *clock->Name ) );
+  }
+  
 }

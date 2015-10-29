@@ -7,10 +7,12 @@ StackPanel::StackPanel( FString name ) : ImageWidget( name )
 {
   restacking = 0;
 }
+
 StackPanel::StackPanel( FString name, UTexture* bkg ) : ImageWidget( name, bkg )
 {
   restacking = 0;
 }
+
 StackPanel::StackPanel( FString name, UTexture* bkg, FLinearColor color ) : ImageWidget( name, bkg, color )
 {
   restacking = 0;
@@ -49,7 +51,7 @@ void StackPanel::Reflow()
 void StackPanel::Restack()
 {
   // Re-add all children in the mode they were added before.
-  children.clear();
+  ClearChildren();
 
   for( int i = 0 ; i < stackOrder.size() ; i++ )
   {
@@ -88,8 +90,8 @@ HotSpot* StackPanel::StackLeft( HotSpot* widget, VAlign vMode )
 {
   widget->Align = Left | vMode;
   // push all the children already in the widget over to the right
-  for( int i = 0 ; i < children.size(); i++ )
-    children[i]->Margin.X += widget->Size.X + Pad.X;
+  for( int i = 0 ; i < GetNumChildren(); i++ )
+    GetChild(i)->Margin.X += widget->Size.X + Pad.X;
   HotSpot::Add( widget );
   recomputeSizeToContainChildren();
   if( !restacking )
@@ -122,8 +124,8 @@ HotSpot* StackPanel::StackRight( HotSpot* widget, VAlign vMode )
 HotSpot* StackPanel::StackTop( HotSpot* widget, HAlign hMode )
 {
   widget->Align = Top | hMode;
-  for( int i = 0 ; i < children.size(); i++ )
-    children[i]->Margin.Y += widget->Size.Y + Pad.Y;
+  for( int i = 0 ; i < GetNumChildren(); i++ )
+    GetChild(i)->Margin.Y += widget->Size.Y + Pad.Y;
   HotSpot::Add( widget );
   recomputeSizeToContainChildren();
   if( !restacking )

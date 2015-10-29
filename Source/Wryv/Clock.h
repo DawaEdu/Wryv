@@ -25,7 +25,7 @@ public:
   // Sets the % fill of the clock, as well as the text inside the clock
   void SetFillFraction( float fraction, Alignment textAlign );
 
+  void SetText( FString text, Alignment textAlignment );
 public:
   virtual void render( FVector2D offset ) override;
 };
-

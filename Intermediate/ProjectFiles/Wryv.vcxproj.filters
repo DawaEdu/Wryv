@@ -354,6 +354,9 @@
     <ClInclude Include="..\..\Source\Wryv\ImageBorder.h">
       <Filter>Source\Wryv\UI\Widgets</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\ItemActionClassAndQuantity.h">
+      <Filter>Source\Wryv\Structures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Wryv\Border.cpp">

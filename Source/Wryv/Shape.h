@@ -15,4 +15,5 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  FString text;
 
   virtual void PostInitializeComponents() override;
+  virtual bool SetDestination( FVector d );
 };

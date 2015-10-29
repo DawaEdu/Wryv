@@ -7,7 +7,7 @@
 
 UTexture* SlotPalette::SlotPaletteTexture = 0;
 
-SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
+SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) :
   ImageWidget( name, bkg ), Rows( 0 ), Cols( 0 ), EntrySize( entrySize )
 {
   Pad = pad;
@@ -19,9 +19,9 @@ SlotPalette::SlotPalette( FString name, UTexture* bkg, int rows, int cols, FVect
 
 void SlotPalette::Blank()
 {
-  for( int i = 0; i < children.size(); i++ )
+  for( int i = 0; i < GetNumChildren(); i++ )
   {
-    GetClock(i)->Reset();
+    GetChild(i)->Reset();
   }
 }
 
@@ -35,16 +35,6 @@ FVector2D SlotPalette::GetSlotPosition( int i )
   int row = i / Cols;
   int col = i % Cols;
   return FVector2D( col * EntrySize.X, row * EntrySize.Y );
-}
-
-Clock* SlotPalette::GetClock( int i )
-{
-  if( i < 0 || i >= children.size() )
-  {
-    LOG( "SlotPalette::GetClock(%d) oob", i );
-    return 0;
-  }
-  return (Clock*)children[i];
 }
 
 // Gets you the adjusted size dimensions of a size
@@ -75,13 +65,13 @@ FVector2D SlotPalette::GetAdjustedSize( FVector2D size )
 
 void SlotPalette::AdjustPosition( int i )
 {
-  if( i < 0 || i >= children.size() ) {
+  if( i < 0 || i >= GetNumChildren() ) {
     error( FS( "Index %d OOB", i ) );
     return;
   }
   
   // get the size of entry i
-  Clock* clock = GetClock( i );
+  Clock* clock = (Clock*)GetChild(i);
   FVector2D adjSize = GetAdjustedSize( clock->Size );
   FVector2D diff = EntrySize - adjSize; // Move the position from stock pos to adj pos
   clock->Margin = GetSlotPosition( i ) + diff/2;
@@ -94,12 +84,11 @@ void SlotPalette::Resize( int rows, int cols )
 
   // Add additional slots to make right size
   // The size of this widget set here.
-  for( int i = children.size(); i < GetNumActiveSlots(); i++ )
+  for( int i = GetNumChildren(); i < GetNumActiveSlots(); i++ )
   {
     // initialize a bunch of cooldown counters
-    FString name = FString::Printf( TEXT("SlotPalette `%s`'s Clock %d"), *Name, i+1 );
-    Clock *clock = new Clock( name, EntrySize, NoTextureTexture, Clock::DefaultColor, Alignment::CenterCenter );
-    clock->Margin = FVector2D(0,0);
+    FString name = FString::Printf( TEXT("SlotPalette `%s`'s Clock %d"), *Name, i + 1 );
+    Clock* clock = new Clock( name, EntrySize, NoTextureTexture, Clock::DefaultColor, Alignment::CenterCenter );
     Add( clock );
     AdjustPosition( i );
   }
@@ -112,7 +101,7 @@ void SlotPalette::SetNumSlots( int rows, int cols )
 {
   // check to see if # slots available matches # requested
   // if there are not enough slots then add more.
-  if( children.size() < rows*cols )
+  if( GetNumChildren() < rows*cols )
     Resize( rows, cols );
   HideChildren();
 
@@ -121,7 +110,7 @@ void SlotPalette::SetNumSlots( int rows, int cols )
   for( int i = 0; i < GetNumActiveSlots(); i++ )
   {
     AdjustPosition( i );
-    GetClock( i )->Show();
+    GetChild(i)->Show();
   }
 
   // Adjust UV coords of tile tex
@@ -134,16 +123,6 @@ void SlotPalette::SetNumSlots( int rows, int cols )
 void SlotPalette::render( FVector2D offset )
 {
   if( hidden ) return;
-
-  // re-align dirty child elements.
-  //for( int i = 0; i < children.size(); i++ )
-  //{
-  //  Clock* clock = GetClock(i);
-  //  if( clock->dirty )
-  //  {
-  //    AdjustPosition( i ); // adjust the position of the ith clock
-  //  }
-  //}
 
   ImageWidget::render( offset );
 }

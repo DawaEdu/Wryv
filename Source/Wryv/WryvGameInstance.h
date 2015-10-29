@@ -63,7 +63,7 @@ public:
   {
     if( !team )
     {
-      info( FS( "Make(): team was null when making unit of type %s!", *ClassType->GetName() ) );
+      //info( FS( "Make(): team was null when making unit of type %s!", *ClassType->GetName() ) );
       // select the neutral team.
       team = gm->neutralTeam;
     }

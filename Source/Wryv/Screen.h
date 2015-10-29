@@ -12,8 +12,8 @@ public:
   // Screens are usually full screen, but have a lot of translucent areas.
   bool hitsElement( FVector2D mouse )
   {
-    for( int i = 0; i < children.size(); i++ )
-      if( children[i]->hit( mouse ) )
+    for( int i = 0; i < GetNumChildren(); i++ )
+      if( GetChild(i)->hit( mouse ) )
         return 1;
     return 0;
   }

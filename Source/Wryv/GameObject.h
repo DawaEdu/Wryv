@@ -56,6 +56,8 @@ class WRYV_API AGameObject : public AActor
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USceneComponent* DummyRoot;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  UCapsuleComponent* hitBounds;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USphereComponent* repulsionBounds;
+  // Whether the object sits on the ground or not.
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  bool Grounds;
 
   vector< PowerUpTimeOut > BonusTraits;
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
@@ -92,7 +94,6 @@ class WRYV_API AGameObject : public AActor
   // responding to a GotoGroundPosition() command)
   bool HoldingGround; // Do not move to engage nearby enemy units.
   // When this flag is false, AttackTarget is set to the nearest unit in SightRange.
-  bool Init; // The object has been initialized
 
   Command& GetCurrentCommand(){ return commands.front(); }
 
@@ -226,16 +227,19 @@ class WRYV_API AGameObject : public AActor
   void Walk( float t );
   // Points Actor to face particular 3-space point
   void Face( FVector point );
-  // time-stepped attack of current target (if any)
-  void MoveWithinDistanceOf( AGameObject* target, float fallbackDistance );
+  // Time-stepped attack of current target (if any)
+  void RecomputePathTo( AGameObject* target, float fallbackDistance );
   void DisplayWaypoints();
   void exec( const Command& cmd );
   virtual void MoveCounters( float t );
+  virtual void RecomputePath();
   // Base Movement function. Called each frame.
   //   * Fixed time step
   //   * Predictable call order
   // This function is provided INSTEAD of ::Tick(), which has variable timestep value 
   // and unpredicatable call order.
+  void CheckNextCommand();
+  void CheckDead( float t );
   virtual void Move( float t );
   // Tells you if the object is idling or not
   UFUNCTION(BlueprintCallable, Category = Fighting) virtual bool Idling();
@@ -259,7 +263,9 @@ class WRYV_API AGameObject : public AActor
   
 protected:
   // Moves towards d using pathfinder, WITHOUT losing Follow/Attack targets.
-  void SetDestination( FVector d, bool attack );
+  void CorrectWaypoints();
+  virtual bool SetDestination( FVector d );
+
 public:
   // Stops motion, WITHOUT losing Follow/Attack targets.
   void StopMoving();

@@ -37,11 +37,6 @@ void ACombatUnit::OnUnselected()
   }
 }
 
-void ACombatUnit::Move( float t )
-{
-  AUnit::Move( t );
-}
-
 void ACombatUnit::ai( float t )
 {
   // Seek out opponents in groups.

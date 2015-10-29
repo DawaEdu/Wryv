@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameObject.h"
+#include "ItemActionClassAndQuantity.h"
 #include "Item.generated.h"
 
 class UItemAction;
@@ -14,12 +15,9 @@ public:
   // The small portrait of the item when used as a buff on a unit.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Properties )  UTexture* BuffPortrait;
   // When the item is picked up, this is the class of the button.
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Properties )  TSubclassOf<UItemAction> ButtonClass;
-  // Mesh for the item.
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Properties )  FItemActionClassAndQuantity ItemActionClassAndQuantity;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Properties )  UStaticMeshComponent* Mesh;
-  // Quantity of item in slot
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Properties )  int32 Quantity;
-
+  
   virtual void Move( float t ) override;
   virtual void Hit( AGameObject* other ) override;
   virtual void Die() override;

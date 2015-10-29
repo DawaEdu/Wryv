@@ -42,7 +42,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* MainCamera; // UPROPERTY type listing doesn't make it appear in listing
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Cam )  UCameraComponent* OrthoCam;
   AFogOfWar* fogOfWar;
-
+  
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Rows;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  int32 Cols;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  bool VizGrid;
@@ -53,7 +53,8 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> CheckerClass;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> LineClass;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> WaypointFlagClass;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads ) TSubclassOf<AWidget3D> SelectorClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AWidget3D> SelectorClass;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Doodads )  TSubclassOf<AShape> GroundMarkerClass;
 
   // Use a TARRAY to keep sfx organized, includes music & effects
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Sounds )  TArray<FSoundEffect> SFX;
@@ -63,8 +64,9 @@ public:
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Colors )  UMaterial* BaseWhiteMaterial;
   UPROPERTY() TArray<UMaterialInstanceDynamic*> ColorMaterials; //Reference counted collection of created colors.
   map<FLinearColor, UMaterialInstanceDynamic*> Colors;
-
-// the name of the title level
+  AShape* GroundMarker;
+  
+  // the name of the title level
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  FName LevelMap;
 
   UAudioComponent* music;

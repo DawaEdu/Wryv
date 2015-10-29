@@ -12,6 +12,7 @@ AProjectile::AProjectile(const FObjectInitializer& PCIP) : AGameObject(PCIP)
   Shooter = 0;
   Gravity = -10.f;
   MaxTravelHeight = 150.f;
+  Homing = 0;
 }
 
 void AProjectile::ai( float t )
@@ -22,13 +23,18 @@ void AProjectile::ai( float t )
 
 void AProjectile::Move( float t )
 {
-  Vel.Z += Gravity * t;
-  Pos += Vel*t;
-
-  Vel.Rotation();
-  SetRot( Vel.GetSafeNormal().Rotation() );
-
-  AGameObject::Move( t ); // Calls flush, so we put it last
+  if( !Homing )
+  {
+    // If it is a homing attack, then flight is different.
+    Vel.Z += Gravity * t;
+    Pos += Vel*t;
+    SetRot( Vel.GetSafeNormal().Rotation() );
+    FlushPosition();
+  }
+  else
+  {
+    AGameObject::Move( t );
+  }
 }
 
 void AProjectile::Hit( AGameObject* other )
@@ -42,7 +48,7 @@ void AProjectile::Hit( AGameObject* other )
   // OR the object has hit the floor, then allow it to deal damage
   if( other == AttackTarget   &&   !AttackTarget->Dead )
   {
-    LOG( "%s is detonating", *Stats.Name );
+    LOG( "%s is detonating", *GetName() );
     // Damage the attack target with impact-damage
     AttackTarget->ReceiveAttack( this );
     Die(); Cleanup();
@@ -51,6 +57,14 @@ void AProjectile::Hit( AGameObject* other )
   {
     LOG( "%s is contacting the floor", *Stats.Name );
     Die(); Cleanup();
+  }
+}
+
+void AProjectile::RecomputePath()
+{
+  if( Homing )
+  {
+    AGameObject::RecomputePath(); // Recompute the pathway to the 
   }
 }
 

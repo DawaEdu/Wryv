@@ -71,6 +71,8 @@ void AFlyCam::BeginPlay()
 
   // Keep checkersphere bonus to below 1.f
   CheckerSphereRadius = FMath::Clamp( CheckerSphereRadius, 0.25f, 1.f );
+
+  GroundMarker = Game->Make<AShape>( GroundMarkerClass );
 }
 
 void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
@@ -251,7 +253,7 @@ void AFlyCam::SetObjectsOnGround()
 
     FVector pos = go->Pos;
     //info( FS( "Object %s started @ %f %f %f", *go->GetName(), pos.X, pos.Y, pos.Z ) );
-    if( SetOnGround( pos ) )
+    if( go->Grounds   &&   SetOnGround( pos ) )
     {
       // Pos & Dest must be set on the ground
       go->SetPosition( pos );
@@ -571,7 +573,7 @@ bool AFlyCam::SetOnGround( FVector& v )
     error( "No floor" );
     return 0;
   }
-
+  
   FVector v2 = v;
   v2.Z += floor->GetBox().GetSize().Z; /// Pick up far above the floor
   
@@ -669,8 +671,10 @@ void AFlyCam::Target()
     info( "Right clicked on nothing" );
     return;
   }
-  FVector P = hit.ImpactPoint;
 
+  FVector P = hit.ImpactPoint;
+  SetOnGround( P );
+  
   // Hit the floor target, which means send units to ground position
   if( target == floor )
   {
@@ -693,12 +697,13 @@ void AFlyCam::Target()
       return;
     }
 
+    GroundMarker->SetPosition( P );
+    GroundMarker->SetDestination( P - 100.f*UnitZ );
     // The side vector is going to be a result of crossing with the up vector
     FVector right = FVector::CrossProduct( UnitZ, travelDir );
-    DrawDebug( P, 25.f, FLinearColor::Green, 10.f );
-
-    DrawDebug( P, P + travelDir*50.f, 5.f, FLinearColor::Green, 10.f );
-    DrawDebug( P, P + right*50.f, 5.f, FLinearColor::Red, 10.f );
+    //DrawDebug( P, 25.f, FLinearColor::Green, 10.f );
+    //DrawDebug( P, P + travelDir*50.f, 5.f, FLinearColor::Green, 10.f );
+    //DrawDebug( P, P + right*50.f, 5.f, FLinearColor::Red, 10.f );
 
     float largestRadius = Game->hud->Selected.front()->Radius();
     for( int i = 0; i < Game->hud->Selected.size(); i++ )
@@ -717,7 +722,7 @@ void AFlyCam::Target()
       float yP = largestRadius * (y - numGridPos/2.f);
 
       FVector pos = P   +   right*xP - travelDir*yP; // use - travel dir so 1st point in front row
-      DrawDebug( pos, 10.f, FLinearColor::Red, 10.f );
+      //DrawDebug( pos, 10.f, FLinearColor::Red, 10.f );
       AGameObject* go = Game->hud->Selected[i];
       //go->GoToGroundPosition( go->Pos + offset ); // C++ Code Command
       if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
