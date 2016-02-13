@@ -94,9 +94,9 @@ void ABuilding::LosePeasant( APeasant* peasant )
     // Take the first available peasant follower/builder and make it the primary
     for( int i = 0; i < Followers.size(); i++ )
     {
-      if( APeasant* peasant = Cast<APeasant>( Followers[i] ) )
+      if( APeasant* p = Cast<APeasant>( Followers[i] ) )
       {
-        PrimaryPeasant = peasant;
+        PrimaryPeasant = p;
         break;
       }
     }

@@ -89,7 +89,7 @@ vector<ACombatUnit*> Team::GetWarriors()
 
 void Team::RemoveUnit( AGameObject *go )
 {
-  removeElement( units, go );
+  removeElement<AGameObject>( units, go );
   go->team = 0;
 }
 

@@ -207,17 +207,17 @@ vector<Ray> APlayerControl::GetFrustumRays( const FBox2DU& box )
 }
 
 // If InTypes is EMPTY, then it picks any type
-vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, 
+vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& viewBox, 
   SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   // A 0 area box picks with a ray from TL corner of the click.
-  if( !box.GetArea() ) {
+  if( !viewBox.GetArea() ) {
     // use a ray pick
-    //info( FS( "Point %f %f using a ray", box.TL().X, box.TL().Y ) );
-    return RayPickMulti( box.TL(), AcceptedTypes, NotTypes );
+    //info( FS( "Point %f %f using a ray", viewBox.TL().X, viewBox.TL().Y ) );
+    return RayPickMulti( viewBox.TL(), AcceptedTypes, NotTypes );
   }
 
-  vector<Ray> rays = GetFrustumRays( box );
+  vector<Ray> rays = GetFrustumRays( viewBox );
   FVector centerP(0,0,0);
   for( int i = 0; i < rays.size(); i++ )
     centerP += rays[i].start;

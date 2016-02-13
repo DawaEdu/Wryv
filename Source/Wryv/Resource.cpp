@@ -75,8 +75,8 @@ void AResource::Harvest( APeasant* peasant )
     Die(); // Mark dead (clears Attackers group)
     //Re-target all attackers to find new resources
     for( AGameObject * go : Harvesters )
-      if( APeasant *peasant = Cast<APeasant>( go ) )
-        if( AResource* res = peasant->FindAndTargetNewResource( Pos, {peasant->Mining}, peasant->Stats.SightRange ) )
+      if( APeasant *p = Cast<APeasant>( go ) )
+        if( AResource* res = p->FindAndTargetNewResource( Pos, {p->Mining}, p->Stats.SightRange ) )
           peasant->Target( res );
   }
 }

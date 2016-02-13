@@ -10,7 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <stdarg.h>
-
+#include <iterator>
 using namespace std;
 
 DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
@@ -358,7 +358,7 @@ template <typename T> vector<T*>& operator+=( vector<T*>& A, const T* b )
 template <typename T> vector<T*>& operator-=( vector<T*>& A, const vector<T*>& B )
 {
   for( T* b : B )
-    removeElement( A, b ) ;
+    removeElement<T>( A, b ) ;
   return A;
 }
 
@@ -448,7 +448,7 @@ template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& fo
 template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
 {
   for( T* t : B )
-    removeElement( A, t );
+    removeElement<T>( A, t );
   return A;
 }
 

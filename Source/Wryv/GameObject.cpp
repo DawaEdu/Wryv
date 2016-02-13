@@ -417,7 +417,7 @@ void AGameObject::OnHitContactEnd_Implementation( AActor* OtherActor, UPrimitive
   //LOG( "OnHitContactEnd" );
   if( AGameObject* THAT = Cast<AGameObject>( OtherActor ) )
   {
-    HitOverlaps -= THAT;
+    operator-=<AGameObject>( HitOverlaps, THAT );
   }
 }
 
@@ -446,7 +446,7 @@ void AGameObject::OnRepulsionContactEnd_Implementation( AActor* OtherActor, UPri
   //LOG( "OnRepulsionContactEnd" );
   if( AGameObject *go = Cast<AGameObject>( OtherActor ) )
   {
-    RepulsionOverlaps -= go;
+    operator-=<AGameObject>( RepulsionOverlaps, go );
   }
 }
 
@@ -999,7 +999,7 @@ void AGameObject::DropTargets()
 void AGameObject::LoseFollower( AGameObject* formerFollower )
 {
   if( !formerFollower ) error( "Cannot lose null follower" );
-  removeElement( Followers, formerFollower );
+  removeElement<AGameObject>( Followers, formerFollower );
   formerFollower->FollowTarget = 0;
   // if I lost all followers, update the hud
   if( !Followers.size() ) {
@@ -1012,7 +1012,7 @@ void AGameObject::LoseAttacker( AGameObject* formerAttacker )
 {
   if( !formerAttacker ) error( "Cannot lose null follower" );
   // This tends to be called while iterating. So be careful here.
-  removeElement( Attackers, formerAttacker );
+  removeElement<AGameObject>( Attackers, formerAttacker );
   
   formerAttacker->AttackTarget = 0;
   // If there are no more attackers, unselect in ui
