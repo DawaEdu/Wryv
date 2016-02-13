@@ -4,10 +4,8 @@
 #include "GlobalFunctions.h"
 #include "Action.generated.h"
 
-// The Action series of objects creates
-// buttons for ItemUse, other Actions etc.
-// Does NOT use a USTRUCT() FObject type
-// so that I don't have to repeat the settings
+// The Action series of objects creates buttons for ItemUse, other Actions etc.
+// Does NOT use a USTRUCT() FObject type so that I don't have to repeat the settings
 class Clock;
 class AGameObject;
 class ITextWidget;
@@ -17,14 +15,13 @@ class WRYV_API UAction : public UObject
 {
   GENERATED_UCLASS_BODY()
 public:
-  // The icon for the action
+  // Text describing the Action
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  FString Text;
-  // This is the amount of time it takes to charge the Action after use.
-  // Every UAction + Derivative has a cooldown counter, but not all of them use it (defaults 0).
+  // The amount of time it takes to charge the Action after use.
+  // Every UAction / Derivative has a cooldown counter, but not all of them use it (defaults 0).
   // The cooldown.TotalTime is taken from the UClass* data when the Object is instantiated.
   FCooldownCounter cooldown;
   // The shortcut key to activate this thing. FKey: autopopulates dialog with available keys.
-  // The UnitsData of all capabilities of the SelectedUnit in the UI's shortcut keys are activated.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  FKey ShortcutKey;
   // Stores the index of the UACTION used for item use invokation.
   // Most Actions invoke the i'th ENTRY in some array in the base
@@ -32,7 +29,8 @@ public:
   // is used for network comm invokation (player 2 invoked Item2 in
   // his list of items).
   int UActionIndex;
-  Clock* clock; // The cooldown clock associated with this icon.
+  // The cooldown clock associated with this icon.
+  Clock* clock;
 
   // Requires implementation in a subclass
   virtual UTexture* GetIcon();
