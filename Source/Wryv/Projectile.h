@@ -8,7 +8,7 @@ class AExplosion;
 UCLASS()
 class WRYV_API AProjectile : public AGameObject
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   AGameObject* Shooter;
   float Gravity;
@@ -25,6 +25,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)
   TSubclassOf< AExplosion > OnImpact;
   
+  AProjectile(const FObjectInitializer& PCIP);
   // Called when the game starts or when spawned
   virtual void ai( float t );
   virtual void Move( float t ) override;

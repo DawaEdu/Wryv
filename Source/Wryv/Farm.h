@@ -6,6 +6,7 @@
 UCLASS()
 class WRYV_API AFarm : public ABuilding
 {
-	GENERATED_UCLASS_BODY()
-  
+  GENERATED_BODY()
+public:
+  AFarm( const FObjectInitializer& PCIP );
 };

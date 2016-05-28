@@ -99,17 +99,19 @@ void AGameObject::BeginPlay()
 
   //LOG( "%s [%s]->AGameObject::BeginPlay()", *GetName(), *Name );
   Team* newTeam = Game->gm->teams[ Stats.TeamId ];
+  if( !newTeam )
+  {
+    error( FS( "Team %d not created yet", Stats.TeamId ) );
+    newTeam = Game->gm->teams[ Stats.TeamId ] =
+      new Team( Stats.TeamId, "err-team", Alliances::Neutral, FLinearColor::Red );
+  }
+  
   SetTeam( newTeam );
   ID = Game->NextId();
   InitIcons();
 }
 
 void AGameObject::OnMapLoaded()
-{
-  
-}
-
-void AGameObject::InitIcons()
 {
   
 }
@@ -1132,8 +1134,10 @@ void AGameObject::SetTeam( Team* newTeam )
   // must be called. To avoid cyclic SetTeam->AddUnit->SetTeam calls, we only supply
   // a SetTeam function here.
   team = newTeam;
-  team->units.push_back( this );
-  Stats.TeamId = team->teamId;
+  if( team ) {
+    team->units.push_back( this );
+    Stats.TeamId = team->teamId;
+  }
   
   // Grab all meshes with material parameters & set color of each
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();

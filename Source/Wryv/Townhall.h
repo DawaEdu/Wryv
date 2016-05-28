@@ -6,6 +6,7 @@
 UCLASS()
 class WRYV_API ATownhall : public ABuilding
 {
-	GENERATED_UCLASS_BODY()
-  
+  GENERATED_BODY()
+public:
+  ATownhall( const FObjectInitializer& PCIP );
 };

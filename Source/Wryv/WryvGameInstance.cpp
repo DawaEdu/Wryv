@@ -13,6 +13,7 @@ UWryvGameInstance* Game = 0;
 UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCIP)
 {
   LOG( "UWryvGameInstance::UWryvGameInstance()");
+  defaultSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
   NextObjectID = 1;
   // On construction of first game object, initialize game instance
   Game = Cast<UWryvGameInstance>( this );

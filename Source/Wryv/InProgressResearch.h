@@ -10,10 +10,11 @@ class UResearch;
 UCLASS( meta=(ShortTooltip="A research") )
 class WRYV_API UInProgressResearch : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UResearch* research;
 
+  UInProgressResearch( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override;
   virtual float GetCooldownTotalTime();
   void Set( UResearch* research );

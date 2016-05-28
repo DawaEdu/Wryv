@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.10",
+	"EngineAssociation": "4.11",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -8,6 +8,13 @@
 			"Name": "Wryv",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModoMaterialImporter",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/offers/9cbfb639f28d446983f74d8d400563e0"
 		}
 	]
 }

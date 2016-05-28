@@ -6,7 +6,9 @@
 UCLASS()
 class WRYV_API ABarracks : public ABuilding
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
+public:
+  ABarracks( const FObjectInitializer& PCIP );
 };
 
 

@@ -7,7 +7,7 @@
 UCLASS()
 class WRYV_API AGroundPlane : public AGameObject
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Pathfinding )  UStaticMeshComponent* Mesh;
   //UPROPERTY( VisibleAnywhere, BlueprintReadWrite, Category = Pathfinding )  FBox Box;
@@ -16,6 +16,7 @@ public:
   UFUNCTION( BlueprintCallable, Category = Fighting )  FBox GetBox();
   UFUNCTION( BlueprintCallable, Category = Fighting )  FBox GetReducedBox();
 
+  AGroundPlane( const FObjectInitializer& PCIP );
   virtual void PostInitializeComponents() override;
   
 };

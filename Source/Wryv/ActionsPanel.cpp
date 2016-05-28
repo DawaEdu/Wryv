@@ -6,6 +6,7 @@
 #include "Clock.h"
 #include "FlyCam.h"
 #include "GameObject.h"
+#include "GlobalFunctions.h"
 #include "Peasant.h"
 #include "Unit.h"
 #include "WryvGameInstance.h"
@@ -76,43 +77,37 @@ void AbilitiesPanel::Set( vector<AGameObject*> objects )
   Blank();
   if( !objects.size() )  return;
   
-  // the abilities we use have to be properties of ALL objects selected for them to be used.
-  set<UUnitAction*> abilities = {};
-  set<UUnitAction*> missingAbilities = {};
+  // the abilities we use have to be properties of ALL units.
+  // WHEN a unit is selected with a bunch of buildings, the
+  // unit's capabilities take precedence and building abilities
+  // are not displayed.
+  // intersect all abilities from all units.
+  TSet<UUnitAction*> availableAbilities = {};
+  bool selectionHasUnits = 0;
   for( int i = 0 ; i < objects.size(); i++ )
-  {
-    // if there's a unit in the group, 
+  {  
     if( AUnit* unit = Cast< AUnit >( objects[i] ) )
     {
-      set<UUnitAction*> thisUnitsAbilities = MakeSet( unit->CountersAbility );
-      if( abilities.empty() )
-        abilities = thisUnitsAbilities;
-      else
-      {
-        // If any in `abilities` are missing from this unit, add them to stricken set
-        missingAbilities += abilities - thisUnitsAbilities;
-      }
+      selectionHasUnits = 1; // use units capabilities over buildings
+      TSet<UUnitAction*> thisUnitsAbilities = 
+        MakeTSet( unit->CountersAbility );
+      availableAbilities = availableAbilities.Intersect( 
+        thisUnitsAbilities );
     }
   }
-
-  abilities -= missingAbilities;
-
-  // Pull any abilities that a particular unit type doesn't have
-  if( abilities.size() )
+  
+  if( !selectionHasUnits )
   {
-    TArray<UUnitAction*> ab = MakeTArray( abilities );
-    Populate<UUnitAction>( ab, 0 );
-  }
-  else
-  {
-    // There aren't any units in the selection. This means selection may be
-    // a building.
+    // There aren't any units in the selection.
+    // This means selection may be a building or resource.
     for( int i = 0 ; i < objects.size(); i++ )
     {
       if( ABuilding* building = Cast< ABuilding >( objects[i] ) )
       {
+        // The building trains.
         if( building->TrainingAvailable.Num() )
           Populate<UTrainingAction>( building->TrainingAvailable, 0 );
+        // The building Researches.
         if( building->ResearchesAvailable.Num() )
           Populate<UResearch>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
       }
@@ -143,7 +138,7 @@ void BuildPanel::Set( vector<AGameObject*> objects )
     // the rest of the abilities can be set to null
     for( int i = 0; i < GetNumActiveSlots(); i++ )
     {
-      // Turn off the function object, jsut in case
+      // Turn off the function object, just in case
       GetChild(i)->OnMouseDownLeft = function<EventCode (FVector2D mouse)>(); // null the callback
       // hide slot 
       GetChild(i)->Hide();

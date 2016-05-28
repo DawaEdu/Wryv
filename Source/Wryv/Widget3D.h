@@ -6,8 +6,9 @@
 UCLASS()
 class WRYV_API AWidget3D : public AShape
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
+  AWidget3D( const FObjectInitializer& PCIP );
   virtual void BeginPlay() override;
   virtual void Tick( float t ) override;
 };

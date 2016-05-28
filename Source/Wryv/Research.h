@@ -11,7 +11,7 @@ struct Team;
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A Research action") )
 class WRYV_API UResearch : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UTexture* Icon;
   
@@ -32,6 +32,7 @@ public:
   // The building conducting the research
   ABuilding* Building;
 
+  UResearch( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override { return Icon; }
   virtual float GetCooldownTotalTime() override { return ResearchTime; }
   virtual bool Click();

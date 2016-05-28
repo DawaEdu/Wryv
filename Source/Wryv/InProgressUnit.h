@@ -13,13 +13,14 @@ class UTrainingAction;
 UCLASS( meta=(ShortTooltip="Something that is being built indicated") )
 class WRYV_API UInProgressUnit : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // Unit type being trained.
   TSubclassOf<AUnit> UnitType;
   // Building that hosts the unit
   ABuilding* HostBuilding;
   
+  UInProgressUnit( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override;
   virtual float GetCooldownTotalTime();
   void Set( UTrainingAction* training );

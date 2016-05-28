@@ -12,7 +12,8 @@ class AUnit;
 UCLASS()
 class WRYV_API ABuilding : public AGameObject
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
+public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USkeletalMeshComponent* Mesh;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USceneComponent* ExitPosition;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  UDestructibleComponent* destructableMesh;
@@ -44,11 +45,12 @@ class WRYV_API ABuilding : public AGameObject
   UPROPERTY() TArray< UResearch* > ResearchesAvailable;  // Research kick-off buttons.
   UPROPERTY() TArray< UInProgressResearch* > CountersResearchInProgress; // Cancellable, started researches.
 
-  //ABuilding(const FObjectInitializer& PCIP);
   APeasant* PrimaryPeasant;      // The main peasant creating the building ( doesn't use resource to build )
   float TimeBuilding;     // When a unit is building, this is the % progress it is to completion.
   bool Complete;          // Set to true when the building is complete.
   float ExplodedTime;     // The length of time the building has been exploded for
+  
+  ABuilding(const FObjectInitializer& PCIP);
   virtual void PostInitializeComponents() override;
   virtual void BeginPlay() override;
   void InitIcons();

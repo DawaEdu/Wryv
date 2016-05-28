@@ -39,7 +39,8 @@ class UTrainingAction;
 UCLASS()
 class WRYV_API AGameObject : public AActor
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
+public:
   const static float WaypointAngleTolerance;
   const static float WaypointReachedToleranceDistance; // The distance to consider waypoint as "reached"
   static AGameObject* Nothing;
@@ -103,6 +104,7 @@ class WRYV_API AGameObject : public AActor
   vector<AGameObject*> Followers, Attackers, RepulsionOverlaps, HitOverlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
   
+  AGameObject( const FObjectInitializer& PCIP );
   // 
   // UE4 & Utility
   template <typename T> vector<T*> GetComponentsByType()
@@ -160,7 +162,7 @@ class WRYV_API AGameObject : public AActor
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
-  virtual void InitIcons();
+  virtual void InitIcons() {}
 
   // Net
   // Hashes the object (checking for network state desync)

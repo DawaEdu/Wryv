@@ -17,7 +17,7 @@ class UUnitAction;
 UCLASS()
 class WRYV_API AUnit : public AGameObject
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)
   USkeletalMeshComponent* Mesh;
@@ -42,7 +42,7 @@ public:
 
   UFUNCTION(BlueprintCallable, Category = Fighting)  virtual void AttackCycle();
   
-  //AUnit(const FObjectInitializer& PCIP);
+  AUnit(const FObjectInitializer& PCIP);
   virtual void InitIcons();
   void AddItem( FItemActionClassAndQuantity itemQuantity );
   virtual void PostInitializeComponents() override;

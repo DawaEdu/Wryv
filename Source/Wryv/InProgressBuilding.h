@@ -9,12 +9,13 @@ class ABuilding;
 UCLASS( meta=(ShortTooltip="Something that is being built indicated") )
 class WRYV_API UInProgressBuilding : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // The building the in-progress counter is attached to.
   ABuilding* Building;
   APeasant* Peasant;
 
+  UInProgressBuilding( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override;
   virtual float GetCooldownTotalTime();
 

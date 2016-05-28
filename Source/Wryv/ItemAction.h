@@ -11,7 +11,7 @@ class AUnit;
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A motion action") )
 class WRYV_API UItemAction : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // Class of the item itself
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  TSubclassOf< AItem > ItemClass;
@@ -22,6 +22,7 @@ public:
   UPROPERTY() AUnit* AssociatedUnit; // Revise that this is set correctly everywhere in the code.
   UPROPERTY() FString AssociatedUnitName;
 
+  UItemAction( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override;
   virtual float GetCooldownTotalTime() override;
   virtual bool Click();

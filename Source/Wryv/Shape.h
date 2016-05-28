@@ -9,11 +9,12 @@
 UCLASS()
 class WRYV_API AShape : public AGameObject
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UStaticMeshComponent* Mesh;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  FString text;
-
+  
+  AShape( const FObjectInitializer & PCIP );
   virtual void PostInitializeComponents() override;
   virtual bool SetDestination( FVector d );
 };

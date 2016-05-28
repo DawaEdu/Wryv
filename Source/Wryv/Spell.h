@@ -6,7 +6,7 @@
 UCLASS()
 class WRYV_API ASpell : public AProjectile
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // Some properties of spells that projectiles don't have.
   // The spell arcs or doesn't. Spells that arc just follow a projectile arc.
@@ -21,6 +21,7 @@ public:
   // How long the spell has been alive for
   float Lifetime;
 
+  ASpell(const FObjectInitializer& PCIP);
   void Damage( AGameObject* go, float t );
   // Called when the game starts or when spawned
   virtual void Move( float t ) override;

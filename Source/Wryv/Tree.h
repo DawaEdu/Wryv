@@ -6,9 +6,9 @@
 UCLASS()
 class WRYV_API ATree : public AResource
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
-  //ATree(const FObjectInitializer& PCIP);
+  ATree(const FObjectInitializer& PCIP);
 
 };
 

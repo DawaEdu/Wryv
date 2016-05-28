@@ -6,9 +6,9 @@
 UCLASS()
 class WRYV_API AStone : public AExplodableResource
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
-  //AStone(const FObjectInitializer& PCIP);
+  AStone(const FObjectInitializer& PCIP);
 
 };
 

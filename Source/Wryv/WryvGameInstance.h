@@ -42,6 +42,7 @@ public:
   AFlyCam *flycam;
   bool IsDestroyStarted;
   deque<Command> commands;
+  FActorSpawnParameters defaultSpawnParams;
   
   UWryvGameInstance(const FObjectInitializer& PCIP);
   // Sets the command for a specific object, clearing previous queue
@@ -72,7 +73,8 @@ public:
       error( FS( "Make(): ClassType was NULL" ) );
       return 0;
     }
-    T* obj = GetWorld()->SpawnActor<T>( ClassType, v, FRotator(0.f) );
+    T* obj = GetWorld()->SpawnActor<T>(
+      ClassType, v, FRotator(0.f), defaultSpawnParams );
     if( obj )
     {
       obj->SetTeam( team );
@@ -82,6 +84,8 @@ public:
       error( FS( 
         "Object of type %s could not be spawned (did it die on spawn by colliding with another actor?)",
         *ClassType->GetName() ) );
+      UE_LOG( LogTemp, Fatal, TEXT( "OBJECT OF CLASSTYPE %s "
+        "COULD NOT BE SPAWNED: DID IT COLLIDE? CHECK POS!=0" ), *ClassType->GetName() );
     }
     return obj;
   }

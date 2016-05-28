@@ -12,14 +12,14 @@ class AUnit;
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A Unit's basic action") )
 class WRYV_API UUnitAction : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // The icon for the action
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  TEnumAsByte< Abilities > Ability;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)  UTexture* Icon;
   // The Unit to which this ability is attached.
   AUnit* Unit;
-
+  UUnitAction( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override { return Icon; }
   virtual bool Click();
 };

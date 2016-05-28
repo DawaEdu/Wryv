@@ -39,9 +39,11 @@ void ATheHUD::PostInitializeComponents()
   Super::PostInitializeComponents();
   LOG( "ATheHUD::PostInitializeComponents()");
   rendererIcon = GetComponentByName<USceneCaptureComponent2D>( this, "rendererIcon" );
-  rendererIcon->TextureTarget = PortraitTexture;
+  if( rendererIcon )
+    rendererIcon->TextureTarget = PortraitTexture;
   rendererMinimap = GetComponentByName<USceneCaptureComponent2D>( this, "rendererMinimap" );
-  rendererMinimap->TextureTarget = MinimapTexture;
+  if( rendererMinimap )
+    rendererMinimap->TextureTarget = MinimapTexture;
   
   ResourceIcons[ AGoldmine::StaticClass() ] = GoldIconTexture;
   ResourceIcons[ ATree::StaticClass() ] = LumberIconTexture;

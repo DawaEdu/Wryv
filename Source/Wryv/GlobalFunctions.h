@@ -480,15 +480,22 @@ template <typename T> set<T> operator+( const set<T>& A, const set<T>& B )
 template <typename T> set<T> MakeSet( const vector<T>& A )
 {
   set<T> B;
-  for( const T& t : A )
-    B.insert( t );
+  for( const T& a : A )
+    B.insert( a );
+  return B;
+}
+template <typename T> TSet<T> MakeTSet( const TArray<T>& A )
+{
+  TSet<T> B;
+  for( const T& a : A )
+    B.Add( a );
   return B;
 }
 template <typename T> set<T> MakeSet( const TArray<T>& A )
 {
   set<T> B;
-  for( const T t : A )
-    B.insert( t );
+  for( const T& a : A )
+    B.insert( a );
   return B;
 }
 template <typename T> vector<T*> MakeVector( const set<T*>& A )

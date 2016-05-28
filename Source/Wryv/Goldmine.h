@@ -6,9 +6,9 @@
 UCLASS()
 class WRYV_API AGoldmine : public AExplodableResource
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
-  //AGoldmine(const FObjectInitializer& PCIP);
+  AGoldmine(const FObjectInitializer& PCIP);
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  USceneComponent* EntryPoint;
 
   virtual void PostInitializeComponents() override;

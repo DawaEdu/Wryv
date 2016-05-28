@@ -8,7 +8,7 @@
 UCLASS()
 class WRYV_API AFogOfWar : public AActor
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UCanvasRenderTarget2D* CRTFogOfWar; // : UTexture (doesn't work as a uproperty)
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = FogOfWar )  UStaticMeshComponent* FogMesh; // renders with material made from crtfogofwar
@@ -17,7 +17,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = FogOfWar )  FLinearColor ClearColor;
   FBox FloorBox; // 
 
-  //AFogOfWar( const FObjectInitializer& PCIP );
+  AFogOfWar( const FObjectInitializer& PCIP );
   virtual void BeginPlay();
   void Init( FBox floorBox );
   UFUNCTION() void DrawFogOfWar( UCanvas* canvas, int32 Width, int32 Height );

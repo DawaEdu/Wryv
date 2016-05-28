@@ -10,7 +10,7 @@ class AItem;
 UCLASS()
 class WRYV_API AItemShop : public ABuilding
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // The nearest ItemShop patron.
   AUnit* patron;
@@ -19,6 +19,7 @@ public:
 
   TArray< TSubclassOf< AItem > > Inventory;
 
+  AItemShop( const FObjectInitializer& PCIP );
   virtual void BeginPlay() override;
 
 };

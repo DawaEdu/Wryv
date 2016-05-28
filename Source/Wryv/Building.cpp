@@ -50,6 +50,7 @@ void ABuilding::PostInitializeComponents()
 
 void ABuilding::BeginPlay()
 {
+  LOG( "ABuilding::BeginPlay()");
   Super::BeginPlay();
   TimeBuilding = Stats.TimeLength; // Start as completed (for ghost object placement).
   Hp = Stats.HpMax; // Start with 1 hp so that the building doesn't bust immediately

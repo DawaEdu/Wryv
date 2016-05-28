@@ -231,7 +231,6 @@ void AFlyCam::OnLevelLoaded()
   RetrievePointers();
   InitializePathfinding();
   
-
   setupLevel = 1;
 }
 
@@ -269,6 +268,11 @@ void AFlyCam::SetObjectsOnGround()
 
 void AFlyCam::InitializePathfinding()
 {
+  if( !floor ) {
+    error( "NO FLOOR, cannot initialize pathfinding" );
+    return;
+  }
+  
   LOG( "Initializing pathfinding" );
   
   if( pathfinder ) {
@@ -480,6 +484,10 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 void AFlyCam::Visualize( FVector& v, float s, FLinearColor color, float time )
 {
   AShape* shape = Game->Make<AShape>( VizClass, Game->gm->neutralTeam, v );
+  if( !shape ) {
+    error( "AFlyCam::Visualize: Cannot spawn AShape" );
+    return;
+  }
   shape->SetSize( FVector( s ) );
   shape->SetColor( color );
   shape->MaxLifeTime = time;

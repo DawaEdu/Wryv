@@ -8,7 +8,7 @@ class APeasant;
 UCLASS()
 class WRYV_API AResource : public AGameObject
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   typedef TSubclassOf<AResource> /* as */ Type;
 
@@ -20,7 +20,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  bool ResourcesFinished;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Stats )  int32 Quantity;
   
-  //AResource(const FObjectInitializer& PCIP);
+  AResource(const FObjectInitializer& PCIP);
   void BeginPlay() override;
   void PostInitializeComponents() override;
   void Harvest( APeasant* peasant );

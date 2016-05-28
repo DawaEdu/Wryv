@@ -17,11 +17,13 @@ typedef set< TSubclassOf<AGameObject> > /* as simply */ SetAGameObject;
 UCLASS()
 class WRYV_API APlayerControl : public APlayerController
 {
-	GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // These are initialized during load to get you the channel on which
   // a profile resides.
   map< FString, ECollisionChannel > CollisionChannels;
+  
+  APlayerControl( const FObjectInitializer& PCIP );
   // Called to bind functionality to input
   virtual void SetupInputComponent() override;
 	virtual void SetupInactiveStateInputComponent(UInputComponent* InComponent) override;

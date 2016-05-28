@@ -12,7 +12,7 @@ class AResource;
 UCLASS()
 class WRYV_API APeasant : public AUnit
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   // How much the mining target can hold.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  USoundBase* JobsDoneSound;
@@ -51,7 +51,7 @@ public:
   map< TSubclassOf<AResource>, UStaticMeshComponent* >  MinedPieces;
   map< TSubclassOf<AResource>, int32 >  Capacities;  // How much of each resource this unit can carry
   
-  //APeasant(const FObjectInitializer& PCIP);
+  APeasant(const FObjectInitializer& PCIP);
   void PostInitializeComponents();
   virtual void InitIcons();
   bool UseBuild( int index );

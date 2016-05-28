@@ -13,7 +13,7 @@ class AUnit;
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A training action") )
 class WRYV_API UTrainingAction : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
   TSubclassOf< AUnit > UnitType;
@@ -21,6 +21,7 @@ public:
   // The building that is training the unit.
   ABuilding* Building;
 
+  UTrainingAction( const FObjectInitializer & PCIP );
   // When you click this button, it kicks off building a unit of UnitType.
   virtual UTexture* GetIcon() override;
   virtual float GetCooldownTotalTime();

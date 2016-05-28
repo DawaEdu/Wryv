@@ -10,12 +10,13 @@ class APeasant;
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="A Build action") )
 class WRYV_API UBuildAction : public UAction
 {
-  GENERATED_UCLASS_BODY()
+  GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
   TSubclassOf< ABuilding > BuildingType;
   APeasant* Peasant;
 
+  UBuildAction( const FObjectInitializer & PCIP );
   virtual UTexture* GetIcon() override;
   // Buildings have a cooldown time of 0s also
   virtual float GetCooldownTotalTime() override { return 0.f; }

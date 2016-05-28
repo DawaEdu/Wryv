@@ -11,11 +11,15 @@
 UCLASS( BlueprintType, Blueprintable, meta=(ShortTooltip="An AI profile") )
 class WRYV_API UAIProfile : public UObject
 {
-  GENERATED_UCLASS_BODY()
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) TEnumAsByte<AILevel> aiLevel;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) FAI ai;
-  
-  UFUNCTION(BlueprintCallable, Category = AI)  FString ToString();
+  GENERATED_BODY()
+public:
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI)
+  TEnumAsByte<AILevel> aiLevel;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI)
+  FAI ai;
+  UAIProfile( const FObjectInitializer& PCIP );
+  UFUNCTION(BlueprintCallable, Category = AI)
+  FString ToString();
 };
 
 

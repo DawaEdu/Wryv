@@ -26,7 +26,7 @@ AUnit::AUnit( const FObjectInitializer& PCIP ) : AGameObject( PCIP )
 void AUnit::InitIcons()
 {
   AGameObject::InitIcons();
-
+  
   // Create instances of each class type
   for( int i = 0; i < Abilities.Num(); i++ )
   {

@@ -62,6 +62,8 @@ public:
   
   // Render-to-texture target. Created inside the editor.
   USceneCaptureComponent2D *rendererIcon, *rendererMinimap;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  USceneCaptureComponent2D *screencapcomponent;
 
   // Because canvas has to be valid for box selection to work it seems
   vector<AGameObject*> Selected;
@@ -75,8 +77,8 @@ public:
   // The uClass of the selected object highlight
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* PortraitTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* MinimapTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
+  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial* WarBlot;
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
 
@@ -86,7 +88,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* largeFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor EmptyCrosshairColor;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor HitCrosshairColor;
-
+  
   UCastSpellAction* NextSpell;
   Abilities NextAbility; //Queued ability
 
