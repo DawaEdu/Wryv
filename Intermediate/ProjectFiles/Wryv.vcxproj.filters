@@ -79,9 +79,6 @@
     <Filter Include="Source\Wryv\GameObjects\Things">
       <UniqueIdentifier>{78c41516-dc92-4c25-b170-e5e4c474be0d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Wryv\ZZ_FactorOut">
-      <UniqueIdentifier>{18c08c9f-c1fd-4ea8-80c8-6d5518b9effe}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\Box2DU.h">
@@ -333,33 +330,6 @@
     <ClInclude Include="..\..\Source\Wryv\Cost.h">
       <Filter>Source\Wryv\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\CastSpellAction.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\InProgressBuilding.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\InProgressResearch.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\InProgressUnit.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\ItemAction.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Research.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\TrainingAction.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\Action.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\UnitAction.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UIActionCommand.h">
       <Filter>Source\Wryv\UI\UIAction</Filter>
     </ClInclude>
@@ -389,9 +359,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UIUnitActionCommand.h">
       <Filter>Source\Wryv\UI\UIAction</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\BuildAction.h">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -605,33 +572,6 @@
     <ClCompile Include="..\..\Source\Wryv\Wryv.cpp">
       <Filter>Source\Wryv\UE</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\CastSpellAction.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\InProgressBuilding.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\InProgressResearch.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\InProgressUnit.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\ItemAction.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Research.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\TrainingAction.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\Action.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\UnitAction.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\UIActionCommand.cpp">
       <Filter>Source\Wryv\UI\UIAction</Filter>
     </ClCompile>
@@ -661,9 +601,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\UIUnitActionCommand.cpp">
       <Filter>Source\Wryv\UI\UIAction</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\BuildAction.cpp">
-      <Filter>Source\Wryv\ZZ_FactorOut</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
