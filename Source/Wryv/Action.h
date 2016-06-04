@@ -4,13 +4,17 @@
 #include "GlobalFunctions.h"
 #include "Action.generated.h"
 
+// UIAction.h is used by Runtime/Slate/Public/Framework/Commands/UIAction.h
+// so we cannot use UIAction as our base class name.
+
 // The Action series of objects creates
 // buttons for ItemUse, other Actions etc.
 // Does NOT use a USTRUCT() FObject type
-// so that I don't have to repeat the settings
+// so you can Blueprint the class and re-use the
+// same Blueprint in multiple Characters.
 class Clock;
 class AGameObject;
-class ITextWidget;
+class IText;
 
 UCLASS( Abstract, meta=(ShortTooltip="Abstract base for any Action type") )
 class WRYV_API UAction : public UObject
@@ -44,7 +48,7 @@ public:
   virtual UTexture* GetIcon();
   // Returns the amount of time this Action takes to cooldown.
   virtual float GetCooldownTotalTime() { return 0.f; }
-  // Kicks off the activity of the Action.
+  // Kicks off the activity of the UIActionCommand.
   virtual bool Click() { return 1; }
   virtual bool Hover() { return 1; }
   // Returns true if the Action is ready to be used

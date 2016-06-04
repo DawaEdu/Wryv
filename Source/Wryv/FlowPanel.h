@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ImageWidget.h"
+#include "ImageHS.h"
 
-class FlowPanel : public ImageWidget
+class FlowPanel : public ImageHS
 {
 public:
   int Rows, Cols;

@@ -3,6 +3,7 @@
 #include "Building.h"
 #include "CombatUnit.h"
 #include "DrawDebugHelpers.h"
+#include "Explosion.h"
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
 #include "Goldmine.h"
@@ -20,7 +21,8 @@
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
-#include "CastSpellAction.h"
+#include "UICastSpellActionCommand.h"
+#include "UIUnitActionCommand.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
@@ -64,21 +66,21 @@ void ATheHUD::InitWidgets()
   LOG( "InitWidgets()" );
 
   // Initialize the widgets that show the player gold, lumber, stone counts.
-  ResourcesWidget::GoldTexture = GoldIconTexture;
-  ResourcesWidget::LumberTexture = LumberIconTexture;
-  ResourcesWidget::StoneTexture = StoneIconTexture;
-  SolidWidget::SolidWhiteTexture = SolidWhiteTexture;
-  SlotPalette::SlotPaletteTexture = SlotPaletteTexture;
+  ResourcesPanel::GoldTexture = GoldIconTexture;
+  ResourcesPanel::LumberTexture = LumberIconTexture;
+  ResourcesPanel::StoneTexture = StoneIconTexture;
+  Solid::SolidWhiteTexture = SolidWhiteTexture;
+  SlotPanel::SlotPanelTexture = SlotPanelTexture;
   StackPanel::StackPanelTexture = VoronoiBackground;
   AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
-  ImageWidget::NoTextureTexture = NoTextureTexture;
+  ImageHS::NoTextureTexture = NoTextureTexture;
   GameCanvas::MouseCursorHand = MouseCursorHand;
   GameCanvas::MouseCursorCrossHairs = MouseCursorCrossHairs;
-  Controls::PauseButtonTexture = PauseButtonTexture;
-  Controls::ResumeButtonTexture = ResumeButtonTexture;
+  ControlsPanel::PauseButtonTexture = PauseButtonTexture;
+  ControlsPanel::ResumeButtonTexture = ResumeButtonTexture;
   SidePanel::RightPanelTexture = RightPanelTexture;
   Minimap::MinimapTexture = MinimapTexture;
-  CostWidget::CostWidgetBackground = VoronoiBackground;
+  CostPanel::CostWidgetBackground = VoronoiBackground;
   Tooltip::TooltipBackgroundTexture = VoronoiBackground;
 
   FVector2D canvasSize( Canvas->SizeX, Canvas->SizeY );
@@ -156,7 +158,13 @@ void ATheHUD::SetNextAbility( Abilities nextAbility )
       SetCursorStyle( CrossHairs, FLinearColor::Blue );
       break;
     case Abilities::Stop:
+      for( int i = 0; i < Selected.size(); i++ )
+        Selected[i]->Stop();
+      break;
     case Abilities::HoldGround:
+      for( int i = 0; i < Selected.size(); i++ )
+        Selected[i]->HoldGround();
+      break;
     case Abilities::NotSet:
       SetPointer();
       break;
@@ -211,8 +219,6 @@ HotSpot* ATheHUD::MouseUpLeft( FVector2D mouse )
 HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
 {
   ui->drag = ui->MouseDownLeft( mouse );
-  if( ui->drag )
-    info( FS( "The drag elt is %s", *ui->drag->Name ) );
   return ui->drag;
 }
 
@@ -258,7 +264,7 @@ void ATheHUD::Select( vector<AGameObject*> objects )
   //}
 
   // Cannot select objects of these types
-  SetAGameObject forbiddenTypes = { AGroundPlane::StaticClass(), AShape::StaticClass() };
+  SetAGameObject forbiddenTypes = { AExplosion::StaticClass(), AGroundPlane::StaticClass(), AShape::StaticClass() };
   // Pull out any objects that are of forbidden types
   for( int i = (int)objects.size() - 1; i >= 0; i-- )
     if( objects[i]->IsAny( forbiddenTypes ) )
@@ -301,7 +307,7 @@ void ATheHUD::Select( vector<AGameObject*> objects )
 void ATheHUD::Unselect( vector<AGameObject*> objects )
 {
   // If none of the objects are in the selection, there's no change.
-  if( !in( Selected, objects ) )
+  if( !in<AGameObject*>( Selected, objects ) )
   {
     error( FS( "None of objects [%s] were in Selected [%s], nothing to unselect",
                *GetNames( objects ), *GetNames( Selected ) ) );
@@ -316,7 +322,7 @@ void ATheHUD::Unselect( vector<AGameObject*> objects )
     // If I'm the only selected unit with on follow target then remove follow target selection
     // If go is the only follower / attacker in Selected, then remove the marker.
     if( go->FollowTarget )
-      if( Intersection( Selected, go->FollowTarget->Followers ).size() <= 1 )
+      if( Intersection<AGameObject>( Selected, go->FollowTarget->Followers ).size() <= 1 )
         go->RemoveTagged( Game->flycam->FollowTargetName );
 
     if( go->AttackTarget )
@@ -326,7 +332,7 @@ void ATheHUD::Unselect( vector<AGameObject*> objects )
 
   }
 
-  Selected -= objects;
+  operator-=<AGameObject*>( Selected, objects );
 
   //Reselect selected, to refresh the selectors on attack targets.
   Select( Selected );
@@ -388,7 +394,7 @@ void ATheHUD::RenderPortrait()
     AGameObject* selected = *Selected.begin();
     // Portrait: render last-clicked object to texture zoom back by radius of bounding sphere of clicked object
     FVector camDir( .5f, .5f, -FMath::Sqrt( 2.f ) );
-    RenderScreen( rendererIcon, selected->Pos, selected->Radius(), camDir );
+    RenderScreen( rendererIcon, selected->Pos, selected->HitBoundsCylindricalRadius(), camDir );
   }
 }
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "SolidWidget.h"
+#include "Solid.h"
 
-class ProgressBar : public SolidWidget
+class ProgressBar : public Solid
 {
 public:
-  SolidWidget* progress;
+  Solid* progress;
   // The fill & unfill colors
   static FLinearColor Fill, Bkg;
   float FillFraction;

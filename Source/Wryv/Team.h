@@ -10,7 +10,7 @@ class ACombatUnit;
 class AGameObject;
 class APeasant;
 class AResource;
-class UResearch;
+class UUIResearchCommand;
 class AUnit;
 
 enum Alliances
@@ -40,14 +40,15 @@ struct Team
   Alliances alliance;
   FAI ai;  // The AI controller for this team.
   FLinearColor Color;
-  float Gold, Lumber, Stone;
+  FCost Resources;
+  //float Gold, Lumber, Stone;
   // How much damage an object should have before starting repair on it
   float DamageRepairThreshold;
   // Groups of buildings, peasants, and units sit in the same collection.
   vector<AGameObject*> units;
   // The research level objects that have been completed. New units have
   // these stats pushed into their stats stack.
-  vector<UResearch*> CompletedResearches;
+  vector<UUIResearchCommand*> CompletedResearches;
 
   Team();
   Team( int iTeamId, FString str );
@@ -68,7 +69,7 @@ struct Team
   bool CanBuild( UClass* ClassType );
   bool Spend( UClass* ClassType );
   bool Refund( UClass* ClassType );
-  void ResourceChange( int gold, int lumber, int stone );
+  void ResourceChange( FCost cost );
   // Usage of food by units in the game.
   int computeFoodUsage();
   int computeFoodSupply();

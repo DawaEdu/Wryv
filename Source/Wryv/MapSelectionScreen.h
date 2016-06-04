@@ -5,14 +5,14 @@
 class MapSelectionScreen : public Screen
 {
 public:
-  ImageWidget *Logo;
+  ImageHS *Logo;
   StackPanel *MapFiles;
   FVector2D MapFileEntrySize;
-  ImageWidget *Thumbnail;
-  ITextWidget *OKButton;
+  ImageHS *Thumbnail;
+  IText *OKButton;
   
   UTexture* MapSlotEntryBkg;
-  ITextWidget* Selected;
+  IText* Selected;
   UFont* Font;
 
   // Constructs the MapSelection Screen.
@@ -25,7 +25,7 @@ public:
     Selected( 0 ), Font( font )
   {
     // Throw in the title
-    Logo = new ImageWidget( "Logo", logoTex );
+    Logo = new ImageHS( "Logo", logoTex );
     Logo->Align = TopLeft;
     Logo->Margin = FVector2D( 75, 50 );
     Add( Logo );
@@ -37,12 +37,12 @@ public:
     MapFiles->Pad = FVector2D( 8,8 );
     Add( MapFiles );
 
-    Thumbnail = new ImageWidget( "Thumbnail", thumbnailTex );
+    Thumbnail = new ImageHS( "Thumbnail", thumbnailTex );
     Thumbnail->Align = CenterRight;
     Thumbnail->Margin = FVector2D( 80, 0 );
     Add( Thumbnail );
 
-    OKButton = new ITextWidget( "Okbutton", mapSlotEntryBkg, entrySize, "OK", CenterCenter );
+    OKButton = new IText( "Okbutton", mapSlotEntryBkg, entrySize, "OK", CenterCenter );
     OKButton->Align = BottomRight;
     OKButton->Margin = FVector2D( 20, 10 );
     
@@ -50,9 +50,9 @@ public:
   }
 
   // Adds a slot
-  ITextWidget* AddText( FString ftext, Alignment textAlignment )
+  IText* AddText( FString ftext, Alignment textAlignment )
   {
-    ITextWidget* text = new ITextWidget( FS("mss text %s",*ftext),
+    IText* text = new IText( FS("mss text %s",*ftext),
       MapSlotEntryBkg, MapFileEntrySize, ftext, textAlignment );
     text->OnMouseDownLeft = [this,text](FVector2D mouse) -> EventCode {
       Select( text );
@@ -63,7 +63,7 @@ public:
   }
 
   // Make widget selected
-  void Select( ITextWidget *widget )
+  void Select( IText *widget )
   {
     LOG( "Selected %s", *widget->GetText() ) ;
 

@@ -5,7 +5,7 @@
 
 AWryvGameState::AWryvGameState(const FObjectInitializer& PCIP) : Super(PCIP)
 {
-  PrimaryActorTick.bCanEverTick = true;
+  PrimaryActorTick.bCanEverTick = 1;
   LOG("AWryvGameState::AWryvGameState()");
 }
 

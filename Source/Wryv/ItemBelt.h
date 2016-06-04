@@ -1,12 +1,12 @@
 #pragma once
 
-#include "SlotPalette.h"
+#include "SlotPanel.h"
 
 class ABuilding;
 class AUnit;
 
 // set of slots for items.
-class ItemBelt : public SlotPalette
+class ItemBelt : public SlotPanel
 {
 public:
   ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad );

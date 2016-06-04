@@ -13,7 +13,7 @@
 
 AResource::AResource( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "mesh1" );
+  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, TEXT( "Mesh" ) );
   Mesh->AttachTo( RootComponent );
   Jiggle = 0;
   AmountRemaining = 0.f;

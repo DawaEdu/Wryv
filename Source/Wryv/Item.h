@@ -4,7 +4,7 @@
 #include "ItemActionClassAndQuantity.h"
 #include "Item.generated.h"
 
-class UItemAction;
+class UUIItemActionCommand;
 class AUnit;
 
 UCLASS()
@@ -20,8 +20,8 @@ public:
   
   AItem(const FObjectInitializer& PCIP);
   virtual void Move( float t ) override;
-  virtual void Hit( AGameObject* other ) override;
+  void Pickup( AGameObject* other );
   virtual void Die() override;
-  //Usage from UItemAction (ButtonClass), not from Item class directly.
+  //Usage from UUIItemActionCommand (ButtonClass), not from Item class directly.
   //void Use( AUnit* unit );
 };

@@ -14,6 +14,6 @@ UUnitAction::UUnitAction( const FObjectInitializer & PCIP ) : Super( PCIP )
 
 bool UUnitAction::Click()
 {
-  Unit->UseAbility( UActionIndex );
+  //Unit->UseAbility( UActionIndex );
   return 1;
 }

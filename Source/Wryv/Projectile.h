@@ -20,6 +20,7 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool TargetsGround;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) float AOERadius;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitData) bool Homing;
+  FVector Vel; // Cached velocity of the projectile
 
   // If the spell has an AOE set, then it is just a remote explosion 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UnitProperties)
@@ -31,7 +32,7 @@ public:
   virtual void Move( float t ) override;
   virtual void Hit( AGameObject* other );
   virtual void RecomputePath();
-  void SetDestinationArc( FVector start, FVector end, float speed, float h );
+  void SetDestinationArc( FVector start, FVector end );
   virtual void Die() override;
 };
 

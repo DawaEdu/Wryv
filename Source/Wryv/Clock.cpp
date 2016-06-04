@@ -9,7 +9,7 @@ FLinearColor Clock::DefaultColor( 1,1,1,1 );
 
 Clock::Clock( FString name, FVector2D size, UTexture* tex, FLinearColor pieColor, Alignment alignment ) : 
   ClockColor( pieColor ),
-  ITextWidget( name, tex, size, "0%", alignment )
+  IText( name, tex, size, "0%", alignment )
 {
   // Spawn the clock material instance to apply to this widget
   clockMaterial = CreateClockMaterial( ClockColor );
@@ -27,7 +27,7 @@ Clock::~Clock()
 
 void Clock::Reset()
 {
-  ITextWidget::Reset();
+  IText::Reset();
   SetTexture( NoTextureTexture );
 }
 
@@ -82,7 +82,7 @@ void Clock::render( FVector2D offset )
     {
       clockMaterial->SetScalarParameterValue( FName( "Fraction" ), PieFillFraction );
       if( DisplayPercentageText )
-        ITextWidget::SetText( FS( "%.0f%%", PieFillFraction*100.f ) );
+        IText::SetText( FS( "%.0f%%", PieFillFraction*100.f ) );
     }
     else
       error( "The MID clock material became invalid, couldn't set parameter" );
@@ -90,7 +90,7 @@ void Clock::render( FVector2D offset )
   }
 
   // Render text beneath clock material
-  ITextWidget::render( offset );
+  IText::render( offset );
 
   // Put the overlay on top.
   FVector2D pos = Pos() + offset;

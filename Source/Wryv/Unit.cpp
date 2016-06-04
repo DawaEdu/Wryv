@@ -3,6 +3,8 @@
 #include <map>
 using namespace std;
 
+#include "Enums.h"
+#include "FlyCam.h"
 #include "Item.h"
 #include "ItemActionClassAndQuantity.h"
 #include "PlayerControl.h"
@@ -13,27 +15,26 @@ using namespace std;
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
-#include "UnitAction.h"
-#include "ItemAction.h"
+#include "UIUnitActionCommand.h"
+#include "UIItemActionCommand.h"
 
 // Sets default values
 AUnit::AUnit( const FObjectInitializer& PCIP ) : AGameObject( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "themeshof" );
+  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, TEXT( "Mesh" ) );
   Mesh->AttachTo( DummyRoot );
 }
 
 void AUnit::InitIcons()
 {
   AGameObject::InitIcons();
-  
+
   // Create instances of each class type
   for( int i = 0; i < Abilities.Num(); i++ )
   {
     if( Abilities[i] )
     {
-      UUnitAction* action = Construct<UUnitAction>( Abilities[i] );
-      action->Unit = this;
+      UUIUnitActionCommand* action = Construct<UUIUnitActionCommand>( Abilities[i] );
       CountersAbility.Push( action );
     }
   }
@@ -47,7 +48,7 @@ void AUnit::InitIcons()
 
 void AUnit::AddItem( FItemActionClassAndQuantity itemAndQuantity )
 {
-  TSubclassOf< UItemAction > itemActionClass = itemAndQuantity.ItemActionClass;
+  TSubclassOf< UUIItemActionCommand > itemActionClass = itemAndQuantity.ItemActionClass;
   if( !itemActionClass )
   {
     error( FS( "%s found item with ItemQuantity with null Action class", *GetName() ) );
@@ -55,7 +56,6 @@ void AUnit::AddItem( FItemActionClassAndQuantity itemAndQuantity )
   }
 
   int i = GetIndexWhichIsA( CountersItems, itemActionClass );
-  info( FS( "%s's index %d is an %s", *GetName(), i, *itemActionClass->GetName() ) );
   if( i >= 0 )
   {
     // Same class of item, increase qty
@@ -63,7 +63,7 @@ void AUnit::AddItem( FItemActionClassAndQuantity itemAndQuantity )
   }
   else
   {
-    UItemAction* itemAction = Construct<UItemAction>( itemActionClass );
+    UUIItemActionCommand* itemAction = Construct<UUIItemActionCommand>( itemActionClass );
     itemAction->AssociatedUnit = this;
     itemAction->AssociatedUnitName = GetName();
     // max the cooldown
@@ -87,21 +87,37 @@ void AUnit::BeginPlay()
   Super::BeginPlay();
 }
 
-bool AUnit::UseAbility( int index )
+void AUnit::UseAbility( int ability, AGameObject* target, FVector pos )
 {
-  if( index < 0 || index > CountersAbility.Num() )
+  switch( ability )
   {
-    error( FS( "%s cannot use ability %d, OOB", *Stats.Name, index ) );
-    return 0;
+    case Abilities::Movement:
+      // Explicit movement, without attack possible.
+      if( target == Game->flycam->floor )
+        GoToGroundPosition( pos );
+      else
+        Follow( target );  // otherwise, follow clicked unit
+      Game->hud->SkipNextMouseUp = 1;
+      break;
+    case Abilities::Attack:
+      // Attack only, even friendly units.
+      if( target == Game->flycam->floor )
+        AttackGroundPosition( pos );  // ready to attack enemy units
+      else
+        Attack( target );
+      Game->hud->SkipNextMouseUp = 1;
+      break;
+    case Abilities::Stop:
+      // Stops units from moving
+      Stop();
+      break;
+    case Abilities::HoldGround:
+      HoldGround();
+      break;
+    default:
+      error( "Ability NotSet" );
+      break;
   }
-
-  UUnitAction* unitAction = CountersAbility[ index ];
-  Game->hud->Status( FS( "%s %s", *Stats.Name, *unitAction->Text ) );
-  info( FS( "Using Action %s [%s] on %s", *unitAction->Text,
-    *GetEnumName( TEXT("Abilities"), unitAction->Ability ), *Stats.Name ) );
-  Game->hud->SetNextAbility( unitAction->Ability.GetValue() );
-
-  return 1;
 }
 
 bool AUnit::UseItem( int index )
@@ -115,7 +131,7 @@ bool AUnit::UseItem( int index )
   }
 
   info( FS( "%s is using item %s", *GetName(), *CountersItems[index]->GetName() ) );
-  UItemAction* itemAction = CountersItems[index];
+  UUIItemActionCommand* itemAction = CountersItems[index];
   BonusTraits.push_back( PowerUpTimeOut( 
     Game->GetData( itemAction->ItemClass ) ) );
 
@@ -184,7 +200,7 @@ void AUnit::Shoot()
 {
   //info( FS( "%s is shooting a %s to %s", *Name, *GetTypesName(ReleasedProjectileWeapon),
   //  *AttackTarget->Name ) );
-  FVector launchPos = GetTip();
+  FVector launchPos = Pos;
   
   // Try and get the launch socket of the mesh. if it doesn't have one, use the top of the object.
   vector<UMeshComponent*> meshes = GetComponentsByType<UMeshComponent>();
@@ -194,11 +210,12 @@ void AUnit::Shoot()
     if( mesh->DoesSocketExist( "Weapon" ) )
     {
       launchPos = mesh->GetSocketLocation( "Weapon" );
-      info( FS( "Launch socket @ %f %f %f", launchPos.X, launchPos.Y, launchPos.Z ) );
+      //info( FS( "Launch socket @ %f %f %f", launchPos.X, launchPos.Y, launchPos.Z ) );
     }
   }
-
-  LOG( "%s launching a projectile of type %s", *Stats.Name, *ReleasedProjectileWeapon->GetName() );
+  //launchPos.Z += 25.f;
+  //Game->flycam->DrawDebug( launchPos, 10.f, FLinearColor::Blue, 10.f );
+  //LOG( "%s launching a projectile of type %s", *Stats.Name, *ReleasedProjectileWeapon->GetName() );
   AProjectile* projectile = Game->Make<AProjectile>( ReleasedProjectileWeapon, team, launchPos );
   if( !projectile )
   {
@@ -207,11 +224,9 @@ void AUnit::Shoot()
   else
   {
     projectile->Shooter = this;
-    projectile->Attack( AttackTarget );
-    projectile->AttackTargetOffset = AttackTargetOffset;
-    
-    projectile->SetDestinationArc( launchPos, AttackTarget->GetCentroid(),
-      projectile->Stats.SpeedMax, projectile->MaxTravelHeight );
+    projectile->Target( AttackTarget ); // Target my current attack target
+    projectile->SetDestinationArc( launchPos, AttackTarget->Pos );
   }
 }
+
 

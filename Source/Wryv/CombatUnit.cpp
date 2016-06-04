@@ -4,7 +4,7 @@
 #include "Spell.h"
 #include "WryvGameInstance.h"
 
-#include "CastSpellAction.h"
+#include "UICastSpellActionCommand.h"
 
 ACombatUnit::ACombatUnit( const FObjectInitializer& PCIP ):Super( PCIP )
 {
@@ -15,7 +15,7 @@ void ACombatUnit::InitIcons()
   AUnit::InitIcons();
   for( int i = 0; i < Spells.Num(); i++ )
   {
-    UCastSpellAction* action = Construct< UCastSpellAction >( Spells[i] );
+    UUICastSpellActionCommand* action = Construct< UUICastSpellActionCommand >( Spells[i] );
     action->Caster = this;
     CountersSpells.Push( action );
   }
@@ -63,6 +63,11 @@ void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType )
 void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType, FVector groundLocation )
 {
   
+}
+
+void ACombatUnit::Die()
+{
+  AUnit::Die();
 }
 
 

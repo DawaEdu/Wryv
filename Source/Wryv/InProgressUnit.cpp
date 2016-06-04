@@ -51,7 +51,7 @@ void UInProgressUnit::PopulateClock( Clock* inClock, int index )
 void UInProgressUnit::OnCooldown()
 {
   UAction::OnCooldown();
-  HostBuilding->ReleaseUnit( this );
+  //HostBuilding->ReleaseUnit( this );
 }
 
 

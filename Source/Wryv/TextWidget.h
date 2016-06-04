@@ -33,6 +33,7 @@ public:
   }
 
   void Set( int v ) { Set( FString::Printf( TEXT( "%d" ), v ) ); }
+  void Set( float v ) { Set( FString::Printf( TEXT( "%.0f" ), v ) ); }
 
   // Sets the text and re-measures the size of the text immediately afterwards
   // the HUD must be ready for this

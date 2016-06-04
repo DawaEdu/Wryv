@@ -4,18 +4,18 @@
 #include "ProgressBar.h"
 
 class TextWidget;
-class Buffs;
+class BuffsPanel;
 
 class StatsPanel : public StackPanel
 {
   TextWidget* unitName;
   ProgressBar* hpBar;
-  Buffs*      buffs;        // list of buffs applied to this unit
+  BuffsPanel* buffs;        // list of buffs applied to this unit
   TextWidget* hpText;
   TextWidget* damage;
   TextWidget* armor;
   TextWidget* description;
-  ResourcesWidget* resourcesCarrying;
+  ResourcesPanel* resourcesCarrying;
   float BarSize;
 public:
   StatsPanel();

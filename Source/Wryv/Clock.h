@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ITextWidget.h"
+#include "IText.h"
 
 class UMaterialExpressionVectorParameter;
 
-class Clock : public ITextWidget
+class Clock : public IText
 {
 public:
   UMaterialInstanceDynamic* clockMaterial;
@@ -20,7 +20,7 @@ public:
   // Resets functionality & textures of the clock.
   virtual void Reset();
   // Clears the extra elements inside the widget that are non-stock to the widget (eg
-  // all except the Text node in an ITextWidget)
+  // all except the Text node in an IText)
   void SetFillFraction( float fraction );
   // Sets the % fill of the clock, as well as the text inside the clock
   void SetFillFraction( float fraction, Alignment textAlign );

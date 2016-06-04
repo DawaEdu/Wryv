@@ -16,9 +16,9 @@ FAI::FAI()
   scoutInterval = 20.f;
   
   // Try to keep these stock amounts of each resource type
-  StartingGold = 1000;
-  StartingLumber = 500;
-  StartingStone = 50;
+  StartingResources.Gold = 1000;
+  StartingResources.Lumber = 500;
+  StartingResources.Stone = 50;
 }
 
 vector< TSubclassOf<AResource> > FAI::GetNeededResourceTypes( Team& team )
@@ -26,28 +26,26 @@ vector< TSubclassOf<AResource> > FAI::GetNeededResourceTypes( Team& team )
   vector< TSubclassOf<AResource> > types;
 
   // recommend to get the resource type of lowest % of starting amounts.
-  float goldP = (float)team.Gold / StartingGold;
-  float lumberP = (float)team.Lumber / StartingLumber;
-  float stoneP = (float)team.Stone / StartingStone;
-
+  FCost percentages = team.Resources / StartingResources;
+  
   // which has the greatest need
-  if( goldP < lumberP   &&   goldP < stoneP )
+  if( percentages.Gold < percentages.Lumber   &&   percentages.Gold < percentages.Stone )
   {
-    if( lumberP < stoneP )
+    if( percentages.Lumber < percentages.Stone )
       types = { AGoldmine::StaticClass(), ATree::StaticClass(), AStone::StaticClass() };
     else
       types = { AGoldmine::StaticClass(), AStone::StaticClass(), ATree::StaticClass() };
   }
-  else if( lumberP < goldP   &&   lumberP < stoneP )
+  else if( percentages.Lumber < percentages.Gold   &&   percentages.Lumber < percentages.Stone )
   {
-    if( goldP < stoneP )
+    if( percentages.Gold < percentages.Stone )
       types = { ATree::StaticClass(), AGoldmine::StaticClass(), AStone::StaticClass() };
     else
       types = { ATree::StaticClass(), AStone::StaticClass(), AGoldmine::StaticClass() };
   }
   else // stone is scarecest
   {
-    if( lumberP < goldP )
+    if( percentages.Lumber < percentages.Gold )
       types = { AStone::StaticClass(), ATree::StaticClass(), AGoldmine::StaticClass() };
     else
       types = { AStone::StaticClass(), AGoldmine::StaticClass(), ATree::StaticClass() }; // EQUAL
@@ -58,9 +56,9 @@ vector< TSubclassOf<AResource> > FAI::GetNeededResourceTypes( Team& team )
 
 FString FAI::ToString()
 {
-  return FS( "AILevel aiLevel=%d foodFraction=%f scoutInterval=%f gold=%d lumber=%d stone=%d", 
+  return FS( "AILevel aiLevel=%d foodFraction=%f scoutInterval=%f gold=%0.f lumber=%0.f stone=%0.f", 
     (int)aiLevel.GetValue(), foodFraction, scoutInterval,
-    StartingGold, StartingLumber, StartingStone );
+    StartingResources.Gold, StartingResources.Lumber, StartingResources.Stone );
 }
 
 

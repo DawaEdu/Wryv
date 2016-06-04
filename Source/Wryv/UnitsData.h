@@ -1,10 +1,14 @@
 #pragma once
 
 #include "Wryv.h"
+#include "Cost.h"
 #include "UnitsData.generated.h"
 
 class ABuilding;
 class AItem;
+
+// All the stats that a given unit has, usually displayed in his description box
+// when clicked upon.
 
 USTRUCT()
 struct FUnitsData
@@ -16,10 +20,8 @@ struct FUnitsData
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) UTexture* Portrait;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) FString Description;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) int32 TeamId;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) int32 GoldCost;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) int32 LumberCost;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) int32 StoneCost;
+  
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) FCost Cost;
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats) float RepairRate;
   // Generic time: 
   //   Units: For units, its the training time
@@ -67,7 +69,6 @@ struct FUnitsData
     Description = "DESCRIPTION";
     TeamId = 0;
 
-    GoldCost = LumberCost = StoneCost = 0;
     RepairRate = 1.f;
     TimeLength = 2.f;
     Cooldown = 10.f;
@@ -93,9 +94,7 @@ struct FUnitsData
   FUnitsData operator+=( const FUnitsData& o )
   {
     FUnitsData copy = *this;
-    copy.GoldCost   += o.GoldCost;
-    copy.LumberCost += o.LumberCost;
-    copy.StoneCost  += o.StoneCost;
+    copy.Cost       += o.Cost;
     copy.RepairRate += o.RepairRate;
     copy.TimeLength += o.TimeLength;
     copy.Cooldown   += o.Cooldown;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SlotPalette.h"
+#include "SlotPanel.h"
 
 class AbilitiesPanel;
 class BuildPanel;
@@ -19,7 +19,7 @@ public:
   void Set( vector<AGameObject*> objects );
 };
 
-class BuildPanel : public SlotPalette
+class BuildPanel : public SlotPanel
 {
   ActionsPanel *Actions;
 public:
@@ -27,9 +27,9 @@ public:
   void Set( vector<AGameObject*> objects );
 };
 
-// An abilities panel is a slotpalette but with the ability to populate
+// An abilities panel is a SlotPanel but with the ability to populate
 // from a game object's capabilities
-class AbilitiesPanel : public SlotPalette
+class AbilitiesPanel : public SlotPanel
 {
   ActionsPanel* Actions;
 public:

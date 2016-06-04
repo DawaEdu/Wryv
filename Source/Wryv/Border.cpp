@@ -6,13 +6,13 @@ Border::Border( FString name, FBox2DU box, float thickness, FLinearColor color )
 {
   Thickness = thickness;
 
-  left = new SolidWidget( "left", color );
+  left = new Solid( "left", color );
   Add( left );
-  top = new SolidWidget( "top", color );
+  top = new Solid( "top", color );
   Add( top );
-  bottom = new SolidWidget( "bot", color );
+  bottom = new Solid( "bot", color );
   Add( bottom );
-  right = new SolidWidget( "right", color );
+  right = new Solid( "right", color );
   Add( right );
 
   Set( box );

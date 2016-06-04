@@ -1,12 +1,12 @@
 #pragma once
 
-#include "SolidWidget.h"
+#include "Solid.h"
 
-class StatusBar : public SolidWidget
+class StatusBar : public Solid
 {
 public:
   TextWidget* Text;
-  StatusBar( FLinearColor bkgColor ) : SolidWidget( "status bar", bkgColor )
+  StatusBar( FLinearColor bkgColor ) : Solid( "status bar", bkgColor )
   {
     Align = Bottom | HFull;
     Text = new TextWidget( "status text" );

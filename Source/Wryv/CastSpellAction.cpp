@@ -29,7 +29,7 @@ bool UCastSpellAction::Click()
   if( AcquiresTarget )
   {
     // Queues spell for use
-    Game->hud->NextSpell = this;
+    //Game->hud->NextSpell = this;
 
     // If the NextSpell is set, then the cursor is a crosshair
     Game->hud->SetCursorStyle( ATheHUD::CrossHairs, FLinearColor::Blue );

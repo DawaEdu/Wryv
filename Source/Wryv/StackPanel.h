@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImageWidget.h"
+#include "ImageHS.h"
 
 struct Stacking
 {
@@ -13,7 +13,7 @@ struct Stacking
 };
 
 // Supports stacking-in of widgets from left/right or top/bottom
-class StackPanel : public ImageWidget
+class StackPanel : public ImageHS
 {
 public:
   static UTexture* StackPanelTexture;

@@ -5,8 +5,8 @@
 
 class APeasant;
 class UParticleEmitter;
-class UInProgressUnit;
-class UInProgressResearch;
+class UUIInProgressUnitCounter;
+class UUIInProgressResearchCounter;
 class AUnit;
 
 UCLASS()
@@ -34,16 +34,20 @@ public:
   
   // List of types this building can train.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
-  TArray< TSubclassOf< UTrainingAction > > TrainClasses;
+  TArray< TSubclassOf< UUITrainingActionCommand > > TrainClasses;
 
   // Researches that this Building can do
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
-  TArray< TSubclassOf< UResearch > > ResearchClasses;
+  TArray< TSubclassOf< UUIResearchCommand > > ResearchClasses;
   
-  UPROPERTY() TArray< UTrainingAction* > TrainingAvailable;
-  UPROPERTY() TArray< UInProgressUnit* > CountersUnitsInProgress;
-  UPROPERTY() TArray< UResearch* > ResearchesAvailable;  // Research kick-off buttons.
-  UPROPERTY() TArray< UInProgressResearch* > CountersResearchInProgress; // Cancellable, started researches.
+  UPROPERTY() TArray< UUITrainingActionCommand* > TrainingAvailable;
+  UPROPERTY() TArray< UUIInProgressUnitCounter* > CountersUnitsInProgress;
+  UPROPERTY() TArray< UUIResearchCommand* > ResearchesAvailable;  // Research kick-off buttons.
+  UPROPERTY() TArray< UUIInProgressResearchCounter* > CountersResearchInProgress; // Cancellable, started researches.
+
+  // The maximum # trains this building supports
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)
+  int32 MaxTrains;
 
   APeasant* PrimaryPeasant;      // The main peasant creating the building ( doesn't use resource to build )
   float TimeBuilding;     // When a unit is building, this is the % progress it is to completion.
@@ -71,7 +75,7 @@ public:
   void montageStarted( UAnimMontage* Montage );
   bool CanBePlaced();
   void PlaceBuilding( APeasant *p );
-  void ReleaseUnit( UInProgressUnit* unit );
+  void ReleaseUnit( UUIInProgressUnitCounter* unit );
   void DropBuilders( bool buildingSuccess );
   void OnBuildingComplete();
   FVector GetExitPosition() { return ExitPosition->GetComponentLocation(); }

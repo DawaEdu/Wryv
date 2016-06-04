@@ -2,13 +2,13 @@
 
 #include "Border.h"
 #include "Screen.h"
-#include "ImageWidget.h"
+#include "ImageHS.h"
 #include "CursorTexture.h"
 
 class GameCanvas : public Screen
 {
 public:
-  ImageWidget* cursor;
+  ImageHS* cursor;
   MouseSelectBox* selectBox;
   static FCursorTexture MouseCursorHand;
   static FCursorTexture MouseCursorCrossHairs;

@@ -20,7 +20,7 @@ UserInterface::UserInterface( FVector2D size ) :
   Add( gameChrome );
   gameChrome->Select( {} ); // empty selection
 
-  // Adjust the BuildQueue's margin 
+  // Adjust the BuildQueuePanel's margin 
   titleScreen = 0;
   mapSelectionScreen = 0;
   missionObjectivesScreen = 0;

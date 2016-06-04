@@ -6,7 +6,7 @@
 
 APlayerStartPosition::APlayerStartPosition( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "flag1" );
+  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, TEXT( "flag1" ) );
   Mesh->AttachTo( GetRootComponent() );
   TeamNumber = 0;
 }

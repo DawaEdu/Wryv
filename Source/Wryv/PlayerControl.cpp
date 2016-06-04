@@ -8,6 +8,8 @@
 #include "WryvGameMode.h"
 #include "Runtime/Core/Public/Math/Plane.h"
 
+const float APlayerControl::RayLength = 1e4f;
+
 APlayerControl::APlayerControl( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
   LOG( "APlayerControl::APlayerControl()" );
@@ -76,7 +78,7 @@ FHitResult APlayerControl::TraceAgainst( UPrimitiveComponent* component, const F
 	{
     error( FS( "Could not DeprojectScreenToWorld (%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
   }
-  ray.SetLen( 1e6f );
+  ray.SetLen( RayLength );
   
   return TraceAgainst( component, ray );
 }
@@ -103,7 +105,7 @@ FHitResult APlayerControl::TraceAgainst( AActor* actor, const FVector2D& ScreenP
   {
     error( FS( "Could not DeprojectScreenToWorld(%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
   }
-  ray.SetLen( 1e6f );
+  ray.SetLen( RayLength );
   
   return TraceAgainst( actor, ray );
 }
@@ -139,7 +141,7 @@ FHitResult APlayerControl::RayPickSingle( const FVector2D& ScreenPosition, SetAG
   {
     error( FS( "Could not DeprojectScreenToWorld(%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
   }
-  ray.SetLen( 1e6f );
+  ray.SetLen( RayLength );
   return RayPickSingle( ray, AcceptedTypes, NotTypes );
 }
 
@@ -147,18 +149,19 @@ FHitResult APlayerControl::RayPickSingle( const Ray& ray, SetAGameObject Accepte
 {
   TArray<FHitResult> hits;
   FCollisionQueryParams fcqp( true );
+
   // Returns closest blocking hit, checking all objects
-  if( !GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp ) )
-  {
-    error( FS( "LineTraceMultiByProfile(RayCast) didn't hit anything, %f %f %f => %f %f %f",
-      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
-  }
+  GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp );
 
   // You get the first result.
-  FHitResult result;
-  if( hits.Num() )
-    result = hits[0];
-  return result;
+  for( int i = 0; i < hits.Num(); i++ )
+  {
+    if( AGameObject* go = Filter( hits[i].GetActor(), AcceptedTypes, NotTypes ) )
+    {
+      return hits[i];
+    }
+  }
+  return FHitResult();
 }
 
 vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
@@ -169,7 +172,7 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const FVector2D& ScreenPositi
 	{
     error( FS( "Could not DeprojectScreenToWorld (%f %f)", ScreenPosition.X, ScreenPosition.Y ) );
 	}
-  ray.SetLen( 1e6f );
+  ray.SetLen( RayLength );
   return RayPickMulti( ray, AcceptedTypes, NotTypes );
 }
 
@@ -178,12 +181,7 @@ vector<AGameObject*> APlayerControl::RayPickMulti( const Ray& ray, SetAGameObjec
   // Casts a ray into the scene
   FCollisionQueryParams fcqp( true );
   TArray<FHitResult> hits;
-  if( !GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp ) )
-  {
-    error( FS( "LineTraceMultiByProfile(RayCast) didn't hit anything, %f %f %f => %f %f %f",
-      ray.start.X,ray.start.Y,ray.start.Z, ray.end.X,ray.end.Y,ray.end.Z ) );
-  }
-
+  GetWorld()->LineTraceMultiByProfile( hits, ray.start, ray.end, "RayCast", fcqp );
   return Filter( hits, AcceptedTypes, NotTypes );
 }
 
@@ -200,25 +198,25 @@ vector<Ray> APlayerControl::GetFrustumRays( const FBox2DU& box )
       error( FS( "Could not DeprojectScreenToWorld to world for %f %f", pts[i].X, pts[i].Y ) );
     }
 
-    ray.SetLen( 1e4f );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e6f causes imprecision
+    ray.SetLen( RayLength );  // WATCH THIS NUMBER IS NOT TOO LARGE, 1e5f causes imprecision
     rays.push_back( ray );
   }
   return rays;
 }
 
 // If InTypes is EMPTY, then it picks any type
-vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& viewBox, 
+vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& box, 
   SetAGameObject AcceptedTypes, SetAGameObject NotTypes )
 {
   // A 0 area box picks with a ray from TL corner of the click.
-  if( !viewBox.GetArea() ) {
+  if( !box.GetArea() ) {
     // use a ray pick
-    //info( FS( "Point %f %f using a ray", viewBox.TL().X, viewBox.TL().Y ) );
-    return RayPickMulti( viewBox.TL(), AcceptedTypes, NotTypes );
+    //info( FS( "Point %f %f using a ray", box.TL().X, box.TL().Y ) );
+    return RayPickMulti( box.TL(), AcceptedTypes, NotTypes );
   }
 
-  vector<Ray> rays = GetFrustumRays( viewBox );
-  FVector centerP(0,0,0);
+  vector<Ray> rays = GetFrustumRays( box );
+  FVector centerP = Zero;
   for( int i = 0; i < rays.size(); i++ )
     centerP += rays[i].start;
   centerP /= rays.size();
@@ -248,14 +246,17 @@ vector<AGameObject*> APlayerControl::FrustumPick( const FBox2DU& viewBox,
       // If you are in the not types group, skip also
       if( go->IsAny( NotTypes ) ) skip;
 
-      FBox box = go->hitBounds->Bounds.GetBox();
-      
+      FVector center = go->GetCentroid();
+      FVector extents = go->hitBox->GetScaledBoxExtent();
+      float radius = go->HitBoundsSphericalRadius();
+
+      //DrawDebugSphere( GetWorld(), center, radius, 12, FColor::Red, 0, 1.f, 0 );
       // Selection by mesh's bounding box is best.
-      if( selectionVolume.IntersectBox( box.GetCenter(), box.GetExtent() ) )
+      if( selectionVolume.IntersectSphere( center, radius ) )
       {
         float d = FVector::Dist( centerP, go->Pos );
-        info( FS( "%s is %f units away from camera (%f %f %f) => (%f %f %f)", 
-          *go->Stats.Name, d, centerP.X,centerP.Y,centerP.Z, go->Pos.X,go->Pos.Y,go->Pos.Z ) );
+        //info( FS( "%s is %f units away from camera (%f %f %f) => (%f %f %f)", 
+        //  *go->Stats.Name, d, centerP.X,centerP.Y,centerP.Z, go->Pos.X,go->Pos.Y,go->Pos.Z ) );
         objects[ d ].push_back( go ); // Possibility of equidistant objects
       }
     }
@@ -282,7 +283,7 @@ vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape sha
   GetWorld()->OverlapMultiByObjectType( overlaps, pos, quat, objectTypes, shape, fcqp );
   
   // indicate where the search shape is.
-  //DrawDebugCylinder( GetWorld(), pos, pos + FVector( 0, 0, shape.Capsule.HalfHeight*2.f ), shape.Capsule.Radius,
+  //DrawDebugCylinder( GetWorld(), pos, pos + FVector( 0, 0, shape.Capsule.HalfHeight*2.f ), shape.Capsule.HitBoundsCylindricalRadius,
   //  16, FColor::Yellow, 1, 10.f, 0 );
   //info( FS( "Shape overlaps %d units", overlaps.Num() ) );
 
@@ -304,7 +305,7 @@ vector<AGameObject*> APlayerControl::ShapePick( FVector pos, FCollisionShape sha
         objects[ d ].push_back( go );
         //info( FS( "  * %s", *go->GetName() ) );
         //DrawDebugCylinder( GetWorld(), go->Pos, go->Pos + FVector(0,0,go->Height()),
-        //  go->Radius(), 16, FColor::Green, 1, 10.f, 0 );
+        //  go->HitBoundsCylindricalRadius(), 16, FColor::Green, 1, 10.f, 0 );
       }
     }
   }

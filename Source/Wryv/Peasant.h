@@ -3,6 +3,7 @@
 #include <map>
 using namespace std;
 
+#include "Cost.h"
 #include "Unit.h"
 #include "Peasant.generated.h"
 
@@ -22,9 +23,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  UStaticMeshComponent* LumberPiece;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  UStaticMeshComponent* StonePiece;
   
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 GoldCarryCapacity;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 LumberCarryCapacity;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  int32 StoneCarryCapacity;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  FCost CarryCapacities;
   // The rate at which a resource is gathered
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = Peasant )  float GatheringRate;
   // Plays the shrug animation
@@ -33,13 +32,13 @@ public:
 
   // Buildings we can build using this unit
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Capabilities)
-  TArray< TSubclassOf< UBuildAction > > Builds;
+  TArray< TSubclassOf< UUIBuildActionCommand > > Builds;
 
   // List of objects that are currently being built by this object.
-  UPROPERTY() TArray< UBuildAction* > Buildables; // Buildings themselves
+  UPROPERTY() TArray< UUIBuildActionCommand* > Buildables; // Buildings themselves
   // Buildings that this peasant is constructing. This will contain a queue
   // of things in case the peasant has queued several buildings.
-  UPROPERTY() TArray< UInProgressBuilding* > CountersBuildingsQueue;
+  UPROPERTY() TArray< UUIInProgressBuildingCounter* > CountersBuildingsQueue;
 
   // These are set when the peasant is repairing a building or unit.
   ABuilding* RepairTarget;  // The building we are repairing.
@@ -56,7 +55,7 @@ public:
   virtual void InitIcons();
   bool UseBuild( int index );
   bool CancelBuilding( int index );
-  bool Build( UBuildAction* buildAction, FVector pos );
+  bool Build( UUIBuildActionCommand* buildAction, FVector pos );
   virtual void Target( AGameObject* target ) override;
   virtual void DropTargets() override;
   void Repair( float t );

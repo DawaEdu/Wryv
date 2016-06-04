@@ -11,19 +11,19 @@ using namespace std;
 
 #include "CursorTexture.h"
 #include "Team.h"
-#include "UnitAction.h"
+#include "UIUnitActionCommand.h"
 #include "Widget.h"
 #include "TheHUD.generated.h"
 
 class FAssetRegistryModule;
-class CostWidget;
-class UCastSpellAction;
+class CostPanel;
+class UUICastSpellActionCommand;
 class AFlyCam;
 class AGameObject;
-class ImageWidget;
-class ITextWidget;
+class ImageHS;
+class IText;
 class UMediaTexture;
-class SlotPalette;
+class SlotPanel;
 class StackPanel;
 class APlayerControl;
 class UserInterface;
@@ -45,7 +45,7 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleScreenTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* TitleLogoTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* RightPanelTexture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPaletteTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* SlotPanelTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* VoronoiBackground;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* PauseButtonTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* ResumeButtonTexture;
@@ -77,10 +77,15 @@ public:
   // The uClass of the selected object highlight
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* PortraitTexture;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTextureRenderTarget2D* MinimapTexture;
-  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
-  //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* MediaTexture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterialInterface* MediaMaterial;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMaterial* WarBlot;
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
+
+  // Classes of objects that can be selected by the mouse
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< TSubclassOf< AGameObject > > Selectables;
+  // Classes of objects that cannot be selected by the mouse
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< TSubclassOf< AGameObject > > Unselectables;
 
   // The font used to render the text in the HUD.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* smallFont;
@@ -88,8 +93,8 @@ public:
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* largeFont;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor EmptyCrosshairColor;
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor HitCrosshairColor;
-  
-  UCastSpellAction* NextSpell;
+
+  UUICastSpellActionCommand* NextSpell;
   Abilities NextAbility; //Queued ability
 
   ATheHUD(const FObjectInitializer& PCIP);

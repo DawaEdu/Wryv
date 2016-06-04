@@ -1,11 +1,11 @@
 #pragma once
 
 #include "HotSpot.h"
-#include "SolidWidget.h"
+#include "Solid.h"
 
 class Border : public HotSpot
 {
-  SolidWidget *left, *top, *bottom, *right;
+  Solid *left, *top, *bottom, *right;
 public:
   FBox2DU Box;
   float Thickness;
@@ -16,7 +16,7 @@ public:
 class MouseSelectBox : public Border
 {
   FVector2D StartPt;
-  ImageWidget* Cursor;
+  ImageHS* Cursor;
 public:
   MouseSelectBox( FString name, FBox2DU box, float thickness, FLinearColor color );
   void SetStart( FVector2D pt );

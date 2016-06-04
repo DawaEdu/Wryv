@@ -1,6 +1,7 @@
 #include "Wryv.h"
 
 #include "Building.h"
+#include "Cost.h"
 #include "Explosion.h"
 #include "FlyCam.h"
 #include "GlobalFunctions.h"
@@ -13,10 +14,10 @@
 #include "Animation/AnimNode_AssetPlayerBase.h"
 #include "Runtime/Engine/Classes/Particles/ParticleEmitter.h"
 
-#include "InProgressUnit.h"
-#include "InProgressResearch.h"
-#include "Research.h"
-#include "TrainingAction.h"
+#include "UIInProgressUnitCounter.h"
+#include "UIInProgressResearchCounter.h"
+#include "UIResearchCommand.h"
+#include "UITrainingActionCommand.h"
 
 ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
 {
@@ -24,16 +25,17 @@ ABuilding::ABuilding( const FObjectInitializer& PCIP ) : AGameObject(PCIP)
   TimeBuilding = FLT_MAX; // So the building starts complete.
   ExplodedTime = 0.f;
   MaxDeadTime = MaxExplosionTime;
+  MaxTrains = 5;
   ExplosiveRadius = 11.f;
   ExplosiveForce = 50000.f;
   
-  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, "buildingmesh" );
+  Mesh = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>( this, TEXT( "Buildingmesh" ) );
   Mesh->AttachTo( DummyRoot );
-  ExitPosition = PCIP.CreateDefaultSubobject<USceneComponent>( this, "ExitPosition" );
+  ExitPosition = PCIP.CreateDefaultSubobject<USceneComponent>( this, TEXT( "ExitPosition" ) );
   ExitPosition->AttachTo( DummyRoot );
-  destructableMesh = PCIP.CreateDefaultSubobject<UDestructibleComponent>( this, "DestructibleMesh" );
+  destructableMesh = PCIP.CreateDefaultSubobject<UDestructibleComponent>( this, TEXT( "DestructibleMesh" ) );
   destructableMesh->AttachTo( DummyRoot );
-  buildingDust = PCIP.CreateDefaultSubobject<UParticleSystemComponent>( this, "ParticleEmitter" );
+  buildingDust = PCIP.CreateDefaultSubobject<UParticleSystemComponent>( this, TEXT( "ParticleEmitter" ) );
   buildingDust->AttachTo( DummyRoot );
 }
 
@@ -65,7 +67,7 @@ void ABuilding::InitIcons()
   {
     if( TrainClasses[i] )
     {
-      UTrainingAction* action = Construct<UTrainingAction>( TrainClasses[i] );
+      UUITrainingActionCommand* action = Construct<UUITrainingActionCommand>( TrainClasses[i] );
       action->Building = this;
       TrainingAvailable.Push( action );
     }
@@ -76,7 +78,7 @@ void ABuilding::InitIcons()
   {
     if( ResearchClasses[i] )
     {
-      UResearch* action = Construct<UResearch>( ResearchClasses[i] );
+      UUIResearchCommand* action = Construct<UUIResearchCommand>( ResearchClasses[i] );
       action->Building = this;
       ResearchesAvailable.Push( action );
     }
@@ -110,12 +112,14 @@ void ABuilding::MoveCounters( float t )
   // When moving counters, when a counter expires it gets removed, 
   for( int i = (int)TrainingAvailable.Num() - 1; i >= 0; i-- )
     TrainingAvailable[i]->Step( t );
-  for( int i = (int)CountersUnitsInProgress.Num() - 1; i >= 0; i-- )
-    CountersUnitsInProgress[i]->Step( t );
+  // Only step the 1st position training counter.
+  if( CountersUnitsInProgress.Num() )
+    CountersUnitsInProgress[0]->Step( t );
   for( int i = (int)ResearchesAvailable.Num() - 1; i >= 0; i-- )
     ResearchesAvailable[i]->Step( t );
-  for( int i = (int)CountersResearchInProgress.Num() - 1; i >= 0; i-- )
-    CountersResearchInProgress[i]->Step( t );
+  // Only step the 1st position training counter.
+  if( CountersResearchInProgress.Num() )
+    CountersResearchInProgress[0]->Step( t );
 }
 
 void ABuilding::Move( float t )
@@ -188,11 +192,22 @@ bool ABuilding::UseTrain( int index )
     return 0;
   }
 
+  if( CountersUnitsInProgress.Num() >= MaxTrains )
+  {
+    info( FS( "%s is over max trains %d", *GetName(), MaxTrains ) );
+    return 0;
+  }
+  
   // Construct an in-progress counter & add it to counters for this object
-  UInProgressUnit* unitInProgress = Construct<UInProgressUnit>( UInProgressUnit::StaticClass() );
+  UUIInProgressUnitCounter* unitInProgress = Construct<UUIInProgressUnitCounter>( UUIInProgressUnitCounter::StaticClass() );
+  
+  // Copy properties of trainingavailable.
   unitInProgress->Set( TrainingAvailable[ index ] );
   CountersUnitsInProgress.Push( unitInProgress );
-   
+  
+  // Cost the team the amount of resources to train the unit.
+  team->Spend( unitInProgress->UnitType );
+
   // Change to UI:
   Game->hud->ui->dirty = 1; // Refresh with selected units
   
@@ -207,7 +222,7 @@ bool ABuilding::CancelTraining( int index )
     return 0;
   }
 
-  UInProgressUnit* ipUnit = CountersUnitsInProgress[ index ];
+  UUIInProgressUnitCounter* ipUnit = CountersUnitsInProgress[ index ];
 
   // refund
   team->Refund( ipUnit->UnitType );
@@ -226,16 +241,14 @@ bool ABuilding::UseResearch( int index )
   }
 
   // Start the clock on there
-  UResearch* research = ResearchesAvailable[ index ];
+  UUIResearchCommand* research = ResearchesAvailable[ index ];
   
   // Spend money required to upgrade
-  team->Gold   -= research->GoldCost;
-  team->Lumber -= research->LumberCost;
-  team->Stone  -= research->StoneCost;
+  team->ResourceChange( -research->Cost );
   
-  UInProgressResearch* iPResearch = Construct<UInProgressResearch>( UInProgressResearch::StaticClass() );
+  UUIInProgressResearchCounter* iPResearch = Construct<UUIInProgressResearchCounter>( UUIInProgressResearchCounter::StaticClass() );
   iPResearch->Set( research );
-  iPResearch->UActionIndex = index;
+  iPResearch->UUICmdActionIndex = index;
   CountersResearchInProgress.Push( iPResearch );
   
   // Change to UI:
@@ -277,7 +290,7 @@ bool ABuilding::CanBePlaced()
 {
   // Required AGameObject* for collision check, not APeasant*
   vector<AGameObject*> objs = Game->pc->ComponentPickExcept(
-    this, hitBounds, { PrimaryPeasant }, "Checkers", {"SolidObstacle"} );
+    this, hitBox, { PrimaryPeasant }, "Checkers", {"SolidObstacle"} );
   for( AGameObject* go : objs )
   {
     LOG( "Building %s hits object %s", *GetName(), *go->GetName() );
@@ -310,10 +323,11 @@ void ABuilding::PlaceBuilding( APeasant *p )
     Game->EnqueueCommand( Command( Command::Target, PrimaryPeasant->ID, ID ) );
 }
 
-void ABuilding::ReleaseUnit( UInProgressUnit* unit )
+void ABuilding::ReleaseUnit( UUIInProgressUnitCounter* unit )
 {
-  Game->Make< AUnit >( unit->UnitType, team, GetExitPosition() );
+  AUnit* newUnit = Game->Make< AUnit >( unit->UnitType, team, GetExitPosition() );
   CountersUnitsInProgress.Remove( unit );
+  info( FS( "Unit %s of type %s created", *newUnit->GetName(), *newUnit->GetClass()->GetName() ) );
 }
 
 void ABuilding::DropBuilders( bool buildingSuccess )

@@ -8,7 +8,7 @@
 UTexture* Minimap::MinimapTexture = 0;
 
 Minimap::Minimap( float borderThickness, FLinearColor borderColor ) : 
-  ImageBorder( "minimap", MinimapTexture, borderThickness, borderColor )
+  BorderImage( "minimap", MinimapTexture, borderThickness, borderColor )
 {
   OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     Game->flycam->SetCameraPosition( mouse / Size );
@@ -22,7 +22,7 @@ Minimap::Minimap( float borderThickness, FLinearColor borderColor ) :
 
 void Minimap::render( FVector2D offset )
 {
-  ImageBorder::render( offset );
+  BorderImage::render( offset );
   // Convert groundIntnPts to pts on screen in screenspace of thing
   //for( int i = 0; i < pts.size()-1; i++ )
   //  DrawDebugLine( UGameplayStatics::GetWorld(), pts[i], pts[i+1], FColor( 100, 100, 100, 100 ) );

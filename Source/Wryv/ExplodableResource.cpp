@@ -3,7 +3,7 @@
 
 AExplodableResource::AExplodableResource( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  destructableMesh = PCIP.CreateDefaultSubobject<UDestructibleComponent>( this, "DestructibleMesh1" );
+  destructableMesh = PCIP.CreateDefaultSubobject<UDestructibleComponent>( this, TEXT( "DestructibleMesh1" ) );
   destructableMesh->AttachTo( DummyRoot );
   ExplosiveRadius = 3.f;
   ExplosiveForce = 10000.f;

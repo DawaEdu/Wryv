@@ -8,8 +8,10 @@ struct WRYV_API FCursorTexture
 {
 	GENERATED_USTRUCT_BODY()
 public:
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UTexture* Texture;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FVector2D Hotpoint;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) FLinearColor Color;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  UTexture* Texture;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  FVector2D Hotpoint;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  FLinearColor Color;
 };
-

@@ -1,10 +1,10 @@
 #include "Wryv.h"
 
 #include "FlowPanel.h"
-#include "ImageWidget.h"
+#include "ImageHS.h"
 
 FlowPanel::FlowPanel( FString name, UTexture* bgTex, int rows, int cols, FVector2D size ) :
-  ImageWidget( name, bgTex, size ), Rows( rows ), Cols( cols )
+  ImageHS( name, bgTex, size ), Rows( rows ), Cols( cols )
 {
 }
 
@@ -35,7 +35,7 @@ void FlowPanel::Reflow()
     GetChild(i)->Size = tileDims;
   }
 
-  ImageWidget::Reflow();
+  ImageHS::Reflow();
 }
 
 // re-flow after each add
@@ -51,7 +51,7 @@ void FlowPanel::render( FVector2D offset )
 
   if( Tex )
   {
-    ImageWidget::render( offset );
+    ImageHS::render( offset );
   }
   else
   {

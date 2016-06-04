@@ -1,6 +1,6 @@
 #include "Wryv.h"
 
-#include "Action.h"
+#include "UIActionCommand.h"
 #include "ActionsPanel.h"
 #include "Building.h"
 #include "Clock.h"
@@ -11,9 +11,9 @@
 #include "Unit.h"
 #include "WryvGameInstance.h"
 
-#include "Research.h"
-#include "TrainingAction.h"
-#include "UnitAction.h"
+#include "UIResearchCommand.h"
+#include "UITrainingActionCommand.h"
+#include "UIUnitActionCommand.h"
 
 UTexture* AbilitiesPanel::BuildButtonTexture = 0;
 
@@ -21,11 +21,11 @@ ActionsPanel::ActionsPanel( FString name, FVector2D entrySize ) : HotSpot( name 
 {
   Align = TopCenter;
 
-  abilitiesPanel = new AbilitiesPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
+  abilitiesPanel = new AbilitiesPanel( this, SlotPanel::SlotPanelTexture, 2, 3,
     entrySize, FVector2D(8,8) );
   Add( abilitiesPanel );
 
-  buildPanel = new BuildPanel( this, SlotPalette::SlotPaletteTexture, 2, 3,
+  buildPanel = new BuildPanel( this, SlotPanel::SlotPanelTexture, 2, 3,
     entrySize, FVector2D(8,8) );
   buildPanel->Hide();
   Add( buildPanel );
@@ -55,7 +55,7 @@ void ActionsPanel::Set( vector<AGameObject*> objects )
 
 AbilitiesPanel::AbilitiesPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, 
   FVector2D entrySize, FVector2D pad ) : 
-  SlotPalette( "abilities panel", bkg, rows, cols, entrySize, pad )
+  SlotPanel( "abilities panel", bkg, rows, cols, entrySize, pad )
 {
   Align = TopCenter;
   Actions = iActions;
@@ -77,48 +77,27 @@ void AbilitiesPanel::Set( vector<AGameObject*> objects )
   Blank();
   if( !objects.size() )  return;
   
-  // the abilities we use have to be properties of ALL units.
-  // WHEN a unit is selected with a bunch of buildings, the
-  // unit's capabilities take precedence and building abilities
-  // are not displayed.
-  // intersect all abilities from all units.
-  TSet<UUnitAction*> availableAbilities = {};
-  bool selectionHasUnits = 0;
-  for( int i = 0 ; i < objects.size(); i++ )
-  {  
-    if( AUnit* unit = Cast< AUnit >( objects[i] ) )
-    {
-      selectionHasUnits = 1; // use units capabilities over buildings
-      TSet<UUnitAction*> thisUnitsAbilities = 
-        MakeTSet( unit->CountersAbility );
-      availableAbilities = availableAbilities.Intersect( 
-        thisUnitsAbilities );
-    }
-  }
+  // the abilities we use have to be properties of ALL objects selected for them to be used.
+  // use the front object to populate abilities.
+  AGameObject* go = *objects.begin();
   
-  if( !selectionHasUnits )
+  if( AUnit* unit = Cast<AUnit>( go ) )
   {
-    // There aren't any units in the selection.
-    // This means selection may be a building or resource.
-    for( int i = 0 ; i < objects.size(); i++ )
-    {
-      if( ABuilding* building = Cast< ABuilding >( objects[i] ) )
-      {
-        // The building trains.
-        if( building->TrainingAvailable.Num() )
-          Populate<UTrainingAction>( building->TrainingAvailable, 0 );
-        // The building Researches.
-        if( building->ResearchesAvailable.Num() )
-          Populate<UResearch>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
-      }
-    }
+    Populate<UUIUnitActionCommand>( unit->CountersAbility, 0 );
+  }
+  else if( ABuilding* building = Cast< ABuilding >( go ) )
+  {
+    if( building->TrainingAvailable.Num() )
+      Populate<UUITrainingActionCommand>( building->TrainingAvailable, 0 );
+    if( building->ResearchesAvailable.Num() )
+      Populate<UUIResearchCommand>( building->ResearchesAvailable, building->TrainingAvailable.Num() );
   }
 }
 
 
 
 BuildPanel::BuildPanel( ActionsPanel* iActions, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) : 
-  SlotPalette( "BuildPanel", bkg, rows, cols, entrySize, pad )
+  SlotPanel( "BuildPanel", bkg, rows, cols, entrySize, pad )
 {
   Align = TopCenter;
   Actions = iActions;

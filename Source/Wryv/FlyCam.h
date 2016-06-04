@@ -123,6 +123,7 @@ public:
   bool SetOnGround( FVector& v );
   
   void FindFloor();
+  vector<FVector> GenerateGroundPositions( FVector P, int numGridPos );
   void Target();
   void MouseUpLeft();
   void MouseDownLeft();

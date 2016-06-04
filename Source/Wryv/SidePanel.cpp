@@ -19,10 +19,10 @@ SidePanel::SidePanel( FVector2D size, FVector2D spacing ) :
   
   // Add the leftBorder in as last child, because it takes up full height,
   // and stackpanel will stack it in below the border
-  leftBorder = new SolidWidget( "panel leftborder",
+  leftBorder = new Solid( "panel leftborder",
     FVector2D( 4.f, size.Y ), FLinearColor( 0.1f, 0.1f, 0.1f, 1.f ) );
   leftBorder->Margin = - Pad + FVector2D( -4.f, 0 );
-  controls = new Controls();
+  controlsPanel = new ControlsPanel();
 
   OnMouseDownLeft = [this](FVector2D mouse) -> EventCode {
     //LOG( "Sidepanel Absorbed click" );
@@ -56,7 +56,7 @@ void SidePanel::Restack()
   StackBottom( Actions, HFull );
   StackBottom( minimap, HCenter );
   Add( leftBorder );
-  Add( controls );
+  Add( controlsPanel );
   Reflow();
 }
 

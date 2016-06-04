@@ -27,7 +27,7 @@ UWryvGameInstance::UWryvGameInstance(const FObjectInitializer& PCIP) : Super(PCI
 
 void UWryvGameInstance::SetCommand( const Command& cmd )
 {
-  info( FS( "SetCommand %s", *cmd.ToString() ) );
+  //info( FS( "SetCommand %s", *cmd.ToString() ) );
   ClearFlags(); // Clear waypointed flags
   /// retrieve command list from object
   AGameObject* go = GetUnitById( cmd.srcObjectId );

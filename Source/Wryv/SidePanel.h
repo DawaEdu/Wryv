@@ -2,7 +2,7 @@
 
 #include "ActionsPanel.h"
 #include "Border.h"
-#include "Controls.h"
+#include "ControlsPanel.h"
 #include "FlowPanel.h"
 #include "Minimap.h"
 #include "PortraitsPanel.h"
@@ -26,8 +26,8 @@ public:
   StatsPanel* Stats;          // The stats of the last selected unit
   ActionsPanel* Actions;      // contains both the abilities & buildings pages
   Minimap* minimap;           // the minimap widget for displaying the world map
-  SolidWidget* leftBorder;
-  Controls* controls;         // controls for pause/unpause/menu
+  Solid* leftBorder;
+  ControlsPanel* controlsPanel;         // controlsPanel for pause/unpause/menu
   static UTexture* RightPanelTexture;
 
   // For the group of selected units.

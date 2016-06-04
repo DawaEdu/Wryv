@@ -4,7 +4,6 @@
 
 AWidget3D::AWidget3D( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  PrimaryActorTick.bCanEverTick = true;
 }
 
 void AWidget3D::BeginPlay()

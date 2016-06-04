@@ -9,7 +9,7 @@
 #include "Peasant.h"
 #include "WryvGameInstance.h"
 
-#include "ITextWidget.h"
+#include "IText.h"
 
 UBuildAction::UBuildAction( const FObjectInitializer & PCIP ) : Super( PCIP )
 {
@@ -23,7 +23,7 @@ UTexture* UBuildAction::GetIcon()
 bool UBuildAction::Click()
 {
   // flycam places ghost of building to build next.
-  Peasant->UseBuild( UActionIndex );
+  //Peasant->UseBuild( UUICmdActionIndex );
   return 1;
 }
 

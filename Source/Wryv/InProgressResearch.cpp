@@ -35,11 +35,11 @@ bool UInProgressResearch::Click()
   if( !cooldown.Done() )
   {
     info( FS( "Cancelled research %s", *Text ) );
-    research->Building->CountersResearchInProgress.Remove( this );
+    //research->Building->CountersResearchInProgress.Remove( this );
     Team *team = research->Building->team;
-    team->Gold   += research->GoldCost;
-    team->Lumber += research->LumberCost;
-    team->Stone  += research->StoneCost;
+    //team->Gold   += research->GoldCost;
+    //team->Lumber += research->LumberCost;
+    //team->Stone  += research->StoneCost;
     cooldown.Reset();
   }
   return 1;  
@@ -54,14 +54,14 @@ void UInProgressResearch::OnCooldown()
     return;
   }
   
-  research->Building->team->CompletedResearches.push_back( research );
+  //research->Building->team->CompletedResearches.push_back( research );
   
   // UActionIndex refers to the index inside the Building's research
   // classes queue.
   // Get the element instance inside building's researches that has this object
   // and replace with the NextLevel
-  research->Building->ResearchClasses[ UActionIndex ] = research->NextLevel;
-  research->Building->ResearchesAvailable[ UActionIndex ] = Construct<UResearch>( research->NextLevel );
+  //research->Building->ResearchClasses[ UActionIndex ] = research->NextLevel;
+  //research->Building->ResearchesAvailable[ UActionIndex ] = Construct<UResearch>( research->NextLevel );
 
 }
 

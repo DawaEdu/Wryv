@@ -12,7 +12,7 @@ AFogOfWar::AFogOfWar( const FObjectInitializer& PCIP ) : Super( PCIP )
   PrimaryActorTick.bCanEverTick = 1;
   CRTFogOfWar = 0;
   FogInverter = 0;
-  FogMesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "Fog Mesh" );
+  FogMesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "FogMesh" ) );
   SetRootComponent( FogMesh );
 }
 

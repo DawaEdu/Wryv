@@ -27,14 +27,14 @@ class AResource;
 class AShape;
 struct Team;
 
-class UAction;
-class UUnitAction;
-class UBuildAction;
-class UInProgressBuilding;
-class UCastSpellAction;
-class UItemAction;
-class UResearch;
-class UTrainingAction;
+class UUIActionCommand;
+class UUIUnitActionCommand;
+class UUIBuildActionCommand;
+class UUIInProgressBuildingCounter;
+class UUICastSpellActionCommand;
+class UUIItemActionCommand;
+class UUIResearchCommand;
+class UUITrainingActionCommand;
 
 UCLASS()
 class WRYV_API AGameObject : public AActor
@@ -48,15 +48,15 @@ public:
   
   // 
   int64 ID; // Unique Identity of the object.
-  Team *team;
+  Team* team;
   // The stats applied due to research bonuses.
   //vector<FUnitsDataRow> ResearchBonusStats;
 
   // The amount that this object multiplies incoming repulsion forces by.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float RepelMultiplier;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USceneComponent* DummyRoot;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  UCapsuleComponent* hitBounds;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Cosmetics)  USphereComponent* repulsionBounds;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Collisions)  USceneComponent* DummyRoot;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Collisions)  UBoxComponent* hitBox;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Collisions)  USphereComponent* repulsionBounds;
   // Whether the object sits on the ground or not.
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  bool Grounds;
 
@@ -64,7 +64,12 @@ public:
   float Hp;             // Current Hp. float, so heal/dmg can be continuous (fractions of Hp)
   float Mana;           // Current Mana.
   UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Stats)  bool Dead;// Whether unit is dead or not.
-  float LifeTime, MaxLifeTime, DeadTime, MaxDeadTime; // how long the object has been around/dead for
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  bool Untargettable;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float LifeTime;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float MaxLifeTime;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float DeadTime;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Stats)  float MaxDeadTime;
+
   FLinearColor vizColor;
   float vizSize;
   bool Recovering;
@@ -78,10 +83,10 @@ public:
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Pos;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Dir;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  float Speed;
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FVector Vel;
   FVector Dest;
   vector<FVector> Waypoints;
-  vector<AShape*> NavFlags; // Debug info for navigation flags
+  vector<AShape*> NavFlags;  // Debug info for navigation flags
+  AShape* GroundDestination; // Debug pos for the destination pos on ground
 
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)  FUnitsData BaseStats;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  FUnitsData Stats;
@@ -100,6 +105,7 @@ public:
 
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  AGameObject* FollowTarget;
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stats)  AGameObject* AttackTarget;
+
   // Cached collections of followers & attackers
   vector<AGameObject*> Followers, Attackers, RepulsionOverlaps, HitOverlaps;
   FVector AttackTargetOffset;  // Ground position of spell attacks
@@ -162,7 +168,7 @@ public:
   virtual void PostInitializeComponents();
   virtual void BeginPlay() override;
   virtual void OnMapLoaded();
-  virtual void InitIcons() {}
+  virtual void InitIcons();
 
   // Net
   // Hashes the object (checking for network state desync)
@@ -183,16 +189,23 @@ public:
   void SetSize( FVector size );
 
   // 
-  // Gameplay.
-  FVector GetTip();
+  // The Centroid is actually the center of the hit bounds. The reason for this is Pos is Grounded.
   FVector GetCentroid();
-  float GetHeight();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float Height();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float HitBoundsCylindricalRadius();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  float HitBoundsSphericalRadius();
+  UFUNCTION(BlueprintCallable, Category = Calculate)
+  /// Inaccessible to Blueprints is C++ function "CalcBounds" on any USceneComponent
+  FBoxSphereBounds CalcBounds( USceneComponent* sceneComponent ) {
+    return sceneComponent->CalcBounds( FTransform() );
+  }
   float centroidDistance( AGameObject *go );
   float outerDistance( AGameObject *go );
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isAttackTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool isFollowTargetWithinRange();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float HpFraction();
   UFUNCTION(BlueprintCallable, Category = Fighting)  float SpeedFraction();
+  UFUNCTION(BlueprintCallable, Category = Fighting)  FVector Velocity(){ return Dir * Speed; }
   // Pass thru to stats structure property
   UFUNCTION(BlueprintCallable, Category = Fighting)  float AttackSpeedMultiplier() { return Stats.AttackSpeedMultiply; }
   UFUNCTION(BlueprintCallable, Category = Fighting)  bool hasAttackTarget() { return AttackTarget != 0; }
@@ -241,16 +254,14 @@ public:
   // This function is provided INSTEAD of ::Tick(), which has variable timestep value 
   // and unpredicatable call order.
   void CheckNextCommand();
-  void CheckDead( float t );
+  bool CheckDead( float t );
   virtual void Move( float t );
   // Tells you if the object is idling or not
   UFUNCTION(BlueprintCallable, Category = Fighting) virtual bool Idling();
   virtual void ai( float t );
   // The hit volumes overlapped
   virtual void Hit( AGameObject* other );
-  float Height();
-  float Radius();
-
+  
   //
   // COMMAND
   // Sets a new ground destination, dropping Follow/Attack targets.
@@ -309,7 +320,7 @@ public:
   // Eg this is a Projectile, then { ASpell::StaticClass(), AProjectile::StaticClass() }
   // would return true.
   template <typename T>
-  bool IsAny( set< TSubclassOf< T > > types )
+  bool IsAny( const set< TSubclassOf< T > >& types )
   {
     static_assert( is_base_of< AGameObject, T >::value, "IsAny<T>: T must derive from AGameObject" );
 

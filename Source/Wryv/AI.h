@@ -3,6 +3,7 @@
 #include <vector>
 using namespace std;
 
+#include "Cost.h"
 #include "Enums.h"
 #include "Wryv.h"
 #include "AI.generated.h"
@@ -28,10 +29,9 @@ struct WRYV_API FAI
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) float scoutInterval;
   float timeSinceLastScout;
   // Need some defaults for stock Gold, Lumber, Stone AI level expects to have
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingGold;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingLumber;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI) int32 StartingStone;
-
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AI)
+  FCost StartingResources;
+  
   FAI();
   vector< TSubclassOf<AResource> > GetNeededResourceTypes( Team& team );
   FString ToString();

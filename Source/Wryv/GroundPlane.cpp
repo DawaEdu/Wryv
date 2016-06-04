@@ -3,7 +3,7 @@
 
 AGroundPlane::AGroundPlane( const FObjectInitializer& PCIP ) : Super( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "mesh1" );
+  Mesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "Mesh" ) );
   Mesh->AttachTo( RootComponent );
 
   TraceFraction = 1.f;

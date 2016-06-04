@@ -35,7 +35,7 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
 
   // Set this character to call Tick() every frame.
   // Turn this off to improve performance if you don't need it.
-  PrimaryActorTick.bCanEverTick = true;
+  PrimaryActorTick.bCanEverTick = 1;
   PrimaryActorTick.bTickEvenWhenPaused = 1;
   ghost = 0;
   floor = 0;
@@ -47,11 +47,11 @@ AFlyCam::AFlyCam( const FObjectInitializer& PCIP ) : APawn( PCIP )
   MovementComponent = PCIP.CreateDefaultSubobject<UFloatingPawnMovement>( this, ADefaultPawn::MovementComponentName );
   MovementComponent->SetTickableWhenPaused( true );
 
-  DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, "Dummy" );
+  DummyRoot = PCIP.CreateDefaultSubobject<USceneComponent>( this, TEXT( "Dummy" ) );
   SetRootComponent( DummyRoot );
-  MainCamera = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "MainCamera" );
+  MainCamera = PCIP.CreateDefaultSubobject<UCameraComponent>( this, TEXT( "MainCamera" ) );
   MainCamera->AttachTo( DummyRoot );
-  OrthoCam = PCIP.CreateDefaultSubobject<UCameraComponent>( this, "OrthoCam" );
+  OrthoCam = PCIP.CreateDefaultSubobject<UCameraComponent>( this, TEXT( "OrthoCam" ) );
   OrthoCam->AttachTo( DummyRoot );
   
   CameraMovementSpeed = 1000.f;
@@ -142,7 +142,7 @@ void AFlyCam::MarkAsSelected( AGameObject* object )
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( SelectedTargetName );
-  float r = object->Radius() * 1.5f;
+  float r = object->HitBoundsCylindricalRadius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(0,1,0,1) );
   object->AddChild( widget );
@@ -161,7 +161,7 @@ void AFlyCam::MarkAsFollow( AGameObject* object )
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( FollowTargetName );
-  float r = object->Radius() * 1.5f;
+  float r = object->HitBoundsCylindricalRadius() * 1.5f;
   widget->SetActorScale3D( FVector(r,r,r) );
   widget->SetMaterialColors( "Color", FLinearColor(1,1,0,1) );
   object->AddChild( widget );
@@ -179,7 +179,7 @@ void AFlyCam::MarkAsAttack( AGameObject* object )
   if( !widget ) { error( "Widget3d couldn't be created" ); return; }
   
   widget->Tags.Add( AttackTargetName );
-  float r = object->Radius() * 1.5f;
+  float r = object->HitBoundsCylindricalRadius() * 1.5f;
   widget->SetActorScale3D( FVector( r,r,r ) );
   widget->SetMaterialColors( "Color", FLinearColor(1,0,0,1) );
   object->AddChild( widget );
@@ -334,10 +334,10 @@ void AFlyCam::InitializePathfinding()
         // the node is regarded as impassible.
         vector<AGameObject*> forbidden = { floor };
 
-        // The hitBounds is used & should be configured inside UE4 SETTINGS
+        // The hitBox is used & should be configured inside UE4 SETTINGS
         // collision profile to determine what types of objects to intersect with.
         // Mesh-Mesh intersection is kind of buggy and not very fast, so I avoided it here.
-        vector<AGameObject*> intns = Game->pc->ComponentPickExcept( sphere, sphere->hitBounds, forbidden,
+        vector<AGameObject*> intns = Game->pc->ComponentPickExcept( sphere, sphere->hitBox, forbidden,
           "Checkers", {"SolidObstacle"} );
         
         if( intns.size() ) {
@@ -368,19 +368,16 @@ void AFlyCam::InitializePathfinding()
   for( int i = 0; i < pathfinder->nodes.size(); i++ )
   {
     GraphNode *node = pathfinder->nodes[i];
-    if( node->terrain == Passible )
-    {
-      if( VizPassibles )
-      {
-        AShape *vizSphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, node->point );
-        vizSphere->SetSize( diameterScale );
-      }
-    }
-    else
+    if( node->terrain == Passible && VizPassibles )
     {
       AShape *vizSphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, node->point );
-      vizSphere->SetColor( FLinearColor::Red );
       vizSphere->SetSize( diameterScale );
+    }
+    else if( node->terrain == Impassible )
+    {
+      AShape *vizSphere = Game->Make<AShape>( CheckerClass, Game->gm->neutralTeam, node->point );
+      vizSphere->SetSize( diameterScale );
+      vizSphere->SetColor( FLinearColor::Red );
     }
 
     // create a node and edge connections
@@ -484,10 +481,6 @@ UMaterialInterface* AFlyCam::GetMaterial( FLinearColor color )
 void AFlyCam::Visualize( FVector& v, float s, FLinearColor color, float time )
 {
   AShape* shape = Game->Make<AShape>( VizClass, Game->gm->neutralTeam, v );
-  if( !shape ) {
-    error( "AFlyCam::Visualize: Cannot spawn AShape" );
-    return;
-  }
   shape->SetSize( FVector( s ) );
   shape->SetColor( color );
   shape->MaxLifeTime = time;
@@ -550,11 +543,19 @@ void AFlyCam::RetrievePointers()
 {
   Game->pc = Cast<APlayerControl>( GetWorld()->GetFirstPlayerController() );
   Game->hud = Cast<ATheHUD>( Game->pc->GetHUD() );
-  Game->gm = (AWryvGameMode*)GetWorld()->GetAuthGameMode();
-  Game->gs = (AWryvGameState*)GetWorld()->GetGameState();
+  Game->gm = Cast<AWryvGameMode>( GetWorld()->GetAuthGameMode() );
+  Game->gs = Cast<AWryvGameState>( GetWorld()->GetGameState() );
   Game->flycam = this;
   //info( FS( "PC: %d, HUD %d, GM: %d, GS %d, flycam %d",
   //  Game->pc, Game->hud, Game->gm, Game->gs, Game->flycam ) );
+
+  // Check that each is an instance of the class it should be.
+  CheckInstance<UWryvGameInstance>( Game );
+  CheckInstance<APlayerControl>( Game->pc );
+  CheckInstance<ATheHUD>( Game->hud );
+  CheckInstance<AWryvGameMode>( Game->gm );
+  CheckInstance<AWryvGameState>( Game->gs );
+  CheckInstance<AFlyCam>( Game->flycam );
 }
 
 void AFlyCam::debug( int slot, FColor color, FString mess )
@@ -668,11 +669,55 @@ void AFlyCam::MouseUpRight()
   
 }
 
+vector<FVector> AFlyCam::GenerateGroundPositions( FVector P, int numGridPos )
+{
+  vector<FVector> positions;
+
+  FVector avgPos = Zero;
+  for( AGameObject* go : Game->hud->Selected )
+    avgPos += go->Pos;
+  avgPos /= Game->hud->Selected.size();
+
+  FVector travelDir = P - avgPos;
+  if( float len = travelDir.Size() )
+    travelDir /= len;
+  else
+  {
+    warning( "Travel length 0" );
+    return positions;
+  }
+
+  // The side vector is going to be a result of crossing with the up vector
+  FVector right = FVector::CrossProduct( UnitZ, travelDir );
+  float largestRadius = Game->hud->Selected.front()->repulsionBounds->GetScaledSphereRadius();
+  for( int i = 0; i < Game->hud->Selected.size(); i++ )
+  {
+    float r = Game->hud->Selected[i]->repulsionBounds->GetScaledSphereRadius();
+    if( r > largestRadius )
+      largestRadius = Game->hud->Selected[i]->repulsionBounds->GetScaledSphereRadius();
+  }
+  largestRadius *= 2.f; // diameter spacing, x4
+  
+  // form the grid centered around the center point
+  for( int i = 0; i < Game->hud->Selected.size(); i++ )
+  {
+    int x = i % numGridPos;
+    int y = i / numGridPos;
+    float xP = largestRadius * (x - (numGridPos-1)/2.f);
+    float yP = largestRadius * (y - (numGridPos-1)/2.f);
+    FVector pos = P   +   right*xP - travelDir*yP; // use - travel dir so 1st point in front row
+    
+    positions.push_back( pos );
+  }
+  return positions;
+}
+
 // Targets selected units @ another unit or groundpos
 // (queued NextAction/left click or right click behavior).
 void AFlyCam::Target()
 {
-  FHitResult hit = Game->pc->RayPickSingle( getMousePos(), {}, { AShape::StaticClass() } );
+  FHitResult hit = Game->pc->RayPickSingle( getMousePos(),
+    MakeSet( Game->hud->Selectables ), MakeSet( Game->hud->Unselectables ) );
   AGameObject* target = Cast<AGameObject>( hit.GetActor() );
   if( !target )
   {
@@ -682,67 +727,31 @@ void AFlyCam::Target()
 
   FVector P = hit.ImpactPoint;
   SetOnGround( P );
-  
+  //DrawDebug( P, 32.f, FLinearColor::Yellow, 10.f );
   // Hit the floor target, which means send units to ground position
   if( target == floor )
   {
     // Arrange the units in some formation around hit.ImpactPoint.
     // Units targeted in group cannot have the same destination.
     // The group of units will be travelling in an average direction
-    FVector avgPos(0.f,0.f,0.f);
-    for( AGameObject* go : Game->hud->Selected )
-      avgPos += go->Pos;
-    avgPos /= Game->hud->Selected.size();
-
-    FVector travelDir = P - avgPos;
-    if( float len = travelDir.Size() )
-    {
-      travelDir /= len;
-    }
-    else
-    {
-      warning( "Travel length 0" );
-      return;
-    }
-
     GroundMarker->SetPosition( P );
     GroundMarker->SetDestination( P - 100.f*UnitZ );
-    // The side vector is going to be a result of crossing with the up vector
-    FVector right = FVector::CrossProduct( UnitZ, travelDir );
-    //DrawDebug( P, 25.f, FLinearColor::Green, 10.f );
-    //DrawDebug( P, P + travelDir*50.f, 5.f, FLinearColor::Green, 10.f );
-    //DrawDebug( P, P + right*50.f, 5.f, FLinearColor::Red, 10.f );
-
-    float largestRadius = Game->hud->Selected.front()->Radius();
-    for( int i = 0; i < Game->hud->Selected.size(); i++ )
-      if( Game->hud->Selected[i]->Radius() > largestRadius )
-        largestRadius = Game->hud->Selected[i]->Radius();
-    largestRadius *= 4.f; // Double-spacing
-
+    
     int numGridPos = FMath::CeilToInt( sqrtf( Game->hud->Selected.size() ) );
-
-    // form the grid centered around the center point
+    vector<FVector> positions = GenerateGroundPositions( P, numGridPos );
     for( int i = 0; i < Game->hud->Selected.size(); i++ )
     {
-      int x = i % numGridPos;
-      int y = i / numGridPos;
-      float xP = largestRadius * (x - numGridPos/2.f);
-      float yP = largestRadius * (y - numGridPos/2.f);
-
-      FVector pos = P   +   right*xP - travelDir*yP; // use - travel dir so 1st point in front row
-      //DrawDebug( pos, 10.f, FLinearColor::Red, 10.f );
       AGameObject* go = Game->hud->Selected[i];
       //go->GoToGroundPosition( go->Pos + offset ); // C++ Code Command
       if( Game->pc->IsAnyKeyDown( { EKeys::LeftShift, EKeys::RightShift } ) )
       {
         // When shift is down, we have to add the command to the list of commands for this unit.
-        Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, pos ) ); // Network command
+        Game->EnqueueCommand( Command( Command::GoToGroundPosition, go->ID, positions[i] ) ); // Network command
       }
       else
       {
         // When shift is NOT down, we have to clear the unit's command set.
-        info( "Replacing prev cmd" );
-        Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, pos ) ); // Network command
+        Game->SetCommand( Command( Command::GoToGroundPosition, go->ID, positions[i] ) ); // Network command
       }
     }
   }

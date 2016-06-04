@@ -9,8 +9,13 @@ struct WRYV_API FSoundEffect
 {
   GENERATED_USTRUCT_BODY()
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds) TEnumAsByte<UISounds> Type;
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds) USoundBase* Sound;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
+  TEnumAsByte<UISounds> Type;
+  
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sounds)
+  USoundBase* Sound;
 
-  FSoundEffect(){}
+  FSoundEffect():Type((UISounds)0),Sound(0)
+  {
+  }
 };

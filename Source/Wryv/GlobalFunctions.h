@@ -2,7 +2,7 @@
 
 // Inlined functions
 #include "Engine.h"
-
+#include <iterator> //back_inserter
 #include <vector>
 #include <set>
 #include <deque>
@@ -10,7 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <stdarg.h>
-#include <iterator>
+
 using namespace std;
 
 DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
@@ -22,6 +22,13 @@ DECLARE_LOG_CATEGORY_EXTERN( K, Log, All );
 
 #define skip continue
 #define self this
+
+// If the cast succeeds then obj is an instance of T.
+template <typename T>
+bool CheckInstance( T* obj )
+{
+  return !!CastChecked< T >( obj );
+}
 
 __forceinline void fatal( FString message )
 {
@@ -43,28 +50,40 @@ __forceinline void info( FString message )
   UE_LOG( K, Display, TEXT("%s"), *message );
 }
 
-// Removes all occurrences of `elt` from `v`. Returns # removals.
-template <typename T> int removeElement( vector<T*>& v, T* elt )
+/// Remove from `v` all occurrences of `elt`. Returns # removals.
+template <typename T> int removeElement( vector<T>& v, const T& elt )
 {
   int count = 0;
-  for( int i = v.size()-1 ; i >= 0; i-- )
+  for( int i = v.size()-1 ; i >= 0; i-- ) {
     if( v[i] == elt ) {
       v.erase( v.begin() + i );
       count++;
     }
+  }
   return count;
 }
 
-// Removes occurrences of `elt` from `v`. Returns #.
-template <typename T> int removeElement( vector<T>& v, T& elt )
+template <typename T> int removeElement( vector<T*>& v, const T*& elt )
 {
   int count = 0;
-  for( int i = v.size()-1 ; i >= 0; i-- )
+  for( int i = v.size()-1 ; i >= 0; i-- ) {
     if( v[i] == elt ) {
       v.erase( v.begin() + i );
       count++;
     }
+  }
   return count;
+}
+
+/// Remove from set `s` element `elt`. Return `true` if success.
+template <typename T> bool removeElement( set<T>& s, const T& elt )
+{
+  set<T>::iterator it = s.find( elt );
+  if( it != s.end() ) {
+    s.erase( it );
+    return 1;
+  }
+  return 0;
 }
 
 template <typename T> bool removeElement( set<T*>& s, T* elt )
@@ -77,17 +96,8 @@ template <typename T> bool removeElement( set<T*>& s, T* elt )
   return 0;
 }
 
-template <typename T> bool removeElement( set<T>& s, T& elt )
-{
-  set<T>::iterator it = s.find( elt );
-  if( it != s.end() ) {
-    s.erase( it );
-    return 1;
-  }
-  return 0;
-}
-
-template <typename T> vector<T*>& operator-=( vector<T*>& v, T* elt )
+/// Subtract from `v` element `elt`. Return `v` again.
+template <typename T> vector<T>& operator-=( vector<T>& v, const T& elt )
 {
   for( int i = v.size()-1 ; i >= 0; i-- )
     if( v[i] == elt )
@@ -95,7 +105,7 @@ template <typename T> vector<T*>& operator-=( vector<T*>& v, T* elt )
   return v;
 }
 
-template <typename T> vector<T>& operator-=( vector<T>& v, T& elt )
+template <typename T> vector<T*>& operator-=( vector<T*>& v, const T*& elt )
 {
   for( int i = v.size()-1 ; i >= 0; i-- )
     if( v[i] == elt )
@@ -103,7 +113,8 @@ template <typename T> vector<T>& operator-=( vector<T>& v, T& elt )
   return v;
 }
 
-template <typename T> T* removeIndex( vector<T*>& v, int index )
+/// Remove v[index] with bounds check. Gives you a copy @ index back.
+template <typename T> T removeIndex( vector<T>& v, int index )
 {
   if( index < 0 || index >= v.size() )
   {
@@ -112,21 +123,7 @@ template <typename T> T* removeIndex( vector<T*>& v, int index )
   }
 
   // get the element, remove from vector
-  T* elt = v[index];
-  v.erase( v.begin() + index );
-  return elt;
-}
-
-template <typename T> T removeIndex( vector<T>& v, int index )
-{
-  T elt;
-  if( index < 0 || index >= v.size() )
-  {
-    LOG( "vector::removeIndex(%d) OOB", index );
-  }
-
-  // get the element, remove from vector
-  elt = v[index];
+  T elt = v[index];
   v.erase( v.begin() + index );
   return elt;
 }
@@ -137,31 +134,18 @@ template <typename T> inline T first( set<T>& s )
   if( s.size() ) return *s.begin();
   else return 0;
 }
-template <typename T> inline T* first( set<T*>& s )
-{
-  if( s.size() ) return *s.begin();
-  else return 0;
-}
+
 template <typename T> inline T first( vector<T>& v )
 {
   if( v.size() ) return *v.begin();
   else return 0;
-}
-template <typename T> inline T* first( vector<T*>& v )
-{
-  if( v.size() ) return *v.begin();
-  else return 0;
-}
-
-template <typename T> inline bool in( const set<T*>& s, const T* elt )
-{
-  return s.find( elt ) != s.end();
 }
 
 template <typename T> inline bool in( const set<T>& s, const T& elt )
 {
   return s.find( elt ) != s.end();
 }
+
 template <typename T> inline bool in( const vector<T>& s, const T& elt )
 {
   for( int i = 0; i < s.size(); i++ )
@@ -170,15 +154,7 @@ template <typename T> inline bool in( const vector<T>& s, const T& elt )
   return 0;
 }
 
-template <typename T> inline bool in( const vector<T*>& s, const T* elt )
-{
-  for( int i = 0; i < s.size(); i++ )
-    if( s[i] == elt )
-      return 1;
-  return 0;
-}
-
-template <typename T> inline bool in( const vector<T*>& u, const vector<T*>& v )
+template <typename T> inline bool in( const vector<T>& u, const vector<T>& v )
 {
   for( int i = 0; i < u.size(); i++ )
     for( int j = 0; j < v.size(); j++ )
@@ -222,7 +198,7 @@ template <typename T> inline int index( const vector<T>& s, const T& elt )
       return i;
   return -1;
 }
-template <typename T> inline int index( const vector<T*>& s, const T* elt )
+template <typename T> inline int index( const vector<T>& s, const T elt )
 {
   for( int i = 0; i < s.size(); i++ )
     if( s[i] == elt )
@@ -290,14 +266,14 @@ template <typename T> FString GetNames( const vector<T*>& v )
   return fs;
 }
 
-template <typename T> FString GetNames( set<T*>& s )
+template <typename T> FString GetNames( set<T>& s )
 {
   static_assert( is_base_of< UObject, T >::value, "GetNames<T>: T must derive from UObject" );
   FString fs;
   
   // With more than 2 elts, push in first N-1 elts
   if( s.size() >= 2 )
-    for( set<T*>::iterator iter = s.begin(); iter != --s.end(); ++iter )
+    for( set<T>::iterator iter = s.begin(); iter != --s.end(); ++iter )
       fs += iter->GetName() + FString( ", " );
   
   // Push in last elt
@@ -314,7 +290,7 @@ template <typename T> set<T*> Intersection( const set<T*>& A, const set<T*>& B )
   return intns;
 }
 
-template <typename T> vector<T*> Intersection( const vector<T*>& A, const vector<T*>& B )
+template <typename T> vector<T*> Intersection( vector<T*>& A, vector<T*>& B )
 {
   vector<T*> intns;
   std::set_intersection( A.begin(), A.end(), B.begin(), B.end(), back_inserter( intns ) );
@@ -322,9 +298,9 @@ template <typename T> vector<T*> Intersection( const vector<T*>& A, const vector
 }
 
 // Adds B to A, removing duplicates
-template <typename T> vector<T*>& operator+=( vector<T*>& A, const vector<T*>& B )
+template <typename T> vector<T>& operator+=( vector<T>& A, const vector<T>& B )
 {
-  for( T* b : B )
+  for( const T& b : B )
     if( !in( A, b ) )
       A.push_back( b ) ;
     else {
@@ -344,21 +320,28 @@ template <typename T> vector<T>& operator+=( vector<T>& A, const T& b )
   return A;
 }
 
-template <typename T> vector<T*>& operator+=( vector<T*>& A, const T* b )
+//template <typename T> vector<T>& operator+=( vector<T>& A, const T& b )
+//{
+//  if( !in(A,b) ) {
+//    A.push_back( b )
+//  }
+//  else {
+//    LOG( "DUPLICATE: vector operator+=: don't keep: b was in A" );
+//  }
+//  return A;
+//}
+
+template <typename T> vector<T>& operator-=( vector<T>& A, const vector<T>& B )
 {
-  if( !in(A,b) ) {
-    A.push_back( b )
-  }
-  else {
-    LOG( "DUPLICATE: vector operator+=: don't keep: b was in A" );
-  }
+  for( const T& b : B )
+    removeElement<T>( A, b ) ;
   return A;
 }
 
 template <typename T> vector<T*>& operator-=( vector<T*>& A, const vector<T*>& B )
 {
   for( T* b : B )
-    removeElement<T>( A, b ) ;
+    removeElement( A, b ) ;
   return A;
 }
 
@@ -375,9 +358,9 @@ template <typename T> deque<T>& operator-=( deque<T>& A, const deque<T>& B )
   return A;
 }
 
-template <typename T> set<T*>& operator+=( set<T*>& A, const set<T*>& B )
+template <typename T> set<T>& operator+=( set<T>& A, const set<T>& B )
 {
-  for( T* b : B )
+  for( const T& b : B )
     A.insert( b );
   return A;
 }
@@ -391,6 +374,24 @@ template <typename T> set<T> operator|( set<T> src, const set<T>& forbidden )
     if( in( forbidden, *it ) ) // then must remove
     {
       set<T>::iterator it2 = it;
+      ++it2;
+      src.erase( it );
+      it = it2;
+    }
+    else ++it;
+  }
+
+  return src;
+}
+
+template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
+{
+  // Filter objects from the set
+  for( set<T*>::iterator it = src.begin(); it != src.end(); )
+  {
+    if( in( forbidden, *it ) ) // then must remove
+    {
+      set<T*>::iterator it2 = it;
       ++it2;
       src.erase( it );
       it = it2;
@@ -416,23 +417,6 @@ template <typename T> vector<T> operator|( vector<T> src, const vector<T>& forbi
   return src;
 }
 
-// Filters by removing elts from set 2 from set 1
-template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
-{
-  // Filter objects from the set
-  for( set<T*>::iterator it = src.begin(); it != src.end(); )
-  {
-    if( in( forbidden, *it ) ) // then must remove
-    {
-      set<T*>::iterator it2 = it;
-      ++it2;
-      src.erase( it );
-      it = it2;
-    }
-    else ++it;
-  }
-  return src;
-}
 
 template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& forbidden )
 {
@@ -440,17 +424,68 @@ template <typename T> vector<T*> operator|( vector<T*> src, const vector<T*>& fo
   for( int i = src.size() - 1; i >= 0; i-- )
   {
     if( in( forbidden, src[i] ) ) // then must remove
+    {
       src.erase( src.begin() + i );
+    }
   }
   return src;
 }
 
-template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
-{
-  for( T* t : B )
-    removeElement<T>( A, t );
-  return A;
-}
+// Filters by removing elts from set 2 from set 1
+//template <typename T> set<T> operator|( set<T> src, const set<T>& forbidden )
+//{
+//  // Filter objects from the set
+//  for( set<T>::iterator it = src.begin(); it != src.end(); )
+//  {
+//    if( in( forbidden, *it ) ) // then must remove
+//    {
+//      set<T>::iterator it2 = it;
+//      ++it2;
+//      src.erase( it );
+//      it = it2;
+//    }
+//    else ++it;
+//  }
+//  return src;
+//}
+//
+//template <typename T> set<T*> operator|( set<T*> src, const set<T*>& forbidden )
+//{
+//  // Filter objects from the set
+//  for( set<T*>::iterator it = src.begin(); it != src.end(); )
+//  {
+//    if( in( forbidden, *it ) ) // then must remove
+//    {
+//      set<T*>::iterator it2 = it;
+//      ++it2;
+//      src.erase( it );
+//      it = it2;
+//    }
+//    else ++it;
+//  }
+//  return src;
+//}
+
+//template <typename T> set<T>& operator-=( set<T>& A, const set<T>& B )
+//{
+//  for( const T& b : B )
+//    removeElement<T>( A, b );
+//  return A;
+//}
+//
+//template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
+//{
+//  for( const T*& b : B )
+//    removeElement<T*>( A, b );
+//  return A;
+//}
+//
+//template <typename T> set<T*>& operator-=( set<T*>& A, const set<T*>& B )
+//{
+//  for( const T*& b : B )
+//    removeElement<T*>( A, b );
+//  return A;
+//}
 
 // Difference of two sets
 template <typename T> set<T> operator-( const set<T>& A, const set<T>& B )
@@ -465,6 +500,18 @@ template <typename T> set<T> operator-( const set<T>& A, const set<T>& B )
   for( const T& a : A )
     if( !in( B, a ) )
       diff.insert( a );
+  return diff;
+}
+
+template <typename T> vector<T> operator-( const vector<T>& A, const vector<T>& B )
+{
+  vector<T> diff;
+  // A: a,b,c,d | 
+  // B: d,e,f,g | 
+  //    a,b,c
+  for( int i = 0; i < A.size(); i++ )
+    if( !in( B, A[i] ) )
+      diff.push_back( A[i] );
   return diff;
 }
 
@@ -484,6 +531,7 @@ template <typename T> set<T> MakeSet( const vector<T>& A )
     B.insert( a );
   return B;
 }
+
 template <typename T> TSet<T> MakeTSet( const TArray<T>& A )
 {
   TSet<T> B;
@@ -491,6 +539,7 @@ template <typename T> TSet<T> MakeTSet( const TArray<T>& A )
     B.Add( a );
   return B;
 }
+
 template <typename T> set<T> MakeSet( const TArray<T>& A )
 {
   set<T> B;
@@ -498,23 +547,47 @@ template <typename T> set<T> MakeSet( const TArray<T>& A )
     B.insert( a );
   return B;
 }
-template <typename T> vector<T*> MakeVector( const set<T*>& A )
-{
-  vector<T*> B;
-  for( T* t : A )
-    B.push_back( t );
-  return B;
-}
 
-template <typename T> vector<T> MakeVector( const set<T>& A )
+//template <typename T> vector<T> MakeVector( const set<T>& A )
+//{
+//  vector<T> B;
+//  for( const T& a : A )
+//    B.push_back( a );
+//  return B;
+//}
+//template <typename T> vector<T*> MakeVector( const set<T*>& A )
+//{
+//  vector<T*> B;
+//  for( const T*& a : A )
+//    B.push_back( a );
+//  return B;
+//}
+//
+//template <typename T> vector<T> MakeVector( const vector<T>& A )
+//{
+//  vector<T> B;
+//  for( const T& a : A )
+//    B.push_back( a );
+//  return B;
+//}
+
+template <typename T> vector<T> MakeVector( const TArray<T>& A )
 {
   vector<T> B;
-  for( const T& a : A )
-    B.push_back( a );
+  for( int i = 0; i < A.Num(); i++ )
+    B.push_back( A[i] );
   return B;
 }
 
 template <typename T> TArray<T> MakeTArray( const set<T>& A )
+{
+  TArray<T> B;
+  for( const T& a : A )
+    B.Push( a );
+  return B;
+}
+
+template <typename T> TArray<T> MakeTArray( const vector<T>& A )
 {
   TArray<T> B;
   for( const T& a : A )

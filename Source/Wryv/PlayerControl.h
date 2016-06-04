@@ -19,6 +19,8 @@ class WRYV_API APlayerControl : public APlayerController
 {
   GENERATED_BODY()
 public:
+  const static float RayLength;
+
   // These are initialized during load to get you the channel on which
   // a profile resides.
   map< FString, ECollisionChannel > CollisionChannels;

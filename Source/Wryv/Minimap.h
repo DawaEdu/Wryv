@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ImageBorder.h"
+#include "BorderImage.h"
 
-class Minimap : public ImageBorder
+class Minimap : public BorderImage
 {
 public:
   static UTexture* MinimapTexture;

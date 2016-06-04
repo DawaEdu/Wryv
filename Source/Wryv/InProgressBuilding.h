@@ -4,6 +4,7 @@
 #include "InProgressBuilding.generated.h"
 
 class ABuilding;
+class APeasant;
 
 // A UInProgressBuilding is a counter for a building that is being built.
 UCLASS( meta=(ShortTooltip="Something that is being built indicated") )

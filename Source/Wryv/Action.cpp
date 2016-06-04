@@ -4,7 +4,7 @@
 #include "Clock.h"
 #include "GameObject.h"
 #include "GlobalFunctions.h"
-#include "ITextWidget.h"
+#include "IText.h"
 #include "TheHUD.h"
 #include "WryvGameInstance.h"
 

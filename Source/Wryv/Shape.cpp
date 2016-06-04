@@ -3,8 +3,10 @@
 
 AShape::AShape( const FObjectInitializer & PCIP ) : Super( PCIP )
 {
-  Mesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "mesh1" );
+  Mesh = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "Mesh" ) );
   Mesh->AttachTo( RootComponent );
+
+  Untargettable = 1;
 }
 
 void AShape::PostInitializeComponents()

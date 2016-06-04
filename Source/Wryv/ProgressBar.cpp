@@ -6,14 +6,14 @@ FLinearColor ProgressBar::Fill(0.169, 0.796, 0.278, 1.f); // nice green
 FLinearColor ProgressBar::Bkg(0.655, 0.000, 0.125, 1.f); // pinkish
 
 ProgressBar::ProgressBar( FString name, float height, int alignment ) :
-  SolidWidget( name, FVector2D( 100.f, height ), Bkg )
+  Solid( name, FVector2D( 100.f, height ), Bkg )
 {
   Align = alignment;
   InitFill( Fill );
 }
 
 ProgressBar::ProgressBar( FString name, float height, FLinearColor backgroundColor, FLinearColor foregroundColor ) :
-  SolidWidget( name, FVector2D( 100.f, height ), backgroundColor )
+  Solid( name, FVector2D( 100.f, height ), backgroundColor )
 {
   Align = HFull | VCenter;
   InitFill( foregroundColor );
@@ -21,13 +21,13 @@ ProgressBar::ProgressBar( FString name, float height, FLinearColor backgroundCol
 
 void ProgressBar::Reflow()
 {
-  SolidWidget::Reflow();
+  Solid::Reflow();
   Set( FillFraction );
 }
 
 void ProgressBar::InitFill( FLinearColor color )
 {
-  progress = new SolidWidget( "foreground progress", color );
+  progress = new Solid( "foreground progress", color );
   progress->Align = Left | VFull; // |***|..|  Fill the progress bar up vertically
   Add( progress );
   FillFraction = 1.f;
@@ -48,5 +48,5 @@ void ProgressBar::SetColors( FLinearColor foreground, FLinearColor background )
 
 void ProgressBar::render( FVector2D offset )
 {
-  SolidWidget::render( offset );
+  Solid::render( offset );
 }

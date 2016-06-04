@@ -2,17 +2,17 @@
 
 #include "Building.h"
 #include "Item.h"
-#include "ItemAction.h"
+#include "UIItemActionCommand.h"
 #include "ItemBelt.h"
-#include "ITextWidget.h"
+#include "IText.h"
 #include "TheHUD.h"
 #include "Unit.h"
 #include "WryvGameInstance.h"
 
-#include "ItemAction.h"
+#include "UIItemActionCommand.h"
 
 ItemBelt::ItemBelt( UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) :
-  SlotPalette( "itembelt", bkg, rows, cols, entrySize, pad )
+  SlotPanel( "itembelt", bkg, rows, cols, entrySize, pad )
 {
   Align = BottomCenter;
   
@@ -61,8 +61,7 @@ void ItemBelt::Set( vector<AGameObject*> objects )
     
       Show();
       SetNumSlots( 1, unit->CountersItems.Num() );
-      Populate<UItemAction>( unit->CountersItems, 0 );
-      
+      Populate<UUIItemActionCommand>( unit->CountersItems, 0 );
     }
     else if( ABuilding* building = Cast<ABuilding>( go ) )
     { 
@@ -79,7 +78,7 @@ void ItemBelt::render( FVector2D offset )
 {
   if( hidden ) return;
 
-  SlotPalette::render( offset );
+  SlotPanel::render( offset );
 }
 
 

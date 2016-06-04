@@ -15,20 +15,20 @@
 #include "WryvGameInstance.h"
 #include "WryvGameMode.h"
 
-#include "BuildAction.h"
-#include "InProgressBuilding.h"
-#include "InProgressUnit.h"
+#include "UIBuildActionCommand.h"
+#include "UIInProgressBuildingCounter.h"
+#include "UIInProgressUnitCounter.h"
 
 APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
 {
-  ResourceCarry = PCIP.CreateDefaultSubobject<USceneComponent>( this, "ResourceCarry1" );
+  ResourceCarry = PCIP.CreateDefaultSubobject<USceneComponent>( this, TEXT( "ResourceCarry" ) );
   ResourceCarry->AttachTo( GetRootComponent() );
 
-  GoldPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "GoldPiece1" );
+  GoldPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "GoldPiece" ) );
   GoldPiece->AttachTo( ResourceCarry );
-  LumberPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "LumberPiece1" );
+  LumberPiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "LumberPiece" ) );
   LumberPiece->AttachTo( ResourceCarry );
-  StonePiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, "StonePiece1" );
+  StonePiece = PCIP.CreateDefaultSubobject<UStaticMeshComponent>( this, TEXT( "StonePiece" ) );
   StonePiece->AttachTo( ResourceCarry );
 
   GoldPiece->SetVisibility( false );
@@ -43,26 +43,26 @@ APeasant::APeasant( const FObjectInitializer& PCIP ) : AUnit(PCIP)
   MinedPieces[ ATree::StaticClass() ] = LumberPiece;
   MinedPieces[ AStone::StaticClass() ] = StonePiece;
 
-  GoldCarryCapacity = LumberCarryCapacity = StoneCarryCapacity = 10;
-  Capacities[ AGoldmine::StaticClass() ] = GoldCarryCapacity;
-  Capacities[ ATree::StaticClass() ] = LumberCarryCapacity;
-  Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
+  CarryCapacities.Gold = CarryCapacities.Lumber = CarryCapacities.Stone = 10;
+  Capacities[ AGoldmine::StaticClass() ] = CarryCapacities.Gold;
+  Capacities[ ATree::StaticClass() ] = CarryCapacities.Lumber;
+  Capacities[ AStone::StaticClass() ] = CarryCapacities.Stone;
 
   RepairTarget = 0;
   Shrugging = 0;
   Mining = 0;
   GatheringRate = 1;
 
-  LastResourcePosition = FVector(0,0,0);
+  LastResourcePosition = Zero;
 }
 
 void APeasant::PostInitializeComponents()
 {
   Super::PostInitializeComponents();
-
-  Capacities[ AGoldmine::StaticClass() ] = GoldCarryCapacity;
-  Capacities[ ATree::StaticClass() ] = LumberCarryCapacity;
-  Capacities[ AStone::StaticClass() ] = StoneCarryCapacity;
+  
+  Capacities[ AGoldmine::StaticClass() ] = CarryCapacities.Gold;
+  Capacities[ ATree::StaticClass() ] = CarryCapacities.Lumber;
+  Capacities[ AStone::StaticClass() ] = CarryCapacities.Stone;
 
   // Hide the stock pieces.
   MinedPieces[ AGoldmine::StaticClass() ] -> SetVisibility( false );
@@ -78,7 +78,7 @@ void APeasant::InitIcons()
   {
     if( Builds[i] )
     {
-      UBuildAction* action = Construct<UBuildAction>( Builds[i] );
+      UUIBuildActionCommand* action = Construct<UUIBuildActionCommand>( Builds[i] );
       action->Peasant = this;
       Buildables.Push( action );
     }
@@ -107,14 +107,14 @@ bool APeasant::CancelBuilding( int index )
   }
 
   // Cancels ith building
-  UInProgressBuilding* buildingAction = CountersBuildingsQueue[ index ];
+  UUIInProgressBuildingCounter* buildingAction = CountersBuildingsQueue[ index ];
   buildingAction->Building->Cancel();
   
   return 1;
 
 }
 
-bool APeasant::Build( UBuildAction* buildAction, FVector pos )
+bool APeasant::Build( UUIBuildActionCommand* buildAction, FVector pos )
 {
   if( team->CanAfford( buildAction->BuildingType ) )
   {
@@ -122,7 +122,7 @@ bool APeasant::Build( UBuildAction* buildAction, FVector pos )
     ABuilding* building = Game->Make<ABuilding>( buildAction->BuildingType, team, pos );
 
     // Construct the counter & add it to counters for this object
-    UInProgressBuilding* buildInProgress = Construct<UInProgressBuilding>( UInProgressBuilding::StaticClass() );
+    UUIInProgressBuildingCounter* buildInProgress = Construct<UUIInProgressBuildingCounter>( UUIInProgressBuildingCounter::StaticClass() );
     buildInProgress->Building = building;
     buildInProgress->Peasant = this;
     CountersBuildingsQueue.Push( buildInProgress );
@@ -206,16 +206,12 @@ void APeasant::Repair( float t )
     
     // repairs Hp gradually to a building at a fraction of the building's original construction cost.
     // cost the team resources for Repairing this building.
-    float goldCost   = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.GoldCost;
-    float lumberCost = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.LumberCost;
-    float stoneCost  = RepairTarget->RepairHPFractionCost * hpRecovered * RepairTarget->Stats.StoneCost;
+    FCost tickRepairCost = RepairTarget->Stats.Cost * RepairTarget->RepairHPFractionCost * hpRecovered;
     
     // Can only repair if won't dip values below zero
-    if( team->Gold >= goldCost   &&   team->Lumber >= lumberCost   &&   team->Stone >= stoneCost )
+    if( team->Resources >= tickRepairCost )
     {
-      team->Gold   -= goldCost;
-      team->Lumber -= lumberCost;
-      team->Stone  -= stoneCost;
+      team->Resources -= tickRepairCost;
       RepairTarget->Hp += hpRecovered;
       info( FS( "Peasant %s has repaired building %s for %f units of hp", *Stats.Name,
         *RepairTarget->Stats.Name, hpRecovered ) );
@@ -410,15 +406,15 @@ void APeasant::Hit( AGameObject* other )
   {
     if( townhall->isAllyTo( this ) )
     {
-      team->Gold += MinedResources[ AGoldmine::StaticClass() ];
+      team->Resources.Gold += MinedResources[ AGoldmine::StaticClass() ];
       MinedResources[ AGoldmine::StaticClass() ] = 0;
       MinedPieces[ AGoldmine::StaticClass() ] -> SetVisibility( false );
       
-      team->Lumber += MinedResources[ ATree::StaticClass() ];
+      team->Resources.Lumber += MinedResources[ ATree::StaticClass() ];
       MinedResources[ ATree::StaticClass() ] = 0;
       MinedPieces[ ATree::StaticClass() ] -> SetVisibility( false );
       
-      team->Stone += MinedResources[ AStone::StaticClass() ];
+      team->Resources.Stone += MinedResources[ AStone::StaticClass() ];
       MinedResources[ AStone::StaticClass() ] = 0;
       MinedPieces[ AStone::StaticClass() ] -> SetVisibility( false );
       
@@ -446,19 +442,48 @@ void APeasant::ReturnResources()
         {
           // Return to nearest townhall for dropoff
           AGameObject* returnCenter = GetClosestObjectOfType( ATownhall::StaticClass() );
-          if( !returnCenter )
+          if( returnCenter )
           {
-            info( "NO RETURN CENTER" );
-          }
-          else
-          {
-            info( FS( "Peasant %s returning to town center %s with %d %s",
-              *GetName(), *returnCenter->GetName(), p.second, *p.first->GetName() ) );
+            //info( FS( "Peasant %s returning to town center %s with %d %s",
+            //  *GetName(), *returnCenter->GetName(), p.second, *p.first->GetName() ) );
             // Check if the resource is exhausted. If so, look for a similar resource
             Follow( returnCenter ); // Set a follow on there (NOT general TARGET() cmd) so that
             // it explicitly sets up as a follow and NOT RepairTarget.
           }
+          else // !returnCenter
+          {
+            info( FS( "NO RETURN CENTER" ) );
+          }
         }
+      }
+    }
+  }
+  else if( ATownhall* townhall = Cast<ATownhall>( FollowTarget ) )
+  {
+    if( in( RepulsionOverlaps, FollowTarget ) )
+    {
+      // We may be following the return center
+      // if the other building is a townhall, can drop off resources
+      if( townhall->isAllyTo( this ) )
+      {
+        team->Resources.Gold += MinedResources[ AGoldmine::StaticClass() ];
+        MinedResources[ AGoldmine::StaticClass() ] = 0;
+        MinedPieces[ AGoldmine::StaticClass() ] -> SetVisibility( false );
+        
+        team->Resources.Lumber += MinedResources[ ATree::StaticClass() ];
+        MinedResources[ ATree::StaticClass() ] = 0;
+        MinedPieces[ ATree::StaticClass() ] -> SetVisibility( false );
+        
+        team->Resources.Stone += MinedResources[ AStone::StaticClass() ];
+        MinedResources[ AStone::StaticClass() ] = 0;
+        MinedPieces[ AStone::StaticClass() ] -> SetVisibility( false );
+        
+        Target( 0 ); // unfollow the townhall
+        
+        // After the resources have been returned
+        OnResourcesReturned();
+        
+        Game->hud->ui->dirty = 1;
       }
     }
   }

@@ -7,7 +7,7 @@
 AWryvGameMode::AWryvGameMode(const FObjectInitializer& PCIP) : Super( PCIP )
 {
   LOG("AWryvGameMode::AWryvGameMode()");
-  PrimaryActorTick.bCanEverTick = true;
+  PrimaryActorTick.bCanEverTick = 1;
   T = 1.f / 60.f;
   GameSpeed = 1.f;
   tick = 0;

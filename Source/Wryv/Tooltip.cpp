@@ -4,7 +4,7 @@
 UTexture* Tooltip::TooltipBackgroundTexture = 0;
 
 Tooltip::Tooltip():
-  ITextWidget( "tooltip", TooltipBackgroundTexture, "tip", Alignment::CenterCenter )
+  IText( "tooltip", TooltipBackgroundTexture, "tip", Alignment::CenterCenter )
 {
 }
 

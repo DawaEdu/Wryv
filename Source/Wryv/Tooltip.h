@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ITextWidget.h"
+#include "IText.h"
 
-class Tooltip : public ITextWidget
+class Tooltip : public IText
 {
 public:
   static UTexture* TooltipBackgroundTexture;

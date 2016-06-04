@@ -6,19 +6,19 @@
 
 GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 {
-  resources = new ResourcesWidget( "Player's Resources", 16, 4 );
+  resources = new ResourcesPanel( "Player's Resources", 16, 4 );
   Add( resources );
 
   rightPanel = new SidePanel( FVector2D( 280, size.Y ), FVector2D(8,8) );
   Add( rightPanel );
 
-  itemBelt = new ItemBelt( SlotPalette::SlotPaletteTexture, 1, 8, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
+  itemBelt = new ItemBelt( SlotPanel::SlotPanelTexture, 1, 8, FVector2D( 100, 100 ), FVector2D( 8, 8 ) );
   Add( itemBelt );
 
-  buildQueue = new BuildQueue( "Building Queue", FVector2D( 128, 128 ), 10 );
+  buildQueue = new BuildQueuePanel( "Building Queue", FVector2D( 128, 128 ), 10 );
   Add( buildQueue );
   
-  costWidget = new CostWidget();
+  costWidget = new CostPanel();
   Add( costWidget );
   costWidget->Align = CenterCenter;
   costWidget->Hide();
@@ -42,8 +42,8 @@ GameChrome::GameChrome( FString name, FVector2D size ) : Screen( name, size )
 void GameChrome::Update( float t )
 {
   // Update # resources available
-  resources->SetValues( Game->gm->playersTeam->Gold, 
-    Game->gm->playersTeam->Lumber, Game->gm->playersTeam->Stone );
+  resources->SetValues( Game->gm->playersTeam->Resources );
+  Screen::Update( t );
 }
 
 void GameChrome::Select( vector<AGameObject*> objects )

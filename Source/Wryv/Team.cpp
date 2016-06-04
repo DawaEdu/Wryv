@@ -3,6 +3,7 @@
 #include "Barracks.h"
 #include "Building.h"
 #include "CombatUnit.h"
+#include "Cost.h"
 #include "Farm.h"
 #include "FlyCam.h"
 #include "GameObject.h"
@@ -40,9 +41,7 @@ Team::Team( int iTeamId, FString str, Alliances iAlliance, FLinearColor color )
 
 void Team::Defaults()
 {
-  Gold = 500;
-  Lumber = 500;
-  Stone = 100;
+  Resources = FCost( 500, 500, 100 );
   DamageRepairThreshold = 2.f/3.f;
   alliance = Neutral;
   Color = FLinearColor::Blue;
@@ -89,7 +88,7 @@ vector<ACombatUnit*> Team::GetWarriors()
 
 void Team::RemoveUnit( AGameObject *go )
 {
-  removeElement<AGameObject>( units, go );
+  removeElement( units, go );
   go->team = 0;
 }
 
@@ -110,8 +109,7 @@ bool Team::Has( UClass* ClassType )
 
 bool Team::CanAfford( UClass* ClassType )
 {
-  FUnitsData data = Game->GetData( ClassType );
-  return Gold >= data.GoldCost && Lumber >= data.LumberCost && Stone >= data.StoneCost;
+  return Resources >= Game->GetData( ClassType ).Cost;
 }
 
 bool Team::CanBuild( UClass* ClassType )
@@ -135,24 +133,20 @@ bool Team::Spend( UClass* ClassType )
     return 0;
   }
 
-  FUnitsData data = Game->GetData( ClassType );
-  ResourceChange( -data.GoldCost, -data.LumberCost, -data.StoneCost );
+  ResourceChange( -Game->GetData( ClassType ).Cost );
   return 1;
 }
 
 bool Team::Refund( UClass* ClassType )
 {
   // Refund cost of ClassType back to team.
-  FUnitsData data = Game->GetData( ClassType );
-  ResourceChange( data.GoldCost, data.LumberCost, data.StoneCost );
+  ResourceChange( Game->GetData( ClassType ).Cost );
   return 1;
 }
 
-void Team::ResourceChange( int gold, int lumber, int stone )
+void Team::ResourceChange( FCost cost )
 {
-  Gold += gold;
-  Lumber += lumber;
-  Stone += stone;
+  Resources += cost;
   Game->hud->ui->dirty = 1;
 }
 

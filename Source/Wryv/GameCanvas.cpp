@@ -2,22 +2,24 @@
 
 #include "Building.h"
 #include "CombatUnit.h"
+#include "Explosion.h"
 #include "FlyCam.h"
 #include "GameCanvas.h"
 #include "Peasant.h"
 #include "PlayerControl.h"
 #include "TheHUD.h"
+#include "Unit.h"
 #include "Widget3D.h"
 #include "WryvGameInstance.h"
 
-#include "Action.h"
-#include "BuildAction.h"
-#include "CastSpellAction.h"
-#include "InProgressBuilding.h"
-#include "InProgressUnit.h"
-#include "ItemAction.h"
-#include "TrainingAction.h"
-#include "UnitAction.h"
+#include "UIActionCommand.h"
+#include "UIBuildActionCommand.h"
+#include "UICastSpellActionCommand.h"
+#include "UIInProgressBuildingCounter.h"
+#include "UIInProgressUnitCounter.h"
+#include "UIItemActionCommand.h"
+#include "UITrainingActionCommand.h"
+#include "UIUnitActionCommand.h"
 
 FCursorTexture GameCanvas::MouseCursorHand;
 FCursorTexture GameCanvas::MouseCursorCrossHairs;
@@ -30,15 +32,16 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   Add( selectBox );
   selectBox->Hide();
 
-  cursor = new ImageWidget( "mouse cursor", MouseCursorHand.Texture );
+  cursor = new ImageHS( "mouse cursor", MouseCursorHand.Texture );
   Add( cursor );
 
   // Attach functionality
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
-    FHitResult hitResult = Game->pc->RayPickSingle( Game->flycam->getMousePos(),
-      {}, { AShape::StaticClass() } );
-    AGameObject* hit = Cast<AGameObject>( hitResult.GetActor() );
+    FHitResult hitResult = Game->pc->RayPickSingle(
+      Game->flycam->getMousePos(), MakeSet( Game->hud->Selectables ),
+      MakeSet( Game->hud->Unselectables ) );
+    AGameObject* hit = Cast<AGameObject>(hitResult.GetActor());
     if( !hit ) {
       warning( FS( "No object was clicked by the mouse" ) );
       return NotConsumed;
@@ -59,41 +62,18 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     }
 
     // Get the mouse location of the click
-    for( AGameObject* go : Game->hud->Selected )
-    {
-      switch( Game->hud->NextAbility )
-      {
-        case Abilities::Movement:
-          // Explicit movement, without attack possible.
-          if( hit == Game->flycam->floor )
-            go->GoToGroundPosition( hitResult.ImpactPoint );
-          else
-            go->Follow( hit );  // otherwise, follow clicked unit
-          Game->hud->SkipNextMouseUp = 1;
-          break;
-        case Abilities::Attack:
-          // Attack only, even friendly units.
-          if( hit == Game->flycam->floor )
-            go->AttackGroundPosition( hitResult.ImpactPoint );  // ready to attack enemy units
-          else
-            go->Attack( hit );
-          Game->hud->SkipNextMouseUp = 1;
-          break;
-        case Abilities::Stop:
-          // Stops units from moving
-          go->Stop();
-          break;
-        case Abilities::HoldGround:
-          go->HoldGround();
-          break;
-        default:
-          error( "Ability NotSet" );
-          break;
-      }
-    }
-
     if( Game->hud->NextAbility )
     {
+      int numGridPos = FMath::CeilToInt( sqrtf( Game->hud->Selected.size() ) );
+      vector<FVector> positions = Game->flycam->GenerateGroundPositions( hitResult.ImpactPoint, numGridPos );
+      for( int i = 0; i < Game->hud->Selected.size(); i++ )
+      {
+        if( AUnit* unit = Cast< AUnit >( Game->hud->Selected[i] ) )
+        {
+          unit->UseAbility( Game->hud->NextAbility, hit, positions[i] );
+        }
+      }
+
       // an ability was set, use it & revert to normal cursor
       Game->hud->SetNextAbility( Abilities::NotSet );
       return Consumed;
@@ -144,8 +124,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   OnMouseUpLeft = [this]( FVector2D mouse ) {
     // Box shaped selection of units.
     // Filtration is done after selection,
-    Game->hud->Select( Game->pc->FrustumPick( 
-      selectBox->Box, {}, { AWidget3D::StaticClass() } ) );
+    Game->hud->Select( Game->pc->FrustumPick( selectBox->Box,
+      MakeSet( Game->hud->Selectables ), MakeSet( Game->hud->Unselectables ) ) );
     SelectEnd();
     return Consumed;
   };

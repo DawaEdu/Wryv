@@ -25,6 +25,7 @@ class WRYV_API UWryvGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 public:
+  // Properties for each unit, row by row.
 	UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UnitData )  UDataTable* DataTable;
   // These are the flags by CommandID=>Flag instance, for flag removal
   map< int64, AShape* > Flags;

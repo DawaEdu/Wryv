@@ -1,8 +1,8 @@
 #include "Wryv.h"
 
-#include "Buffs.h"
+#include "BuffsPanel.h"
 #include "Building.h"
-#include "ImageWidget.h"
+#include "ImageHS.h"
 #include "Goldmine.h"
 #include "Peasant.h"
 #include "Resource.h"
@@ -14,17 +14,17 @@
 #include "WryvGameInstance.h"
 
 StatsPanel::StatsPanel() :
-  StackPanel( "Stats", SolidWidget::SolidWhiteTexture, FLinearColor( 0.15, 0.15, 0.15, 0.15 ) )
+  StackPanel( "Stats", Solid::SolidWhiteTexture, FLinearColor( 0.15, 0.15, 0.15, 0.15 ) )
 {
   unitName = new TextWidget( "|" );
   unitName->Font = Game->hud->mediumFont;
   hpBar = new ProgressBar( FS( "HpBar %s", *Name ), 25.f, ProgressBar::Bkg, ProgressBar::Fill );
-  buffs = new Buffs( "Buffs", 0 );
+  buffs = new BuffsPanel( "BuffsPanel", 0 );
   hpText = new TextWidget( "|" );
   damage = new TextWidget( "|" );
   armor = new TextWidget( "|" );
   description = new TextWidget( "|" );
-  resourcesCarrying = new ResourcesWidget( "ResourcesWidget", 16, 4 );
+  resourcesCarrying = new ResourcesPanel( "ResourcesPanel", 16, 4 );
   Align = HFull | VCenter;
   BarSize = 25.f;
 
@@ -39,7 +39,7 @@ void StatsPanel::Blank()
   damage -> Set( "" );
   armor -> Set( "" );
   description -> Set( "" );
-  resourcesCarrying -> SetValues( 0, 0, 0 );
+  resourcesCarrying -> SetValues( FCost(0,0,0) );
 }
 
 void StatsPanel::Restack()
@@ -99,7 +99,7 @@ void StatsPanel::Set( vector<AGameObject*> objects )
       int lumber = peasant->MinedResources[ ATree::StaticClass() ];
       int stone = peasant->MinedResources[ AStone::StaticClass() ];
 
-      resourcesCarrying->SetValues( gold, lumber, stone );
+      resourcesCarrying->SetValues( FCost( gold, lumber, stone ) );
       resourcesCarrying->Show();
     }
   }
