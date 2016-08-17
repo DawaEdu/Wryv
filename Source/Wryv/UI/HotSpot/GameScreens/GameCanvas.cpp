@@ -32,21 +32,17 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   Add( selectBox );
   selectBox->Hide();
 
-  cursor = new ImageHS( "mouse cursor", MouseCursorHand.Texture );
+  cursor = new Image( "mouse cursor", MouseCursorHand.Texture );
   Add( cursor );
 
-  // Attach functionality
+  // Attach functionality to the GameCanvas
   OnMouseDownLeft = [this]( FVector2D mouse )
   {
     FHitResult hitResult = Game->pc->RayPickSingle(
-      Game->flycam->getMousePos(), MakeSet( Game->hud->Selectables ),
+      mouse, MakeSet( Game->hud->Selectables ),
       MakeSet( Game->hud->Unselectables ) );
-    AGameObject* hit = Cast<AGameObject>(hitResult.GetActor());
-    if( !hit ) {
-      warning( FS( "No object was clicked by the mouse" ) );
-      return NotConsumed;
-    }
-
+  
+    // First check if there's a queued spell or action.
     if( Game->hud->NextSpell )
     {
       // Cast the spell using any selected units that can invoke the spell
@@ -70,7 +66,8 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
       {
         if( AUnit* unit = Cast< AUnit >( Game->hud->Selected[i] ) )
         {
-          unit->UseAbility( Game->hud->NextAbility, hit, positions[i] );
+          AGameObject* t = Cast<AGameObject>( hitResult.GetActor() );
+          unit->UseAbility( Game->hud->NextAbility, t, positions[i] );
         }
       }
 
@@ -79,32 +76,35 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
       return Consumed;
     }
 
-    if( Game->flycam->ghost )
+    if( ! Game->flycam->IsBuildingBeingPlaced() )
+    {
+      BoxSelectStart( mouse );
+    }
+    else // Building to be placed is set
     {
       // Presence of the ghost indicates a building is queued to be placed by the UI.
-      ABuilding *ghost = Game->flycam->ghost;
+      ABuilding* newBuilding = Game->flycam->ghost;
 
       // the src peasant must be present
-      APeasant *peasant = 0;
-      if( Game->hud->Selected.size() )
+      APeasant* peasant = Game->hud->GetFirstSelected<APeasant>();
+      if( ! peasant )
       {
-        peasant = Cast<APeasant>( Game->hud->Selected[0] );
-      }
-      if( !peasant )
-      {
-        error( FS( "A peasant wasn't selected to place the building.", *peasant->GetName() ) );
+        // Peasant wasn't selected to place the building. Err-out.
+        error( FS( "A peasant wasn't selected to place the building." ) );
+        Game->flycam->ClearGhost();
         return NotConsumed;
       }
 
       // If the user has UI-placed the building in an acceptable spot,
       // then we should place the building here.
-      if( ghost->CanBePlaced() )
+      else if( newBuilding->CanBePlaced() )
       {
         // Build a building @ location. The peasant will pick up this command next frame.
         //Command cmd( Command::CommandType::CreateBuilding,
         //  peasant->ID, peasant->LastBuildingID, ghost->Pos );
         //Game->EnqueueCommand( cmd );
-        peasant->UseBuild( peasant->LastBuildIndex );
+        // The ghost has the building type to make
+        
         Game->flycam->ClearGhost();
       }
       else
@@ -112,11 +112,6 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
         // Ghost cannot be placed
         LOG( "Cannot place building here" );
       }
-    }
-    else // No ghost is set
-    {
-      // Box-shaped selection here
-      SelectStart( mouse );
     }
     return Consumed;
   };
@@ -126,7 +121,7 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
     // Filtration is done after selection,
     Game->hud->Select( Game->pc->FrustumPick( selectBox->Box,
       MakeSet( Game->hud->Selectables ), MakeSet( Game->hud->Unselectables ) ) );
-    SelectEnd();
+    BoxSelectEnd();
     return Consumed;
   };
 
@@ -150,8 +145,26 @@ GameCanvas::GameCanvas( FVector2D size ) : Screen( "GameCanvas", size )
   };
 
   OnMouseDragLeft = [this]( FVector2D mouse ) {
-    DragBox( mouse );
+    BoxDrag( mouse );
     return Consumed;
+  };
+
+  OnMouseDownRight = [this]( FVector2D mouse ) {
+    // Unset any buildings on right-click.
+    if( Game->flycam->ghost )
+    {
+      info( FS( "The building %s was cancelled", *Game->flycam->ghost->Stats.Name ) );
+      Game->flycam->ClearGhost();
+    }
+    else if( !Game->hud->Selected.size() )
+    {
+      info( "Nothing to command" );
+    }
+    else
+    {
+      Game->flycam->Target();
+    }
+    return NotConsumed;
   };
 }
 
@@ -161,19 +174,19 @@ void GameCanvas::Set( FVector2D mouse )
   cursor->Margin = mouse;
 }
 
-void GameCanvas::SelectStart( FVector2D mouse )
+void GameCanvas::BoxSelectStart( FVector2D mouse )
 {
   selectBox->SetStart( mouse );
   selectBox->Show();
   cursor->Hide();
 }
 
-void GameCanvas::DragBox( FVector2D mouse )
+void GameCanvas::BoxDrag( FVector2D mouse )
 {
   selectBox->SetEnd( mouse );
 }
 
-void GameCanvas::SelectEnd()
+void GameCanvas::BoxSelectEnd()
 {
   selectBox->Hide();
   cursor->Show();

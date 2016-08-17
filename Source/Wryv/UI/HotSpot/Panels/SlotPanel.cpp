@@ -8,7 +8,7 @@
 UTexture* SlotPanel::SlotPanelTexture = 0;
 
 SlotPanel::SlotPanel( FString name, UTexture* bkg, int rows, int cols, FVector2D entrySize, FVector2D pad ) :
-  ImageHS( name, bkg ), Rows( 0 ), Cols( 0 ), EntrySize( entrySize )
+  Image( name, bkg ), Rows( 0 ), Cols( 0 ), EntrySize( entrySize )
 {
   Pad = pad;
   // Init w/ # slots used in this palette
@@ -124,6 +124,6 @@ void SlotPanel::render( FVector2D offset )
 {
   if( hidden ) return;
 
-  ImageHS::render( offset );
+  Image::render( offset );
 }
 

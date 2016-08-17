@@ -62,7 +62,8 @@ void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType )
 
 void ACombatUnit::CastSpell( TSubclassOf< ASpell > SpellClassType, FVector groundLocation )
 {
-  
+  ASpell* spell = Game->Make< ASpell >( SpellClassType, team, Pos );
+  spell->SetDestinationArc( Pos, groundLocation );
 }
 
 void ACombatUnit::Die()

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 #include "UI/HotSpot/Elements/TextWidget.h"
 
 class TextWidget;
 
-class IText : public ImageHS
+class IText : public Image
 {
   bool FixedSize; // the background graphic can have fixed size or
   // it can wrap/house the text in the textwidget inside

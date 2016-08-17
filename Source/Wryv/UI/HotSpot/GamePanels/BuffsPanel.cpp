@@ -22,7 +22,7 @@ void BuffsPanel::Set( AGameObject* go )
     //IText* widget = new IText( go->BonusTraits[i].BonusStats.Name,
     //  tex, BuffSize, FS( "%.1f", go->BonusTraits[i].timeRemaining ),
     //  Alignment::CenterCenter );
-    ImageHS* widget = new ImageHS( go->BonusTraits[i].BonusStats.Name, tex, BuffSize );
+    Image* widget = new Image( go->BonusTraits[i].BonusStats.Name, tex, BuffSize );
     StackRight( widget, Top );
   }
 

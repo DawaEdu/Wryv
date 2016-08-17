@@ -81,7 +81,7 @@ void AGameObject::PostInitializeComponents()
       hitBox->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnHitContactBegin );
       hitBox->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnHitContactEnd );
     }
-    else error( "NO HITBOUNDS" );
+    else error( "NO HITBOX" );
     if( repulsionBounds ) {
       repulsionBounds->OnComponentBeginOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactBegin );
       repulsionBounds->OnComponentEndOverlap.AddDynamic( this, &AGameObject::OnRepulsionContactEnd );
@@ -189,12 +189,22 @@ void AGameObject::SetSize( FVector size )
 
 FVector AGameObject::GetCentroid()
 {
-  return hitBox->GetComponentLocation();
+  if( hitBox )
+    return hitBox->GetComponentLocation();
+  else {
+    error( "No hitbox" );
+    return FVector( 0.f, 0.f, 0.f );
+  }
 }
 
 float AGameObject::Height()
 {
-  return hitBox->GetScaledBoxExtent().Z;
+  if( hitBox )
+    return hitBox->GetScaledBoxExtent().Z;
+  else {
+    error( "No hitbox" );
+    return 1.f;
+  }
 }
 
 float AGameObject::HitBoundsCylindricalRadius()
@@ -583,6 +593,10 @@ void AGameObject::Face( FVector point )
 // Stand outside target within `distance` units
 void AGameObject::RecomputePathTo( AGameObject* target, float fallbackDistance )
 {
+  // Sends ME to * which is fallbackDistance units from target.
+  //            fallbackDistance
+  // ME       * <-- target
+  //
   if( !target )
   {
     warning( FS( "%s has a NULL AttackTarget", *GetName() ) );
@@ -593,27 +607,38 @@ void AGameObject::RecomputePathTo( AGameObject* target, float fallbackDistance )
   FVector targetPos = target->Pos;
   if( AGoldmine* goldmine = Cast<AGoldmine>( target ) )
   {
+    // Switch pos to entry point of mine when a mine is the target.
     targetPos = goldmine->GetEntryPoint();
-    targetPos.Z = Pos.Z; // Ground the Z value so that difference in Z
-    // doesn't mean the unit isn't at the right spot
-    fallbackDistance = 0.f;
+    // Not sure about float level of goldmine.. so that doesn't matter,
+    // equate the Z of the goldmine with CURRENT UNIT POSITION Z
+    // so diff in Z doesn't mean no entry.
+    targetPos.Z = Pos.Z;
+    fallbackDistance = 0.f; // Overlap the goldmine's entry pt to enter.
   }
   
+  //         len
+  // Pos <---------- targetPos
+  //            *<-- targetPos
   FVector targetToMe = Pos - targetPos;
   float len = targetToMe.Size();
-  //info( FS( "%s attacking %s is %f units from it", *Name, *AttackTarget->Name, len ) );
-  // If we're outside the attack range.. move in.
+  //    len
+  // Pos <- targetPos
+  //   *<-- targetPos
   if( len < fallbackDistance )
   {
-    // Within distance, so face
-    // You are within attack range, so face the attack target
+    // Within fallbackDistance, so face only (no movement)
     Face( targetPos );
   }
-  else
+  else if( len ) // If there is a distance to travel
   {
+    // Normalize
     targetToMe /= len;
     // Set the fallback distance to being size of bounding radius of other unit
     SetDestination( targetPos + targetToMe*(fallbackDistance*.997f) );
+  }
+  else
+  {
+    // I'm already there
   }
 }
 
@@ -654,10 +679,10 @@ void AGameObject::exec( const Command& cmd )
         {
           UUIBuildActionCommand* buildAction = peasant->Buildables[ cmd.targetObjectId ];
           info( FS( "The unit [%s] is building a %s @ %f %f %f",
-            *peasant->GetName(), *buildAction->BuildingType->GetName(),
+            *peasant->GetName(), *buildAction->BuildingClass->GetName(),
             cmd.pos.X,cmd.pos.Y,cmd.pos.Z ) );
           
-          peasant->Build( buildAction, cmd.pos );
+          peasant->Build( buildAction->BuildingClass, cmd.pos );
         }
         else
         {
@@ -668,8 +693,7 @@ void AGameObject::exec( const Command& cmd )
       break;
     case Command::CommandType::CreateUnit:
       {
-        APeasant* peasant = Cast<APeasant>( this );
-        peasant->UseBuild( cmd.targetObjectId ); // C++ command
+        
       }
       break;
     case Command::CommandType::GoToGroundPosition:

@@ -18,11 +18,11 @@ ResourcesPanel::ResourcesPanel( FString name, int pxSize, int spacing ) :
   // |G1000 W1000 S1000|
   // +-----------------+
   // The 3 resource types
-  StackRight( new ImageHS( "Gold icon", GoldTexture ), VCenter ); // icon
+  StackRight( new Image( "Gold icon", GoldTexture ), VCenter ); // icon
   StackRight( Gold = new TextWidget( FS("%d",displayedResources.Gold) ), VCenter );
-  StackRight( new ImageHS( "Lumber icon", LumberTexture ), VCenter );
+  StackRight( new Image( "Lumber icon", LumberTexture ), VCenter );
   StackRight( Lumber = new TextWidget( FS("%d",displayedResources.Lumber) ), VCenter );
-  StackRight( new ImageHS( "Stone icon", StoneTexture ), VCenter );
+  StackRight( new Image( "Stone icon", StoneTexture ), VCenter );
   StackRight( Stone = new TextWidget( FS("%d",displayedResources.Stone) ), VCenter );
 
   recomputeSizeToContainChildren();

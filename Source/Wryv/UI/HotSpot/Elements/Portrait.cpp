@@ -6,7 +6,7 @@
 
 Portrait::Portrait( FString name, UTexture* tex, float thickness, FLinearColor color ) :
   BorderImage( name, tex, thickness, color )
-  //ImageHS( name, tex )
+  //Image( name, tex )
 {
   // select only this object
   OnMouseDownLeft = [this]( FVector2D mouse ){

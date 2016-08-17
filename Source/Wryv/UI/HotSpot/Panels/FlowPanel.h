@@ -1,8 +1,8 @@
 #pragma once
 
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 
-class FlowPanel : public ImageHS
+class FlowPanel : public Image
 {
 public:
   int Rows, Cols;

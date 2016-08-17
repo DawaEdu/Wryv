@@ -5,10 +5,10 @@
 class MapSelectionScreen : public Screen
 {
 public:
-  ImageHS *Logo;
+  Image *Logo;
   StackPanel *MapFiles;
   FVector2D MapFileEntrySize;
-  ImageHS *Thumbnail;
+  Image *Thumbnail;
   IText *OKButton;
   
   UTexture* MapSlotEntryBkg;
@@ -25,7 +25,7 @@ public:
     Selected( 0 ), Font( font )
   {
     // Throw in the title
-    Logo = new ImageHS( "Logo", logoTex );
+    Logo = new Image( "Logo", logoTex );
     Logo->Align = TopLeft;
     Logo->Margin = FVector2D( 75, 50 );
     Add( Logo );
@@ -37,7 +37,7 @@ public:
     MapFiles->Pad = FVector2D( 8,8 );
     Add( MapFiles );
 
-    Thumbnail = new ImageHS( "Thumbnail", thumbnailTex );
+    Thumbnail = new Image( "Thumbnail", thumbnailTex );
     Thumbnail->Align = CenterRight;
     Thumbnail->Margin = FVector2D( 80, 0 );
     Add( Thumbnail );

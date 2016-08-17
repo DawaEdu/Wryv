@@ -8,7 +8,7 @@ UTexture* ControlsPanel::ResumeButtonTexture = 0;
 
 ControlsPanel::ControlsPanel() : StackPanel( "ControlsPanel" )
 {
-  Pause = new ImageHS( "Pause", PauseButtonTexture );
+  Pause = new Image( "Pause", PauseButtonTexture );
   Align = TopRight;
   StackRight( Pause, Top );
 

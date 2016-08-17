@@ -5,25 +5,25 @@
 #include "Flycam.h"
 
 #include "AI/AIProfile.h"
-#include "GameObjects/Buildings/Building.h"
 #include "Game/Enums.h"
+#include "GameObjects/Buildings/Building.h"
 #include "GameObjects/GameObject.h"
-#include "Util/GlobalFunctions.h"
-#include "GameObjects/Things/Resources/Goldmine.h"
 #include "GameObjects/Things/GroundPlane.h"
-#include "AI/Pathfinder.h"
-#include "GameObjects/Units/Peasant.h"
-#include "UE4/PlayerControl.h"
-#include "UE4/PlayerStartPosition.h"
 #include "GameObjects/Things/Projectile.h"
-#include "GameObjects/Things/Resources/Resource.h"
 #include "GameObjects/Things/Shape.h"
+#include "GameObjects/Things/Resources/Goldmine.h"
+#include "GameObjects/Things/Resources/Resource.h"
 #include "GameObjects/Things/Resources/Stone.h"
-#include "UE4/TheHUD.h"
 #include "GameObjects/Things/Resources/Tree.h"
 #include "GameObjects/Things/Widget3D.h"
+#include "GameObjects/Units/Peasant.h"
+#include "AI/Pathfinder.h"
+#include "UE4/PlayerControl.h"
+#include "UE4/PlayerStartPosition.h"
+#include "UE4/TheHUD.h"
 #include "UE4/WryvGameInstance.h"
 #include "UE4/WryvGameMode.h"
+#include "Util/GlobalFunctions.h"
 
 FName AFlyCam::AttackTargetName = "AttackTarget";
 FName AFlyCam::FollowTargetName = "FollowTarget";
@@ -69,19 +69,16 @@ void AFlyCam::BeginPlay()
 {
   LOG( "AFlyCam::BeginPlay()" );
 	Super::BeginPlay();
-
   // Keep checkersphere bonus to below 1.f
   CheckerSphereRadius = FMath::Clamp( CheckerSphereRadius, 0.25f, 1.f );
-
-  GroundMarker = Game->Make<AShape>( GroundMarkerClass );
 }
 
-void AFlyCam::SetupPlayerInputComponent( UInputComponent* InputComponent )
+void AFlyCam::SetupPlayerInputComponent( UInputComponent* Input )
 {
   LOG( "AFlyCam::SetupPlayerInputComponent()" );
-  check( InputComponent );
-  Super::SetupPlayerInputComponent( InputComponent );
-  this->InputComponent = InputComponent;
+  check( Input );
+  Super::SetupPlayerInputComponent( Input );
+  this->InputComponent = Input;
   this->InputComponent->SetTickableWhenPaused(true);
 
   //UPlayerInput::AddEngineDefinedAxisMapping(FInputAxisKeyMapping("CameraUp", EKeys::PageUp, 1.f));
@@ -199,12 +196,6 @@ void AFlyCam::ClearGhost()
   {
     error( "Tried to clean up ghost when no ghost was set" );
   }
-
-  //for( ABuilding* gho : ghosts )
-  //{
-  //  gho->Cleanup();
-  //}
-  //ghosts.clear();
 }
 
 void AFlyCam::LoadLevel( FName levelName )
@@ -567,7 +558,15 @@ void AFlyCam::debug( int slot, FColor color, FString mess )
 	}
 }
 
-FVector2D AFlyCam::getMousePos()
+AGameObject* AFlyCam::Pick( const FVector2D& screenCoords )
+{
+  FHitResult hit = Game->pc->RayPickSingle(
+    screenCoords, MakeSet( Game->hud->Selectables ),
+    MakeSet( Game->hud->Unselectables ) );
+  return Cast<AGameObject>( hit.GetActor() );
+}
+
+FVector2D AFlyCam::GetMousePos()
 {
   FVector2D mouse(0,0);
   if( !Game->pc->GetMousePosition( mouse.X, mouse.Y ) )
@@ -653,23 +652,6 @@ void AFlyCam::FindFloor()
   ////fogOfWar->Init( floor->GetBox() );
 }
 
-void AFlyCam::MouseUpLeft()
-{
-  // Passes thru to HUD
-  Game->hud->MouseUpLeft( getMousePos() );
-}
-
-void AFlyCam::MouseDownLeft()
-{
-  // Covers all click behavior.
-  Game->hud->MouseDownLeft( getMousePos() );
-}
-
-void AFlyCam::MouseUpRight()
-{
-  
-}
-
 vector<FVector> AFlyCam::GenerateGroundPositions( FVector P, int numGridPos )
 {
   vector<FVector> positions;
@@ -717,7 +699,7 @@ vector<FVector> AFlyCam::GenerateGroundPositions( FVector P, int numGridPos )
 // (queued NextAction/left click or right click behavior).
 void AFlyCam::Target()
 {
-  FHitResult hit = Game->pc->RayPickSingle( getMousePos(),
+  FHitResult hit = Game->pc->RayPickSingle( GetMousePos(),
     MakeSet( Game->hud->Selectables ), MakeSet( Game->hud->Unselectables ) );
   AGameObject* target = Cast<AGameObject>( hit.GetActor() );
   if( !target )
@@ -770,28 +752,32 @@ void AFlyCam::Target()
   }
 }
 
+void AFlyCam::MouseUpLeft()
+{
+  // Passes thru to HUD
+  Game->hud->MouseUpLeft( GetMousePos() );
+}
+
+void AFlyCam::MouseDownLeft()
+{
+  // Covers all click behavior.
+  Game->hud->MouseDownLeft( GetMousePos() );
+}
+
 void AFlyCam::MouseDownRight()
 {
-  if( !Game->hud->Selected.size() )
-  {
-    info( "Nothing to command" );
-    return;
-  }
+  Game->hud->MouseDownRight( GetMousePos() );
+}
 
-  if( ghost )
-  {
-    info( FS( "The building %s was cancelled", *ghost->Stats.Name ) );
-    ClearGhost();
-    return;
-  }
-
-  Target();
+void AFlyCam::MouseUpRight()
+{
+  
 }
 
 void AFlyCam::MouseMoved()
 {
   RetrievePointers();
-  FVector2D mouse = getMousePos();
+  FVector2D mouse = GetMousePos();
 
   if( !setupLevel )
   {
@@ -835,7 +821,7 @@ void AFlyCam::MouseMoved()
 void AFlyCam::MouseMovedX( float amount )
 {
   // Just calls MouseMoved() where mouse pixel
-  // coords are extracted from getMousePos()
+  // coords are extracted from GetMousePos()
   MouseMoved();
 }
 

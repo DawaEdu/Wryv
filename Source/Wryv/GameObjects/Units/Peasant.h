@@ -55,7 +55,8 @@ public:
   virtual void InitIcons();
   bool UseBuild( int index );
   bool CancelBuilding( int index );
-  bool Build( UUIBuildActionCommand* buildAction, FVector pos );
+
+  bool Build( TSubclassOf<ABuilding> BuildingClass, FVector position );
   virtual void Target( AGameObject* target ) override;
   virtual void DropTargets() override;
   void Repair( float t );

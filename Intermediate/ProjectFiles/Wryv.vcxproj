@@ -457,7 +457,7 @@
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\BorderImage.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\Clock.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\HotSpot.cpp" />
-    <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\ImageHS.cpp" />
+    <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\Image.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\IText.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\Portrait.cpp" />
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\ProgressBar.cpp" />
@@ -541,7 +541,7 @@
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\BorderImage.h" />
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\Clock.h" />
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\HotSpot.h" />
-    <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\ImageHS.h" />
+    <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\Image.h" />
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\IText.h" />
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\Portrait.h" />
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\ProgressBar.h" />

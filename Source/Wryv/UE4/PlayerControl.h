@@ -43,9 +43,10 @@ public:
   FHitResult TraceAgainst( AActor* actor, const FVector2D& ScreenPosition );
   FHitResult TraceAgainst( AActor* actor, const Ray& ray );
 
-  // 2Space, usually used for impact point
+  // 2Space - pick using a ray into the screen
   FHitResult RayPickSingle( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
   FHitResult RayPickSingle( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
+
   // Gets all objects that are traced thru by vector
   vector<AGameObject*> RayPickMulti( const FVector2D& ScreenPosition, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );
   vector<AGameObject*> RayPickMulti( const Ray& ray, SetAGameObject AcceptedTypes, SetAGameObject NotTypes );

@@ -3,7 +3,7 @@
 #include "UI/HotSpot/Elements/IText.h"
 
 IText::IText( FString name, UTexture* pic, FString ftext, Alignment textAlignment, 
-  UFont* font, float scale ) : ImageHS( name, pic )
+  UFont* font, float scale ) : Image( name, pic )
 {
   if( pic ) Name += pic->GetName();
   SetName( Name );
@@ -16,7 +16,7 @@ IText::IText( FString name, UTexture* pic, FString ftext, Alignment textAlignmen
 }
 
 IText::IText( FString name, UTexture* pic, FVector2D size, FString ftext, Alignment textAlignment,
-  UFont* font, float scale ) : ImageHS( pic, size )
+  UFont* font, float scale ) : Image( pic, size )
 {
   Name = name;
   if( pic ) Name += pic->GetName();
@@ -58,5 +58,5 @@ void IText::render( FVector2D offset )
     dirty = 0;
   }
 
-  ImageHS::render( offset );
+  Image::render( offset );
 }

@@ -4,7 +4,7 @@
 
 struct FCursorTexture;
 
-class ImageHS : public HotSpot
+class Image : public HotSpot
 {
 public:
   static UTexture* NoTextureTexture;
@@ -16,18 +16,18 @@ public:
   float Rotation;
   FVector2D PivotPoint; // the pivot about which the rotation is based
   void ImageWidgetDefaults();
-  ImageHS( FString name );
-  ImageHS( FString name, UTexture* pic );
-  ImageHS( FString name, UTexture* pic, FLinearColor color );
+  Image( FString name );
+  Image( FString name, UTexture* pic );
+  Image( FString name, UTexture* pic, FLinearColor color );
 
   // Size specified:
-  ImageHS( UTexture* pic, FVector2D size );
-  ImageHS( FString name, UTexture* pic, FVector2D size );
-  ImageHS( FString name, UTexture* pic, FVector2D size, FLinearColor color );
+  Image( UTexture* pic, FVector2D size );
+  Image( FString name, UTexture* pic, FVector2D size );
+  Image( FString name, UTexture* pic, FVector2D size, FLinearColor color );
   virtual void SetTexture( UTexture* texture );
   virtual void SetTexture( FCursorTexture cursorTexture );
 
-  virtual ~ImageHS(){}
+  virtual ~Image(){}
   virtual void render( FVector2D offset ) override ;
 };
 

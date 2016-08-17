@@ -13,7 +13,7 @@ class WRYV_API UUIBuildActionCommand : public UUIActionCommand
   GENERATED_BODY()
 public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Properties)
-  TSubclassOf< ABuilding > BuildingType;
+  TSubclassOf< ABuilding > BuildingClass;
   APeasant* Peasant;
 
   UUIBuildActionCommand( const FObjectInitializer & PCIP );

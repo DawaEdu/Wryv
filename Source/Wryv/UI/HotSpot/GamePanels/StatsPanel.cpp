@@ -3,7 +3,7 @@
 #include "UI/HotSpot/GamePanels/StatsPanel.h"
 #include "UI/HotSpot/GamePanels/BuffsPanel.h"
 
-#include "../Elements/ImageHS.h"
+#include "../Elements/Image.h"
 #include "../Elements/TextWidget.h"
 
 #include "GameObjects/Buildings/Building.h"

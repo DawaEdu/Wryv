@@ -16,7 +16,7 @@ public:
 class MouseSelectBox : public Border
 {
   FVector2D StartPt;
-  ImageHS* Cursor;
+  Image* Cursor;
 public:
   MouseSelectBox( FString name, FBox2DU box, float thickness, FLinearColor color );
   void SetStart( FVector2D pt );

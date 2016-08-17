@@ -4,7 +4,7 @@
 
 #include "UI/HotSpot/Elements/HotSpot.h"
 #include "UI/HotSpot/Elements/TextWidget.h"
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 #include "UI/HotSpot/Elements/IText.h"
 #include "UI/HotSpot/Elements/Clock.h"
 #include "UI/HotSpot/Elements/Solid.h"

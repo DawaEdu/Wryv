@@ -162,9 +162,6 @@
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\HotSpot.cpp">
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\ImageHS.cpp">
-      <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\IText.cpp">
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClCompile>
@@ -342,6 +339,9 @@
     <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\Screen.cpp">
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\Wryv\UI\HotSpot\Elements\Image.cpp">
+      <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Wryv\Util\Box2DU.h">
@@ -423,9 +423,6 @@
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\HotSpot.h">
-      <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\ImageHS.h">
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\IText.h">
@@ -621,6 +618,9 @@
       <Filter>Source\Wryv\UI\HotSpot\GameElements</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\Screen.h">
+      <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Wryv\UI\HotSpot\Elements\Image.h">
       <Filter>Source\Wryv\UI\HotSpot\Elements</Filter>
     </ClInclude>
   </ItemGroup>

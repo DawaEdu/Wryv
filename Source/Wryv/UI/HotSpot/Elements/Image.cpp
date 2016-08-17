@@ -1,13 +1,13 @@
 #include "Wryv.h"
 
 #include "Util/CursorTexture.h"
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 #include "UE4/TheHUD.h"
 #include "UE4/WryvGameInstance.h"
 
-UTexture* ImageHS::NoTextureTexture = 0;
+UTexture* Image::NoTextureTexture = 0;
 
-void ImageHS::ImageWidgetDefaults()
+void Image::ImageWidgetDefaults()
 {
   Tex = 0;
   hotpoint = FVector2D(0,0);
@@ -16,11 +16,11 @@ void ImageHS::ImageWidgetDefaults()
   PivotPoint = FVector2D(0,0);
 }
 
-ImageHS::ImageHS( FString name ) : HotSpot( name ) { 
+Image::Image( FString name ) : HotSpot( name ) { 
   ImageWidgetDefaults();
 }
 
-ImageHS::ImageHS( FString name, UTexture* pic ) : HotSpot( name )
+Image::Image( FString name, UTexture* pic ) : HotSpot( name )
 {
   ImageWidgetDefaults();
   Tex = pic;
@@ -31,7 +31,7 @@ ImageHS::ImageHS( FString name, UTexture* pic ) : HotSpot( name )
   }
 }
 
-ImageHS::ImageHS( FString name, UTexture* pic, FLinearColor color ) : HotSpot( name )
+Image::Image( FString name, UTexture* pic, FLinearColor color ) : HotSpot( name )
 {
   ImageWidgetDefaults();
   Tex = pic;
@@ -44,7 +44,7 @@ ImageHS::ImageHS( FString name, UTexture* pic, FLinearColor color ) : HotSpot( n
 }
 
 // Size specified:
-ImageHS::ImageHS( UTexture* pic, FVector2D size ) : HotSpot( "ImageHS", size )
+Image::Image( UTexture* pic, FVector2D size ) : HotSpot( "Image", size )
 {
   ImageWidgetDefaults();
   Tex = pic;
@@ -52,13 +52,13 @@ ImageHS::ImageHS( UTexture* pic, FVector2D size ) : HotSpot( "ImageHS", size )
   // Don't assign size from tex
 }
 
-ImageHS::ImageHS( FString name, UTexture* pic, FVector2D size ) : HotSpot( name, size )
+Image::Image( FString name, UTexture* pic, FVector2D size ) : HotSpot( name, size )
 {
   ImageWidgetDefaults();
   Tex = pic;
 }
 
-ImageHS::ImageHS( FString name, UTexture* pic, FVector2D size, FLinearColor color ) : HotSpot( name, size )
+Image::Image( FString name, UTexture* pic, FVector2D size, FLinearColor color ) : HotSpot( name, size )
 {
   ImageWidgetDefaults(); 
   Tex = pic;
@@ -66,20 +66,20 @@ ImageHS::ImageHS( FString name, UTexture* pic, FVector2D size, FLinearColor colo
   // Don't assign size from tex
 }
 
-void ImageHS::SetTexture( UTexture* texture )
+void Image::SetTexture( UTexture* texture )
 {
   Tex = texture;
   dirty = 1;
 }
 
-void ImageHS::SetTexture( FCursorTexture cursorTexture )
+void Image::SetTexture( FCursorTexture cursorTexture )
 {
   Tex = cursorTexture.Texture;
   hotpoint = cursorTexture.Hotpoint;
   dirty = 1;
 }
 
-void ImageHS::render( FVector2D offset )
+void Image::render( FVector2D offset )
 {
   if( hidden ) return;
   if( !Tex )
@@ -87,7 +87,7 @@ void ImageHS::render( FVector2D offset )
     // We have to remove this comment for normal ops because
     // sometimes we want to have null texes eg in SlotPanel items when
     // no item is present
-    LOG( "Texture not set for ImageHS `%s`, setting to NULL texture", *Name );
+    LOG( "Texture not set for Image `%s`, setting to NULL texture", *Name );
     // render should not be called when the texture is hidden
     Tex = NoTextureTexture; //!! Possibly remove
   }

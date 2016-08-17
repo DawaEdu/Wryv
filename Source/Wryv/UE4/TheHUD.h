@@ -20,7 +20,7 @@ class CostPanel;
 class UUICastSpellActionCommand;
 class AFlyCam;
 class AGameObject;
-class ImageHS;
+class Image;
 class IText;
 class UMediaTexture;
 class SlotPanel;
@@ -83,9 +83,11 @@ public:
   //UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UMediaPlayer* mediaPlayer;
 
   // Classes of objects that can be selected by the mouse
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< TSubclassOf< AGameObject > > Selectables;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  TArray< TSubclassOf< AGameObject > > Selectables;
   // Classes of objects that cannot be selected by the mouse
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) TArray< TSubclassOf< AGameObject > > Unselectables;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD )
+  TArray< TSubclassOf< AGameObject > > Unselectables;
 
   // The font used to render the text in the HUD.
   UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = HUD ) UFont* smallFont;
@@ -111,6 +113,7 @@ public:
   HotSpot* MouseMoved( FVector2D mouse );
   HotSpot* MouseUpLeft( FVector2D mouse );
   HotSpot* MouseDownLeft( FVector2D mouse );
+  HotSpot* MouseDownRight( FVector2D mouse );
   void Select( vector<AGameObject*> objects );
   void Unselect( vector<AGameObject*> objects );
   void Status( FString msg );
@@ -141,5 +144,14 @@ public:
   // has FOV=fovyDegrees
   float GetPxWidth( float radiusWorldUnits, float distanceToObject, float texW, float fovyDegrees );
   void RenderScreen( USceneCaptureComponent2D* renderer, FVector lookPos, float radiusWorldUnits, FVector cameraDir );
+  /// Gets you the first selected object of type T
+  /// in the HUD.
+  template <typename T> T* GetFirstSelected()
+  {
+    for( int i = 0; i < Selected.size(); i++ )
+      if( T* obj = Cast<T>( Selected[i] ) )
+        return obj;
+    return NULL;
+  }
   virtual void BeginDestroy() override;
 };

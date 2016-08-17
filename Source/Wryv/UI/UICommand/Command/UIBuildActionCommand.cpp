@@ -1,14 +1,13 @@
 #include "Wryv.h"
 
-#include "GameObjects/Buildings/Building.h"
 #include "UI/UICommand/Command/UIBuildActionCommand.h"
-#include "UE4/Flycam.h"
+#include "GameObjects/Buildings/Building.h"
 #include "GameObjects/GameObject.h"
-#include "Util/GlobalFunctions.h"
-#include "UE4/TheHUD.h"
 #include "GameObjects/Units/Peasant.h"
+#include "Util/GlobalFunctions.h"
+#include "UE4/Flycam.h"
+#include "UE4/TheHUD.h"
 #include "UE4/WryvGameInstance.h"
-
 #include "UI/HotSpot/Elements/IText.h"
 
 UUIBuildActionCommand::UUIBuildActionCommand( const FObjectInitializer & PCIP ) : Super( PCIP )
@@ -17,14 +16,12 @@ UUIBuildActionCommand::UUIBuildActionCommand( const FObjectInitializer & PCIP ) 
 
 UTexture* UUIBuildActionCommand::GetIcon()
 {
-  return Game->GetData( BuildingType ).Portrait;
+  return Game->GetData( BuildingClass ).Portrait;
 }
 
 bool UUIBuildActionCommand::Click()
 {
-  // flycam places ghost of building to build next.
-  Peasant->UseBuild( UUICmdActionIndex );
-  return 1;
+  return Peasant->UseBuild( UUICmdActionIndex );
 }
 
 bool UUIBuildActionCommand::Hover()

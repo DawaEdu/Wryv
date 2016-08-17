@@ -3,9 +3,9 @@
 #include "UI/HotSpot/Elements/BorderImage.h"
 
 BorderImage::BorderImage( FString name, UTexture* tex, float thickness, FLinearColor borderColor ) :
-  ImageHS( name, tex )
+  Image( name, tex )
 {
-  // Size determined by ImageHS. Border will cover padding.
+  // Size determined by Image. Border will cover padding.
   FBox2DU box( FVector2D(0.f,0.f), Size );
   border = new Border( FS( "Border for %s", *name ), box, thickness, borderColor );
   Add( border );
@@ -13,7 +13,7 @@ BorderImage::BorderImage( FString name, UTexture* tex, float thickness, FLinearC
 
 void BorderImage::SetTexture( UTexture* tex )
 {
-  ImageHS::SetTexture( tex );
+  Image::SetTexture( tex );
   FBox2DU box( FVector2D(0.f,0.f), Size );
   border->Set( box );
 }

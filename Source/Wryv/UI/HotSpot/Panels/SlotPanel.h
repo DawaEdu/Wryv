@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 #include "Util/CooldownCounter.h"
 
 class UUIActionCommand;
@@ -8,7 +8,7 @@ class Clock;
 
 // SlotPanel is always populated with generic HotSpot* objects.
 
-class SlotPanel : public ImageHS
+class SlotPanel : public Image
 {
   int Rows, Cols;
 public:

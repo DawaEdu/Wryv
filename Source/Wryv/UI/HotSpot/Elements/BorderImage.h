@@ -1,9 +1,9 @@
 #pragma once
 
-#include "UI/HotSpot/Elements/ImageHS.h"
+#include "UI/HotSpot/Elements/Image.h"
 #include "UI/HotSpot/Elements/Border.h"
 
-class BorderImage : public ImageHS
+class BorderImage : public Image
 {
   Border* border;
 public:

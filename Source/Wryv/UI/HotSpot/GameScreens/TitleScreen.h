@@ -5,10 +5,10 @@
 class TitleScreen : public Screen
 {
 public:
-  ImageHS *graphic;
+  Image *graphic;
   TitleScreen( UTexture* titleTex, FVector2D size ) : Screen( "Title screen", size )
   {
-    graphic = new ImageHS( "title graphic", titleTex );
+    graphic = new Image( "title graphic", titleTex );
     graphic->Align = Full;
     Add( graphic );
   }

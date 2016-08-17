@@ -1,28 +1,31 @@
 #include "Wryv.h"
 
-#include "GameObjects/Buildings/Building.h"
-#include "GameObjects/Units/CombatUnit.h"
 #include "DrawDebugHelpers.h"
-#include "GameObjects/Things/Explosion.h"
-#include "UE4/Flycam.h"
-#include "Util/GlobalFunctions.h"
-#include "GameObjects/Things/Resources/Goldmine.h"
-#include "GameObjects/Things/GroundPlane.h"
+
+#include "GameObjects/Buildings/Building.h"
 #include "GameObjects/Buildings/ItemShop.h"
-#include "UE4/PlayerControl.h"
+#include "GameObjects/Things/Explosion.h"
+#include "GameObjects/Things/GroundPlane.h"
 #include "GameObjects/Things/Projectile.h"
+#include "GameObjects/Things/Resources/Goldmine.h"
 #include "GameObjects/Things/Resources/Resource.h"
 #include "GameObjects/Things/Resources/Stone.h"
-#include "UE4/TheHUD.h"
 #include "GameObjects/Things/Resources/Tree.h"
-#include "GameObjects/Units/Unit.h"
-#include "UI/HotSpot/Widget.h"
 #include "GameObjects/Things/Widget3D.h"
+#include "GameObjects/Units/CombatUnit.h"
+#include "GameObjects/Units/Unit.h"
+
+#include "UE4/Flycam.h"
+#include "UE4/TheHUD.h"
+#include "UE4/PlayerControl.h"
 #include "UE4/WryvGameInstance.h"
 #include "UE4/WryvGameMode.h"
 
+#include "UI/HotSpot/Widget.h"
 #include "UI/UICommand/Command/UICastSpellActionCommand.h"
 #include "UI/UICommand/Command/UIUnitActionCommand.h"
+
+#include "Util/GlobalFunctions.h"
 
 #include "Runtime/AssetRegistry/Public/AssetRegistryModule.h"
 //#include "Editor/UnrealEd/Public/AssetThumbnail.h"
@@ -50,7 +53,6 @@ void ATheHUD::PostInitializeComponents()
   ResourceIcons[ AGoldmine::StaticClass() ] = GoldIconTexture;
   ResourceIcons[ ATree::StaticClass() ] = LumberIconTexture;
   ResourceIcons[ AStone::StaticClass() ] = StoneIconTexture;
-
 }
 
 void ATheHUD::BeginPlay()
@@ -73,7 +75,7 @@ void ATheHUD::InitWidgets()
   SlotPanel::SlotPanelTexture = SlotPanelTexture;
   StackPanel::StackPanelTexture = VoronoiBackground;
   AbilitiesPanel::BuildButtonTexture = BuildButtonTexture;
-  ImageHS::NoTextureTexture = NoTextureTexture;
+  Image::NoTextureTexture = NoTextureTexture;
   GameCanvas::MouseCursorHand = MouseCursorHand;
   GameCanvas::MouseCursorCrossHairs = MouseCursorCrossHairs;
   ControlsPanel::PauseButtonTexture = PauseButtonTexture;
@@ -222,6 +224,11 @@ HotSpot* ATheHUD::MouseDownLeft( FVector2D mouse )
   return ui->drag;
 }
 
+HotSpot* ATheHUD::MouseDownRight( FVector2D mouse )
+{
+  return ui->MouseDownRight( mouse );
+}
+
 HotSpot* ATheHUD::MouseMoved( FVector2D mouse )
 {
   if( !Init )  return 0;
@@ -257,11 +264,6 @@ void ATheHUD::Select( vector<AGameObject*> objects )
     if( sel->AttackTarget )
       sel->AttackTarget->RemoveTagged( Game->flycam->AttackTargetName );
   }
-
-  //if( Game->flycam->ghost )
-  //{
-  //  Game->flycam->ClearGhost();
-  //}
 
   // Cannot select objects of these types
   SetAGameObject forbiddenTypes = { AExplosion::StaticClass(), AGroundPlane::StaticClass(), AShape::StaticClass() };
@@ -328,8 +330,6 @@ void ATheHUD::Unselect( vector<AGameObject*> objects )
     if( go->AttackTarget )
       if( Intersection( Selected, go->AttackTarget->Attackers ).size() <= 1 )
         go->RemoveTagged( Game->flycam->AttackTargetName );
-
-
   }
 
   operator-=<AGameObject*>( Selected, objects );

@@ -93,9 +93,19 @@ bool APeasant::UseBuild( int index )
     return 0;
   }
 
-  Game->flycam->ghost = Game->Make< ABuilding >( Buildables[index]->BuildingType );
-  
-  return 1;
+  TSubclassOf<ABuilding> BuildingClass = Buildables[index]->BuildingClass;
+  // Check if the player can afford this building class
+  if( team->CanAfford( BuildingClass ) )
+  {
+    // Setup the ghost to being BuildingClass we like
+    Game->flycam->ghost = Game->Make< ABuilding >( BuildingClass );
+    return 1;
+  }
+  else
+  {
+    info( FS( "Team %s cannot afford to build a %s", *team->Name, *BuildingClass->GetName() ) );
+    return 0;
+  }
 }
 
 bool APeasant::CancelBuilding( int index )
@@ -111,18 +121,28 @@ bool APeasant::CancelBuilding( int index )
   buildingAction->Building->Cancel();
   
   return 1;
-
 }
 
-bool APeasant::Build( UUIBuildActionCommand* buildAction, FVector pos )
+// From the UI button, there's PROPOSEBUILD so you can't
+// go thru with UI click when can't afford the building..
+bool APeasant::Build( TSubclassOf<ABuilding> BuildingClass, FVector position )
 {
-  if( team->CanAfford( buildAction->BuildingType ) )
+  if( !team->CanAfford( BuildingClass ) )
   {
-    // Construct the instance of the building
-    ABuilding* building = Game->Make<ABuilding>( buildAction->BuildingType, team, pos );
+    //err-out
+    error( FS( "Team %s cannot afford BuildingClass %s", *team->Name, *BuildingClass->GetName() ) );
+    return 0;
+  }
+  // Check against techtree if this building class is allowed for this team now.
+  ///else if( !team->TECHTREECHECK(BuildingClass) )
+  else
+  {
+    // Actually construct the building.
+    ABuilding* building = Game->Make<ABuilding>( BuildingClass, team, position );
 
     // Construct the counter & add it to counters for this object
-    UUIInProgressBuilding* buildInProgress = Construct<UUIInProgressBuilding>( UUIInProgressBuilding::StaticClass() );
+    UUIInProgressBuilding* buildInProgress = 
+      Construct<UUIInProgressBuilding>( UUIInProgressBuilding::StaticClass() );
     buildInProgress->Building = building;
     buildInProgress->Peasant = this;
     CountersBuildingsQueue.Push( buildInProgress );
@@ -130,12 +150,6 @@ bool APeasant::Build( UUIBuildActionCommand* buildAction, FVector pos )
     // Make the building and ask the peasant to join in building it.
     building->PlaceBuilding( this );
     return 1;
-  }
-  else
-  {
-    info( FS( "%s cannot afford type %s",
-      *Stats.Name, *buildAction->BuildingType->GetName() ) );
-    return 0;
   }
 }
 

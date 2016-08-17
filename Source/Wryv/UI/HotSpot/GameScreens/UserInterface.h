@@ -1,9 +1,9 @@
 #pragma once
 
-#include "UI/HotSpot/Elements/Border.h"
 #include "GameChrome.h"
 #include "MapSelectionScreen.h"
 #include "MissionObjectivesScreen.h"
+#include "UI/HotSpot/Elements/Border.h"
 #include "UI/HotSpot/Elements/Screen.h"
 #include "UI/HotSpot/GameElements/StatusBar.h"
 #include "TitleScreen.h"

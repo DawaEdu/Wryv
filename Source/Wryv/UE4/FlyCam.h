@@ -74,9 +74,10 @@ public:
   
   // this flag indicates if the level has been initialized yet
   bool setupLevel;
-  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )  float CameraMovementSpeed;
-  UFloatingPawnMovement *MovementComponent;
+  UPROPERTY( EditAnywhere, BlueprintReadWrite, Category = UOptions )
+  float CameraMovementSpeed;
   
+  UFloatingPawnMovement *MovementComponent;
   UInputComponent* InputComponent;
   vector<AGameObject*> viz;
   static FName AttackTargetName;
@@ -87,6 +88,11 @@ public:
 	AFlyCam( const FObjectInitializer& PCIP );
   
   virtual void BeginPlay() override;
+
+  /// Tells you if a building is being placed by the UI
+  /// by the `ghost` variable not being NULL.
+  /// If it is NULL, then NO building is being placed.
+  bool IsBuildingBeingPlaced() { return ghost != NULL; }
 	  
   // Called to bind functionality to input.
   // SetupPlayerInputComponent only exists in APawn, so we attach
@@ -113,12 +119,14 @@ public:
   void DrawDebug( FVector pt, float size, FLinearColor color, float time );
   void DrawDebug( FVector start, FVector end, float thickness, FLinearColor color, float time );
   void ClearViz();
-  
   AGameObject* MakeLine( FVector Start, FVector End, FLinearColor color );
+  
   void RetrievePointers();
   void debug( int slot, FColor color, FString mess );
   
-  FVector2D getMousePos();
+  // Picks from screen coords, closest object
+  AGameObject* Pick( const FVector2D& screenCoords );
+  FVector2D GetMousePos();
   // Modifies vector if can hit ground. If not, it just stays floating.
   bool SetOnGround( FVector& v );
   

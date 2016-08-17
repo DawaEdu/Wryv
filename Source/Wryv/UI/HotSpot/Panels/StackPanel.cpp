@@ -3,17 +3,17 @@
 
 UTexture* StackPanel::StackPanelTexture = 0;
 
-StackPanel::StackPanel( FString name ) : ImageHS( name )
+StackPanel::StackPanel( FString name ) : Image( name )
 {
   restacking = 0;
 }
 
-StackPanel::StackPanel( FString name, UTexture* bkg ) : ImageHS( name, bkg )
+StackPanel::StackPanel( FString name, UTexture* bkg ) : Image( name, bkg )
 {
   restacking = 0;
 }
 
-StackPanel::StackPanel( FString name, UTexture* bkg, FLinearColor color ) : ImageHS( name, bkg, color )
+StackPanel::StackPanel( FString name, UTexture* bkg, FLinearColor color ) : Image( name, bkg, color )
 {
   restacking = 0;
 }
@@ -21,7 +21,7 @@ StackPanel::StackPanel( FString name, UTexture* bkg, FLinearColor color ) : Imag
 void StackPanel::Clear()
 {
   stackOrder.clear();
-  ImageHS::Clear();
+  Image::Clear();
 }
 
 // Override base class function, to prevent warning when
@@ -32,7 +32,7 @@ void StackPanel::render( FVector2D offset )
 
   // Doesn't render the texture if it isn't set,
   // so that clear background is allowed
-  if( Tex )  ImageHS::render( offset );  //!! If remove NoTextureTexture, can remove this
+  if( Tex )  Image::render( offset );  //!! If remove NoTextureTexture, can remove this
 
   // render children
   HotSpot::render( offset );
